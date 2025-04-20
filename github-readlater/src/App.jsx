@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import AuthCallback from './components/AuthCallback';
 import SaveRepository from './pages/SaveRepository';
 import RepositoryDetails from './pages/RepositoryDetails';
+import Subscription from './pages/Subscription';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -78,6 +79,12 @@ function App() {
             <Route path="/repository/:id" element={
               <ProtectedRoute>
                 <RepositoryDetails />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/subscription" element={
+              <ProtectedRoute>
+                <Subscription />
               </ProtectedRoute>
             } />
             

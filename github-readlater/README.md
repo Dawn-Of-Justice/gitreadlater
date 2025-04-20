@@ -1,54 +1,209 @@
-# React + TypeScript + Vite
+# GitHub ReadLater
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+GitHub ReadLater is a web application that allows developers to save, organize, and manage GitHub repositories for later reference. It's like Pocket or Instapaper, but specifically designed for GitHub repositories.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Save GitHub repositories with personal notes and tags
+- Import repositories directly from your GitHub stars
+- Search and filter saved repositories
+- View repository details including README content
+- Organize repositories with custom tags
+- Responsive design for desktop and mobile
 
-## Expanding the ESLint configuration
+### Premium Features (Subscription)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Unlimited saved repositories (free tier limited to 100)
+- Advanced search with multiple filters and sorting options
+- Rich tagging system with nested tags
+- Automatic categorization suggestions
+- Export to third-party services (Notion, etc.)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Tech Stack
+
+- **Frontend**: React with Vite, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Authentication, Storage)
+- **Authentication**: GitHub OAuth
+- **API Integration**: GitHub REST API via Octokit
+- **Payments**: Stripe integration for subscription management
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+- A Supabase account (free tier available)
+- A GitHub OAuth application
+- A Stripe account (for subscription features)
+
+### Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/your-username/github-readlater.git
+cd github-readlater
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install dependencies:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+npm install
 ```
+
+3. Create a `.env` file based on `.env.example`:
+
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_GITHUB_CLIENT_ID=your_github_client_id
+VITE_REDIRECT_URL=http://localhost:5173/auth/callback
+VITE_STRIPE_PRICE_ID=your_stripe_price_id
+VITE_API_URL=http://localhost:3000
+```
+
+4. Set up Supabase:
+   - Create a new project in Supabase
+   - Run the SQL commands from `supabase-schema.sql` and `subscription-schema.sql` in the SQL Editor
+   - Set up GitHub OAuth in the Authentication settings
+
+5. Set up Stripe (for subscription features):
+   - Create a Stripe account and product with a monthly subscription price
+   - Add your Stripe price ID to the `.env` file
+   - Configure the webhook endpoint (see Server Setup below)
+
+6. Start the development server:
+
+```bash
+npm run dev
+```
+
+7. Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### Server Setup (for Stripe integration)
+
+1. Navigate to the server directory:
+
+```bash
+cd server
+```
+
+2. Install server dependencies:
+
+```bash
+npm install
+```
+
+3. Create a `.env` file based on `.env.example` in the server directory:
+
+```
+# Stripe API Keys
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+# Supabase API Keys
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Server
+PORT=3000
+```
+
+4. Start the server:
+
+```bash
+npm start
+```
+
+For detailed server setup instructions, see the [server README](./server/README.md).
+
+## Supabase Setup
+
+1. Create a new project in Supabase
+2. Go to the SQL Editor and run the SQL commands from:
+   - `supabase-schema.sql` (core tables)
+   - `subscription-schema.sql` (subscription tables)
+3. Set up GitHub OAuth in Authentication > Providers:
+   - Enable GitHub provider
+   - Add your GitHub OAuth client ID and secret
+   - Set callback URL to `http://localhost:5173/auth/callback` (for local development)
+
+## GitHub OAuth Setup
+
+1. Go to GitHub Settings > Developer settings > OAuth Apps > New OAuth App
+2. Fill in the details:
+   - Application name: GitHub ReadLater (or your preferred name)
+   - Homepage URL: http://localhost:5173 (for local development)
+   - Authorization callback URL: https://[your-supabase-project].supabase.co/auth/v1/callback
+3. Register the application
+4. Copy the Client ID and Client Secret to your Supabase project
+
+## Stripe Setup
+
+1. Create a Stripe account at [stripe.com](https://stripe.com)
+2. In the Stripe Dashboard, create a product and price:
+   - Go to Products > Create Product
+   - Set the product name (e.g., "GitHub ReadLater Premium")
+   - Add a price (e.g., $3/month)
+   - Copy the Price ID (starts with "price_") to your frontend `.env` file
+3. Get your API keys from Developers > API keys
+4. Set up webhook for subscription lifecycle events:
+   - Go to Developers > Webhooks > Add endpoint
+   - Set the endpoint URL to your server's webhook endpoint
+   - Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Get the Webhook Secret for your server's `.env` file
+
+## Deployment
+
+### Frontend (Vercel/Netlify)
+
+1. Push your code to a GitHub repository
+2. Import your repository in Vercel or Netlify
+3. Set environment variables in your hosting platform
+4. Deploy!
+
+### Backend Server (for Stripe integration)
+
+The backend server can be deployed to Vercel, Heroku, or any Node.js hosting platform.
+
+For Vercel:
+1. Add a `vercel.json` file to the server directory
+2. Deploy with the Vercel CLI
+
+For Heroku:
+1. Create a new Heroku app
+2. Set environment variables in the Heroku dashboard
+3. Deploy using the Heroku CLI or GitHub integration
+
+## Project Structure
+
+```
+github-readlater/
+├── public/                # Static assets
+├── server/                # Backend server for Stripe integration
+├── src/
+│   ├── components/        # Reusable React components
+│   ├── lib/               # Utility functions and API clients
+│   ├── pages/             # Page components
+│   ├── services/          # Service modules for API interactions
+│   ├── App.jsx            # Main application component
+│   ├── index.css          # Global styles
+│   └── main.jsx           # Entry point
+├── .env.example           # Example environment variables
+├── subscription-schema.sql # SQL for subscription tables
+├── supabase-schema.sql    # SQL for core tables
+└── README.md              # Project documentation
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- GitHub API for providing access to repository data
+- Supabase for the excellent backend services
+- React and Vite for the frontend framework
+- Tailwind CSS for the styling
+- Stripe for the subscription payment system

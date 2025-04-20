@@ -1,5 +1,17 @@
 import { supabase } from '../lib/supabaseClient';
 import { getRepositoryDetails, parseGitHubUrl } from './githubService';
+import { canSaveRepository } from './subscriptionService';
+
+// Get current user
+const getCurrentUser = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error || !session) {
+    return null;
+  }
+  
+  return session.user;
+};
 
 // Save repository to user's collection
 export const saveRepository = async (url, notes = '', tags = []) => {
@@ -8,6 +20,13 @@ export const saveRepository = async (url, notes = '', tags = []) => {
     
     if (!user) {
       throw new Error('User not authenticated');
+    }
+    
+    // Check if user can save more repositories based on their subscription
+    const canSave = await canSaveRepository();
+    
+    if (!canSave) {
+      throw new Error('Repository limit reached for your plan. Please upgrade to save more repositories.');
     }
     
     // Parse GitHub URL
@@ -43,17 +62,6 @@ export const saveRepository = async (url, notes = '', tags = []) => {
     console.error('Error saving repository:', error);
     throw error;
   }
-};
-
-// Get current user
-const getCurrentUser = async () => {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
-  if (error || !session) {
-    return null;
-  }
-  
-  return session.user;
 };
 
 // Get user's saved repositories

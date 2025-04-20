@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle } from 'react-icons/fa';
+import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags } from '../services/repositoryService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 
 const Dashboard = () => {
   const [repositories, setRepositories] = useState([]);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userTier, setUserTier] = useState(TIERS.FREE);
+  const [repoCount, setRepoCount] = useState(0);
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,6 +21,10 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
+        // Get user's subscription tier
+        const tier = await getUserTier();
+        setUserTier(tier);
+        
         // Build filters
         const filters = {};
         if (searchQuery) filters.search = searchQuery;
@@ -26,6 +33,7 @@ const Dashboard = () => {
         // Fetch repositories
         const repoData = await getSavedRepositories(filters);
         setRepositories(repoData);
+        setRepoCount(repoData.length);
         
         // Fetch tags if not already loaded
         if (tags.length === 0) {
@@ -54,6 +62,11 @@ const Dashboard = () => {
     setSelectedTag(tag === selectedTag ? '' : tag);
   };
   
+  // Calculate repository limit
+  const repoLimit = REPOSITORY_LIMITS[userTier];
+  const isNearLimit = userTier === TIERS.FREE && repoCount >= repoLimit * 0.8;
+  const isAtLimit = userTier === TIERS.FREE && repoCount >= repoLimit;
+  
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -61,11 +74,54 @@ const Dashboard = () => {
         
         <Link 
           to="/save"
-          className="btn btn-primary flex items-center space-x-2"
+          className={`btn btn-primary flex items-center space-x-2 ${isAtLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={(e) => isAtLimit && e.preventDefault()}
         >
           <span>Save New Repository</span>
         </Link>
       </div>
+      
+      {/* Subscription status banner */}
+      {isNearLimit && (
+        <div className={`mb-6 p-4 rounded-md ${isAtLimit ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-medium">
+                {isAtLimit 
+                  ? `You've reached the limit of ${repoLimit} repositories on your free plan.` 
+                  : `You've saved ${repoCount} of ${repoLimit} repositories (${Math.round((repoCount/repoLimit)*100)}%).`
+                }
+              </p>
+              <p className="mt-1">
+                {isAtLimit 
+                  ? 'Upgrade to Premium to save unlimited repositories.' 
+                  : 'You\'re approaching your free plan limit. Consider upgrading soon.'}
+              </p>
+            </div>
+            
+            <Link 
+              to="/subscription" 
+              className={`btn mt-3 md:mt-0 flex items-center justify-center space-x-2 ${isAtLimit ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-yellow-600 hover:bg-yellow-700 text-white'}`}
+            >
+              <FaCrown className="mr-1" />
+              <span>Upgrade to Premium</span>
+              <FaArrowRight className="ml-1" />
+            </Link>
+          </div>
+        </div>
+      )}
+      
+      {userTier === TIERS.PREMIUM && (
+        <div className="mb-6 p-4 rounded-md bg-blue-50 text-blue-700">
+          <div className="flex items-center">
+            <FaCrown className="text-yellow-500 mr-2" />
+            <p>
+              <span className="font-medium">Premium Plan Active: </span>
+              You have unlimited repository storage and access to all premium features.
+            </p>
+          </div>
+        </div>
+      )}
       
       <div className="bg-white rounded-lg shadow-md p-4 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
@@ -120,7 +176,7 @@ const Dashboard = () => {
           ) : (
             <div>
               <p className="text-gray-600 mb-4">You haven't saved any repositories yet.</p>
-              <Link to="/save" className="btn btn-primary">
+              <Link to="/save" className={`btn btn-primary ${isAtLimit ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={(e) => isAtLimit && e.preventDefault()}>
                 Save Your First Repository
               </Link>
             </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaGithub, FaStar, FaSpinner, FaCircle, FaTimes } from 'react-icons/fa';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaGithub, FaStar, FaSpinner, FaCircle, FaTimes, FaCrown, FaArrowRight } from 'react-icons/fa';
 import { parseGitHubUrl, getRepositoryDetails, getStarredRepositories } from '../services/githubService';
 import { saveRepository } from '../services/repositoryService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS, getUserRepositoryCount, canSaveRepository } from '../services/subscriptionService';
 
 const SaveRepository = () => {
   const navigate = useNavigate();
@@ -21,12 +22,42 @@ const SaveRepository = () => {
   const [starredRepos, setStarredRepos] = useState([]);
   const [loadingStarred, setLoadingStarred] = useState(false);
   
+  // Subscription states
+  const [userTier, setUserTier] = useState(TIERS.FREE);
+  const [repoCount, setRepoCount] = useState(0);
+  const [canSave, setCanSave] = useState(true);
+  
+  // Check subscription status on load
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const tier = await getUserTier();
+        const count = await getUserRepositoryCount();
+        const saveAbility = await canSaveRepository();
+        
+        setUserTier(tier);
+        setRepoCount(count);
+        setCanSave(saveAbility);
+      } catch (err) {
+        console.error('Error checking subscription:', err);
+      }
+    };
+    
+    checkSubscription();
+  }, []);
+  
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!repoUrl.trim()) {
       setError('Please enter a GitHub repository URL');
+      return;
+    }
+    
+    // Check if user can save more repositories
+    if (!canSave) {
+      setError(`You've reached the limit of ${REPOSITORY_LIMITS[TIERS.FREE]} repositories on your free plan. Please upgrade to save more.`);
       return;
     }
     
@@ -41,7 +72,11 @@ const SaveRepository = () => {
       navigate('/');
     } catch (err) {
       console.error('Error saving repository:', err);
-      setError(err.message || 'Failed to save repository. Please try again.');
+      if (err.message.includes('Repository limit reached')) {
+        setError(`You've reached the limit of ${REPOSITORY_LIMITS[TIERS.FREE]} repositories on your free plan. Please upgrade to save more.`);
+      } else {
+        setError(err.message || 'Failed to save repository. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -126,9 +161,99 @@ const SaveRepository = () => {
     }
   };
   
+  const repoLimit = REPOSITORY_LIMITS[userTier];
+  const isAtLimit = !canSave;
+  
+  // If user is at limit, show upgrade notice
+  if (isAtLimit) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Save Repository</h1>
+        
+        <div className="bg-red-50 border border-red-100 rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-red-700 mb-3">Repository Limit Reached</h2>
+          
+          <p className="mb-4">
+            You've saved {repoCount} repositories, which is the maximum allowed on the free plan.
+            To save more repositories, you'll need to upgrade to our Premium plan.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link 
+              to="/subscription" 
+              className="btn bg-github-blue hover:bg-blue-700 text-white flex items-center justify-center"
+            >
+              <FaCrown className="mr-2" />
+              <span>Upgrade to Premium</span>
+              <FaArrowRight className="ml-2" />
+            </Link>
+            
+            <Link 
+              to="/" 
+              className="btn btn-secondary"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold mb-4">Premium Plan Benefits</h3>
+          
+          <ul className="space-y-2">
+            <li className="flex items-start">
+              <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+              <span>Unlimited saved repositories</span>
+            </li>
+            <li className="flex items-start">
+              <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+              <span>Advanced search with filters</span>
+            </li>
+            <li className="flex items-start">
+              <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+              <span>Rich tagging system with nested tags</span>
+            </li>
+            <li className="flex items-start">
+              <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+              <span>Automatic categorization suggestions</span>
+            </li>
+            <li className="flex items-start">
+              <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+              <span>Export to third-party services</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Save Repository</h1>
+      
+      {/* Subscription status */}
+      {userTier === TIERS.FREE && repoCount >= repoLimit * 0.8 && (
+        <div className="mb-6 p-4 rounded-md bg-yellow-50 text-yellow-700">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-medium">
+                You've saved {repoCount} of {repoLimit} repositories ({Math.round((repoCount/repoLimit)*100)}%).
+              </p>
+              <p className="mt-1">
+                You're approaching your free plan limit. Consider upgrading soon.
+              </p>
+            </div>
+            
+            <Link 
+              to="/subscription" 
+              className="btn mt-3 md:mt-0 bg-yellow-600 hover:bg-yellow-700 text-white flex items-center justify-center"
+            >
+              <FaCrown className="mr-1" />
+              <span>Upgrade to Premium</span>
+            </Link>
+          </div>
+        </div>
+      )}
       
       <div className="bg-white rounded-lg shadow-md p-6">
         <form onSubmit={handleSubmit}>

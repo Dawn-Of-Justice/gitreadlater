@@ -1,11 +1,25 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGithub, FaBookmark, FaPlus, FaSignOutAlt, FaUser } from 'react-icons/fa';
+import { FaGithub, FaBookmark, FaPlus, FaSignOutAlt, FaUser, FaCrown } from 'react-icons/fa';
 import { signOut } from '../lib/supabaseClient';
+import { getUserTier, TIERS } from '../services/subscriptionService';
+import { useEffect } from 'react';
 
 const Header = ({ user }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userTier, setUserTier] = useState(TIERS.FREE);
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    const fetchUserTier = async () => {
+      if (user) {
+        const tier = await getUserTier();
+        setUserTier(tier);
+      }
+    };
+    
+    fetchUserTier();
+  }, [user]);
   
   const handleSignOut = async () => {
     try {
@@ -43,6 +57,20 @@ const Header = ({ user }) => {
                 >
                   <FaPlus />
                   <span>Save Repository</span>
+                </Link>
+                
+                <Link 
+                  to="/subscription" 
+                  className="flex items-center space-x-1 hover:text-gray-300 transition-colors"
+                >
+                  {userTier === TIERS.PREMIUM ? (
+                    <>
+                      <FaCrown className="text-yellow-400" />
+                      <span>Premium</span>
+                    </>
+                  ) : (
+                    <span>Upgrade</span>
+                  )}
                 </Link>
                 
                 <div className="flex items-center space-x-4">
@@ -102,6 +130,21 @@ const Header = ({ user }) => {
                 >
                   <FaPlus />
                   <span>Save Repository</span>
+                </Link>
+                
+                <Link 
+                  to="/subscription" 
+                  className="flex items-center space-x-2 hover:text-gray-300 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {userTier === TIERS.PREMIUM ? (
+                    <>
+                      <FaCrown className="text-yellow-400" />
+                      <span>Premium</span>
+                    </>
+                  ) : (
+                    <span>Upgrade</span>
+                  )}
                 </Link>
                 
                 <div className="flex items-center space-x-2">
