@@ -1,3 +1,11 @@
+"Read Later" Service for GitHub Repositories:
+
+Problem: Developers often star interesting GitHub repositories but forget why or lose track of them. It's not easy to categorize or add notes to starred repos directly.
+Idea: A web app or browser extension that lets you "save" GitHub repos (similar to Pocket/Instapaper for articles). Allows adding tags, notes, and categorizing saved repos. Could potentially fetch READMEs or key stats for easier recall.
+Free Start Tech: Browser extension (HTML/CSS/JS) or Web App (React/Vue on Vercel/Netlify). Backend API using serverless functions or free tier hosting (Render/Fly.io). Supabase/Firestore for storing user data, saved repos, tags, notes. GitHub API for fetching repo details. Use GitHub auth for login.
+Monetization: Free tier with a limit on saved repos (e.g., 100) and basic tagging. Paid tier (~$3/month) for unlimited repos, advanced search, richer tagging, maybe automatic categorization suggestions, or integrations (e.g., send to Notion).
+
+
 Roadmap to Develop the "Read Later" Service for GitHub Repositories
 Phase 1: Planning and Design
 
