@@ -124,15 +124,26 @@ export const initializeUserSubscription = async (userId) => {
 };
 
 // Update user's subscription tier
-export const updateUserTier = async (userId, tier, validUntil = null) => {
+export const updateUserTier = async (userId, tier, validUntil = null, paddleUserId = null, paddleSubscriptionId = null) => {
   try {
+    const updateData = {
+      tier,
+      valid_until: validUntil,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Only include Paddle IDs if they are provided
+    if (paddleUserId) {
+      updateData.paddle_user_id = paddleUserId;
+    }
+    
+    if (paddleSubscriptionId) {
+      updateData.paddle_subscription_id = paddleSubscriptionId;
+    }
+    
     const { error } = await supabase
       .from('user_subscriptions')
-      .update({
-        tier,
-        valid_until: validUntil,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('user_id', userId);
     
     if (error) throw error;
@@ -141,5 +152,38 @@ export const updateUserTier = async (userId, tier, validUntil = null) => {
   } catch (error) {
     console.error('Error updating user tier:', error);
     return false;
+  }
+};
+
+// Get user's subscription details
+export const getSubscriptionDetails = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select('tier, valid_until, paddle_user_id, paddle_subscription_id')
+      .eq('user_id', session.user.id)
+      .single();
+    
+    if (error) throw error;
+    
+    return {
+      tier: data.tier,
+      validUntil: data.valid_until,
+      paddleUserId: data.paddle_user_id,
+      paddleSubscriptionId: data.paddle_subscription_id,
+      isActive: data.tier === TIERS.PREMIUM && (!data.valid_until || new Date(data.valid_until) > new Date())
+    };
+  } catch (error) {
+    console.error('Error getting subscription details:', error);
+    return {
+      tier: TIERS.FREE,
+      isActive: false
+    };
   }
 };

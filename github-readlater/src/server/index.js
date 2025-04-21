@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const axios = require('axios');
 require('dotenv').config();
 
 // Initialize Express app
@@ -13,23 +14,26 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Paddle API credentials
+const PADDLE_VENDOR_ID = process.env.PADDLE_VENDOR_ID;
+const PADDLE_API_KEY = process.env.PADDLE_API_KEY;
+const PADDLE_PUBLIC_KEY = process.env.PADDLE_PUBLIC_KEY;
+
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Webhook signing secret
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+app.use(express.urlencoded({ extended: true })); // Required for Paddle webhook format
 
 // Helper to update user subscription
-async function updateUserSubscription(userId, tier, validUntil = null, stripeCustomerId = null, stripeSubscriptionId = null) {
+async function updateUserSubscription(userId, tier, validUntil = null, paddleSubscriptionId = null, paddleUserId = null) {
   try {
     const { error } = await supabase
       .from('user_subscriptions')
       .update({
         tier,
         valid_until: validUntil,
-        stripe_customer_id: stripeCustomerId,
-        stripe_subscription_id: stripeSubscriptionId,
+        paddle_subscription_id: paddleSubscriptionId,
+        paddle_user_id: paddleUserId,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId);
@@ -43,234 +47,219 @@ async function updateUserSubscription(userId, tier, validUntil = null, stripeCus
   }
 }
 
-// Create a checkout session
-app.post('/create-checkout-session', async (req, res) => {
+// Generate Paddle checkout URL
+app.post('/generate-checkout', async (req, res) => {
   try {
-    const { userId, priceId, successUrl, cancelUrl } = req.body;
+    const { userId, planId, successUrl, cancelUrl } = req.body;
     
     // Get user from Supabase
-    const { data: userData, error: userError } = await supabase
-      .from('user_subscriptions')
-      .select('stripe_customer_id')
-      .eq('user_id', userId)
-      .single();
+    const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
     
-    if (userError) throw userError;
+    if (authError) throw authError;
     
-    // Check if we need to create a new customer or use existing one
-    let customerId = userData.stripe_customer_id;
+    // Generate Paddle checkout URL
+    const checkoutParams = new URLSearchParams({
+      product_id: planId,
+      customer_email: authData.user.email,
+      passthrough: JSON.stringify({ userId }),
+      return_url: successUrl,
+      cancel_url: cancelUrl
+    });
     
-    if (!customerId) {
-      // Get user email from auth
-      const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
-      
-      if (authError) throw authError;
-      
-      // Create a new customer in Stripe
-      const customer = await stripe.customers.create({
-        email: authData.user.email,
-        metadata: {
-          userId: userId
-        }
-      });
-      
-      customerId = customer.id;
-      
-      // Update user with Stripe customer ID
-      await updateUserSubscription(userId, 'free', null, customerId, null);
-    }
-    
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        userId: userId
+    // Make API request to Paddle
+    const response = await axios.post(
+      'https://vendors.paddle.com/api/2.0/product/generate_pay_link',
+      {
+        vendor_id: PADDLE_VENDOR_ID,
+        vendor_auth_code: PADDLE_API_KEY,
+        ...Object.fromEntries(checkoutParams)
       }
-    });
+    );
     
-    res.json({ sessionId: session.id, url: session.url });
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Create a portal session
-app.post('/create-portal-session', async (req, res) => {
-  try {
-    const { userId, returnUrl } = req.body;
-    
-    // Get customer ID from Supabase
-    const { data: userData, error: userError } = await supabase
-      .from('user_subscriptions')
-      .select('stripe_customer_id')
-      .eq('user_id', userId)
-      .single();
-    
-    if (userError) throw userError;
-    
-    if (!userData.stripe_customer_id) {
-      throw new Error('User does not have a Stripe customer ID');
+    if (!response.data.success) {
+      throw new Error('Failed to generate Paddle checkout URL');
     }
     
-    // Create customer portal session
-    const session = await stripe.billingPortal.sessions.create({
-      customer: userData.stripe_customer_id,
-      return_url: returnUrl,
+    res.json({ 
+      url: response.data.response.url
     });
-    
-    res.json({ url: session.url });
   } catch (error) {
-    console.error('Error creating portal session:', error);
+    console.error('Error generating checkout URL:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Webhook to handle subscription events
-app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
+// Verify Paddle webhook signature
+function verifyPaddleWebhook(reqBody, signature) {
+  // Sort parameters alphabetically
+  const sortedParams = {};
+  Object.keys(reqBody).sort().forEach(key => {
+    if (key !== 'p_signature') {
+      sortedParams[key] = reqBody[key];
+    }
+  });
   
-  let event;
+  // Serialize the parameters
+  const serialized = Object.entries(sortedParams)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('&');
+
+  // Verify the signature using PHP-SIG format
+  const verifier = crypto.createVerify('sha1WithRSAEncryption');
+  verifier.update(serialized);
   
+  return verifier.verify(PADDLE_PUBLIC_KEY, signature, 'base64');
+}
+
+// Paddle webhook handler
+app.post('/webhook', async (req, res) => {
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    console.error(`Webhook Error: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-  
-  // Store event in Supabase for audit
-  try {
-    const { error } = await supabase
-      .from('stripe_events')
-      .insert([
-        {
-          stripe_event_id: event.id,
-          event_type: event.type,
-          user_id: event.data.object.metadata?.userId,
-          data: event.data.object,
-          processed: false,
-          created_at: new Date().toISOString()
+    // Verify webhook signature
+    const signature = req.body.p_signature;
+    
+    if (!signature || !verifyPaddleWebhook(req.body, signature)) {
+      return res.status(400).send('Invalid webhook signature');
+    }
+    
+    // Get the alert type
+    const alertType = req.body.alert_name;
+    
+    // Store webhook event in Supabase for audit
+    try {
+      const { error } = await supabase
+        .from('paddle_events')
+        .insert([
+          {
+            paddle_event_id: req.body.p_signature, // Use signature as unique ID
+            event_type: alertType,
+            data: req.body,
+            processed: false,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      
+      if (error) throw error;
+    } catch (err) {
+      console.error(`Error storing event: ${err.message}`);
+      // Continue processing even if storage fails
+    }
+    
+    // Extract user ID from passthrough data
+    let userId;
+    try {
+      const passthrough = JSON.parse(req.body.passthrough || '{}');
+      userId = passthrough.userId;
+    } catch (err) {
+      console.error('Error parsing passthrough data:', err);
+    }
+    
+    // Process webhook based on alert type
+    switch (alertType) {
+      case 'subscription_created': {
+        // New subscription created
+        if (userId) {
+          const validUntil = new Date(req.body.next_bill_date);
+          
+          await updateUserSubscription(
+            userId,
+            'premium',
+            validUntil.toISOString(),
+            req.body.subscription_id,
+            req.body.user_id
+          );
         }
-      ]);
+        break;
+      }
+      
+      case 'subscription_updated': {
+        // Subscription details updated
+        if (userId) {
+          const validUntil = new Date(req.body.next_bill_date);
+          
+          await updateUserSubscription(
+            userId,
+            'premium',
+            validUntil.toISOString(),
+            req.body.subscription_id,
+            req.body.user_id
+          );
+        }
+        break;
+      }
+      
+      case 'subscription_cancelled': {
+        // Subscription cancelled
+        if (userId) {
+          await updateUserSubscription(
+            userId,
+            'free',
+            null,
+            req.body.subscription_id,
+            req.body.user_id
+          );
+        }
+        break;
+      }
+      
+      case 'subscription_payment_succeeded': {
+        // Payment for subscription processed successfully
+        if (userId) {
+          const validUntil = new Date(req.body.next_bill_date);
+          
+          await updateUserSubscription(
+            userId,
+            'premium',
+            validUntil.toISOString(),
+            req.body.subscription_id,
+            req.body.user_id
+          );
+        }
+        break;
+      }
+      
+      case 'subscription_payment_failed': {
+        // Payment failure - could downgrade or flag account
+        console.log('Subscription payment failed:', req.body);
+        // Optionally downgrade user or flag account for follow-up
+        break;
+      }
+      
+      default:
+        console.log(`Unhandled webhook alert type: ${alertType}`);
+    }
+    
+    // Mark event as processed
+    await supabase
+      .from('paddle_events')
+      .update({ processed: true })
+      .eq('paddle_event_id', req.body.p_signature);
+    
+    // Acknowledge receipt of the webhook
+    res.status(200).send('Webhook received');
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).send('Error processing webhook');
+  }
+});
+
+// Endpoint to get user's subscription
+app.get('/subscription/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
     
     if (error) throw error;
-  } catch (err) {
-    console.error(`Error storing event: ${err.message}`);
-    // Continue processing even if storage fails
+    
+    res.json({ subscription: data });
+  } catch (error) {
+    console.error('Error getting subscription:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      const userId = session.metadata.userId;
-      
-      // If payment was successful, update the user's subscription
-      if (session.payment_status === 'paid') {
-        // Get subscription details
-        const subscription = await stripe.subscriptions.retrieve(session.subscription);
-        
-        // Calculate valid until date (1 year from now for simplicity)
-        const validUntil = new Date();
-        validUntil.setFullYear(validUntil.getFullYear() + 1);
-        
-        // Update user subscription
-        await updateUserSubscription(
-          userId,
-          'premium',
-          validUntil.toISOString(),
-          session.customer,
-          session.subscription
-        );
-        
-        // Mark event as processed
-        await supabase
-          .from('stripe_events')
-          .update({ processed: true })
-          .eq('stripe_event_id', event.id);
-      }
-      break;
-    }
-    
-    case 'customer.subscription.updated': {
-      const subscription = event.data.object;
-      
-      // Get the user ID from the customer
-      const customer = await stripe.customers.retrieve(subscription.customer);
-      const userId = customer.metadata.userId;
-      
-      if (subscription.status === 'active') {
-        // Subscription is active - set to premium
-        const validUntil = new Date(subscription.current_period_end * 1000);
-        
-        await updateUserSubscription(
-          userId,
-          'premium',
-          validUntil.toISOString(),
-          subscription.customer,
-          subscription.id
-        );
-      } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-        // Subscription is canceled or unpaid - downgrade to free
-        await updateUserSubscription(
-          userId,
-          'free',
-          null,
-          subscription.customer,
-          subscription.id
-        );
-      }
-      
-      // Mark event as processed
-      await supabase
-        .from('stripe_events')
-        .update({ processed: true })
-        .eq('stripe_event_id', event.id);
-      
-      break;
-    }
-    
-    case 'customer.subscription.deleted': {
-      const subscription = event.data.object;
-      
-      // Get the user ID from the customer
-      const customer = await stripe.customers.retrieve(subscription.customer);
-      const userId = customer.metadata.userId;
-      
-      // Subscription is canceled - downgrade to free
-      await updateUserSubscription(
-        userId,
-        'free',
-        null,
-        subscription.customer,
-        null
-      );
-      
-      // Mark event as processed
-      await supabase
-        .from('stripe_events')
-        .update({ processed: true })
-        .eq('stripe_event_id', event.id);
-      
-      break;
-    }
-    
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-  
-  res.json({ received: true });
 });
 
 // Start server

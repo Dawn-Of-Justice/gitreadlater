@@ -13,7 +13,7 @@ import {
   createCheckoutSession, 
   createCustomerPortalSession, 
   cancelSubscription 
-} from '../services/stripeService';
+} from '../services/paddleService';
 import { supabase } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
 

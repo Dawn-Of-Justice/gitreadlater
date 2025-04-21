@@ -3,8 +3,8 @@ CREATE TABLE user_subscriptions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   tier TEXT NOT NULL DEFAULT 'free',
-  stripe_customer_id TEXT,
-  stripe_subscription_id TEXT,
+  paddle_subscription_id TEXT,
+  paddle_user_id TEXT,
   valid_until TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -60,17 +60,15 @@ AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION initialize_user_subscription();
 
--- Create stripe_events table to track webhook events
-CREATE TABLE stripe_events (
+-- Create paddle_events table to track webhook events
+CREATE TABLE paddle_events (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  stripe_event_id TEXT NOT NULL UNIQUE,
+  paddle_event_id TEXT NOT NULL UNIQUE,
   event_type TEXT NOT NULL,
-  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   data JSONB NOT NULL,
   processed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create index for faster queries
-CREATE INDEX stripe_events_stripe_event_id_idx ON stripe_events(stripe_event_id);
-CREATE INDEX stripe_events_user_id_idx ON stripe_events(user_id);
+CREATE INDEX paddle_events_paddle_event_id_idx ON paddle_events(paddle_event_id);
