@@ -17,7 +17,7 @@ const Footer = () => {
           
           <div className="flex space-x-4">
             <a 
-              href="https://twitter.com/gitreadlater" 
+              href="https://x.com/SaloSojaEdwin" 
               className={`${themeClasses.link} transition-colors duration-300`}
               aria-label="Twitter"
               target="_blank"
@@ -26,7 +26,7 @@ const Footer = () => {
               <FaTwitter />
             </a>
             <a 
-              href="https://github.com/gitreadlater" 
+              href="https://github.com/Dawn-Of-Justice" 
               className={`${themeClasses.link} transition-colors duration-300`}
               aria-label="GitHub"
               target="_blank"
@@ -34,13 +34,6 @@ const Footer = () => {
             >
               <FaGithub />
             </a>
-            <Link 
-              to="/contact" 
-              className={`${themeClasses.link} transition-colors duration-300`}
-              aria-label="Contact us by email"
-            >
-              <FaEnvelope />
-            </Link>
           </div>
         </div>
         
