@@ -10,7 +10,7 @@ import {
   REPOSITORY_LIMITS 
 } from '../services/subscriptionService';
 import { 
-  createCheckoutSession, 
+  createCheckout, 
   createCustomerPortalSession, 
   cancelSubscription 
 } from '../services/paddleService';
@@ -68,7 +68,7 @@ const Subscription = () => {
       
       // For development, we'll simulate the process
       const priceId = 'price_mock_premium_monthly';
-      const { url } = await createCheckoutSession(priceId);
+      const { url } = await createCheckout(priceId);
       
       // Normally, we would redirect to the Stripe checkout page
       // window.location.href = url;

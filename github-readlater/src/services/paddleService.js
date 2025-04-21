@@ -108,18 +108,49 @@ export const updatePaymentMethod = async (subscriptionId) => {
 // Cancel subscription through Paddle
 export const cancelSubscription = async (userId) => {
   try {
-    // In a real implementation, this would call Paddle to cancel the subscription
-    // For development, we'll just update the user's tier in our database
+    if (!userId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+      
+      userId = session.user.id;
+    }
     
-    // In production, this would be handled by the webhook when Paddle notifies of cancellation
-    await updateUserTier(userId, TIERS.FREE, null);
+    // In a production environment, this would call your backend API
+    // to cancel the subscription with Paddle
+    const response = await fetch(`${API_URL}/cancel-subscription`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+    });
     
-    // Alert the user that they need to cancel through their Paddle account or email
-    alert('Please note: Your subscription must also be canceled in your Paddle account or by contacting support.');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to cancel subscription');
+    }
     
-    return true;
+    // Return the response data
+    const result = await response.json();
+    
+    // For development, update the user's tier directly
+    if (import.meta.env.DEV) {
+      await updateUserTier(userId, TIERS.FREE, null);
+    }
+    
+    return result;
   } catch (error) {
     console.error('Error canceling subscription:', error);
+    
+    // For development/testing, simulate success
+    if (import.meta.env.DEV) {
+      await updateUserTier(userId, TIERS.FREE, null);
+      return { success: true, isDevelopment: true };
+    }
+    
     throw error;
   }
 };
@@ -149,5 +180,49 @@ export const checkSubscriptionStatus = async (userId) => {
       tier: TIERS.FREE,
       isActive: false
     };
+  }
+};
+
+// Creates a customer portal session for managing subscriptions
+export const createCustomerPortalSession = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('User not authenticated');
+    }
+    
+    const userId = session.user.id;
+    
+    // In a production environment, this would call your backend API
+    // to create a customer portal session with Paddle
+    const response = await fetch(`${API_URL}/customer-portal`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create customer portal session');
+    }
+    
+    const { url } = await response.json();
+    
+    return { url };
+  } catch (error) {
+    console.error('Error creating customer portal session:', error);
+    
+    // For development/testing, return mock URL
+    if (import.meta.env.DEV) {
+      return {
+        url: 'https://example.com/customer-portal/dev_session_id',
+        isDevelopment: true
+      };
+    }
+    
+    throw error;
   }
 };
