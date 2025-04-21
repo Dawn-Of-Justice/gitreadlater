@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Components
 import Header from './components/Header';
@@ -55,46 +56,48 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Header user={user} />
-        
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/save" element={
-              <ProtectedRoute>
-                <SaveRepository />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/repository/:id" element={
-              <ProtectedRoute>
-                <RepositoryDetails />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/subscription" element={
-              <ProtectedRoute>
-                <Subscription />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        
-        <Footer />
-      </div>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <div className="flex flex-col min-h-screen bg-gray-50">
+          <Header user={user} />
+          
+          <main>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/save" element={
+                <ProtectedRoute>
+                  <SaveRepository />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/repository/:id" element={
+                <ProtectedRoute>
+                  <RepositoryDetails />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/subscription" element={
+                <ProtectedRoute>
+                  <Subscription />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          
+          <Footer />
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 }
 

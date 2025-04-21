@@ -1,34 +1,59 @@
-import { FaGithub, FaHeart } from 'react-icons/fa';
+import { FaGithub, FaHeart, FaBookmark, FaTwitter, FaEnvelope } from 'react-icons/fa';
+import { useTheme } from '../context/ThemeContext';
 
 const Footer = () => {
+  // Get theme from context
+  const { darkMode, themeClasses } = useTheme();
+  
   return (
-    <footer className="bg-github-dark text-white py-6">
-      <div className="container mx-auto px-4">
+    <footer className={`${themeClasses.footer} py-8 transition-colors duration-300`}>
+      <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <p className="flex items-center justify-center md:justify-start">
-              <span>GitHub ReadLater</span>
-              <span className="mx-2">•</span>
-              <span>Save repositories for later reference</span>
-            </p>
+          <div className="flex items-center space-x-2 mb-4 md:mb-0">
+            <FaBookmark className="text-xl text-blue-500" />
+            <span className="text-lg font-bold">GitHub ReadLater</span>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex space-x-4">
             <a 
-              href="https://github.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-white transition-colors"
+              href="#" 
+              className={`${themeClasses.link} transition-colors duration-300`}
+              aria-label="Twitter"
             >
-              <FaGithub className="text-xl" />
+              <FaTwitter />
             </a>
-            
-            <p className="flex items-center">
-              <span>Made with</span>
-              <FaHeart className="text-red-500 mx-1" />
-              <span>for developers</span>
-            </p>
+            <a 
+              href="#" 
+              className={`${themeClasses.link} transition-colors duration-300`}
+              aria-label="GitHub"
+            >
+              <FaGithub />
+            </a>
+            <a 
+              href="#" 
+              className={`${themeClasses.link} transition-colors duration-300`}
+              aria-label="Contact us by email"
+            >
+              <FaEnvelope />
+            </a>
           </div>
+        </div>
+        
+        <div className={`mt-4 pt-4 border-t ${themeClasses.divider} text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'} transition-colors duration-300`}>
+          <p>© 2025 GitHub ReadLater. Not affiliated with GitHub.</p>
+          <div className="mt-2">
+            <a href="#" className={`${themeClasses.link} mx-2 transition-colors duration-300`}>Terms</a>
+            <a href="#" className={`${themeClasses.link} mx-2 transition-colors duration-300`}>Privacy</a>
+            <a href="#" className={`${themeClasses.link} mx-2 transition-colors duration-300`}>Contact</a>
+          </div>
+        </div>
+        
+        <div className="text-center mt-4">
+          <p className="flex items-center justify-center text-sm">
+            <span className={themeClasses.textSecondary}>Made with</span>
+            <FaHeart className="text-red-500 mx-1" />
+            <span className={themeClasses.textSecondary}>for developers</span>
+          </p>
         </div>
       </div>
     </footer>

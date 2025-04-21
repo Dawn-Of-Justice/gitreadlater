@@ -4,6 +4,7 @@ import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinne
 import { supabase } from '../lib/supabaseClient';
 import { getReadmeContent } from '../services/githubService';
 import { updateRepository, deleteRepository } from '../services/repositoryService';
+import { useTheme } from '../context/ThemeContext';
 
 const RepositoryDetails = () => {
   const { id } = useParams();
@@ -18,10 +19,13 @@ const RepositoryDetails = () => {
   // Edit states
   const [isEditing, setIsEditing] = useState(false);
   const [notes, setNotes] = useState('');
-  const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  
+  // Get theme from context
+  const { darkMode, themeClasses } = useTheme();
   
   // Fetch repository data
   useEffect(() => {
@@ -38,22 +42,24 @@ const RepositoryDetails = () => {
         
         if (error) throw error;
         
-        if (!data) {
-          throw new Error('Repository not found');
+        if (data) {
+          setRepository(data);
+          setNotes(data.notes || '');
+          setTags(data.tags || []);
+          
+          // Try to get README
+          try {
+            const readmeContent = await getReadmeContent(data.repo_owner, data.repo_name);
+            setReadme(readmeContent);
+          } catch (readmeError) {
+            console.log('No README found or error fetching README');
+          }
         }
-        
-        setRepository(data);
-        setNotes(data.notes || '');
-        setTags(data.tags || []);
-        
-        // Get README content
-        const readmeData = await getReadmeContent(data.repo_owner, data.repo_name);
-        setReadme(readmeData);
         
         setError(null);
       } catch (err) {
-        console.error('Error fetching repository details:', err);
-        setError(err.message || 'Failed to load repository details');
+        console.error('Error fetching repository:', err);
+        setError('Failed to load repository. It may have been deleted or there was a network issue.');
       } finally {
         setLoading(false);
       }
@@ -130,255 +136,257 @@ const RepositoryDetails = () => {
   };
   
   return (
-    <div className="max-w-4xl mx-auto">
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="w-10 h-10 border-4 border-github-blue border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 p-4 rounded-md text-red-600">
-          <p>{error}</p>
-          <Link to="/" className="text-github-blue hover:underline mt-2 inline-block">
-            Back to Dashboard
-          </Link>
-        </div>
-      ) : repository ? (
-        <div>
-          {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <h1 className="text-3xl font-bold mb-2 md:mb-0">{repository.repo_name}</h1>
-            
-            <div className="flex items-center space-x-2">
-              {!isEditing ? (
-                <>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="btn btn-secondary flex items-center space-x-1"
-                  >
-                    <FaEdit />
-                    <span>Edit</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setConfirming(true)}
-                    className="btn flex items-center space-x-1 bg-red-500 text-white hover:bg-red-600"
-                  >
-                    <FaTrash />
-                    <span>Delete</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={handleSaveChanges}
-                    disabled={saving}
-                    className="btn btn-primary flex items-center space-x-1"
-                  >
-                    {saving ? <FaSpinner className="animate-spin" /> : <FaCheck />}
-                    <span>Save</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setNotes(repository.notes || '');
-                      setTags(repository.tags || []);
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
+    <div className={`${themeClasses.body} min-h-screen transition-colors duration-300`}>
+      <div className="container mx-auto px-6 py-8">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
-          
-          {/* Repository Information */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-            <div className="p-6">
-              <div className="flex flex-col md:flex-row justify-between mb-4">
-                <div>
-                  <p className="text-gray-600 text-sm mb-2">
-                    {repository.repo_owner}/{repository.repo_name}
-                  </p>
-                  
-                  {repository.description && (
-                    <p className="text-gray-700 mb-3">
-                      {repository.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex flex-wrap items-center gap-4">
-                    {repository.language && (
-                      <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <FaCircle className="text-github-blue" style={{ fontSize: '10px' }} />
-                        <span>{repository.language}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center space-x-1 text-sm text-gray-600">
-                      <FaStar className="text-yellow-500" />
-                      <span>{repository.stars || 0}</span>
-                    </div>
-                    
-                    <a 
-                      href={repository.repo_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-github-blue hover:underline flex items-center space-x-1 text-sm"
+        ) : error ? (
+          <div className={`${themeClasses.dangerBanner} p-4 rounded-md transition-colors duration-300`}>
+            <p>{error}</p>
+            <Link to="/" className="text-blue-500 hover:underline mt-2 inline-block">
+              Back to Dashboard
+            </Link>
+          </div>
+        ) : repository ? (
+          <div>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+              <h1 className="text-3xl font-bold mb-2 md:mb-0">{repository.repo_name}</h1>
+              
+              <div className="flex items-center space-x-2">
+                {!isEditing ? (
+                  <>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
                     >
-                      <span>View on GitHub</span>
-                      <FaExternalLinkAlt className="text-xs" />
-                    </a>
-                  </div>
-                </div>
-                
-                <div className="mt-4 md:mt-0">
-                  <p className="text-sm text-gray-500">
-                    Saved on {new Date(repository.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-              
-              <hr className="my-4" />
-              
-              {/* Tags */}
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Tags</h3>
-                
-                {isEditing ? (
-                  <div>
-                    <div className="flex items-center space-x-2 mb-2">
-                      <input
-                        type="text"
-                        placeholder="Add tags..."
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={handleTagKeyDown}
-                        className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-blue focus:border-transparent"
-                      />
-                      
-                      <button
-                        type="button"
-                        onClick={addTag}
-                        className="btn btn-secondary"
-                      >
-                        Add
-                      </button>
-                    </div>
+                      <FaEdit className="mr-2" />
+                      <span>Edit</span>
+                    </button>
                     
-                    {tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full flex items-center space-x-1"
-                          >
-                            <span>{tag}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeTag(tag)}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              <FaTimes size={12} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500">No tags added yet.</p>
-                    )}
-                  </div>
+                    <button
+                      onClick={() => setConfirming(true)}
+                      className={`${themeClasses.dangerButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                    >
+                      <FaTrash className="mr-2" />
+                      <span>Delete</span>
+                    </button>
+                  </>
                 ) : (
+                  <>
+                    <button
+                      onClick={handleSaveChanges}
+                      disabled={saving}
+                      className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                    >
+                      {saving ? <FaSpinner className="animate-spin mr-2" /> : <FaCheck className="mr-2" />}
+                      <span>Save</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setNotes(repository.notes || '');
+                        setTags(repository.tags || []);
+                      }}
+                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300`}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Repository Information */}
+            <div className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden mb-6 transition-colors duration-300`}>
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row justify-between mb-4">
                   <div>
-                    {tags && tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2 transition-colors duration-300`}>
+                      {repository.repo_owner}/{repository.repo_name}
+                    </p>
+                    
+                    {repository.description && (
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-3 transition-colors duration-300`}>
+                        {repository.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex flex-wrap items-center gap-4">
+                      {repository.language && (
+                        <div className="flex items-center space-x-1 text-sm">
+                          <FaCircle className="text-blue-500" style={{ fontSize: '10px' }} />
+                          <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{repository.language}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center space-x-1 text-sm">
+                        <FaStar className="text-yellow-500" />
+                        <span>{repository.stars || 0}</span>
                       </div>
-                    ) : (
-                      <p className="text-gray-500">No tags added yet.</p>
-                    )}
+                      
+                      <a 
+                        href={repository.repo_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline flex items-center space-x-1 text-sm"
+                      >
+                        <span>View on GitHub</span>
+                        <FaExternalLinkAlt className="text-xs ml-1" />
+                      </a>
+                    </div>
                   </div>
-                )}
-              </div>
-              
-              <hr className="my-4" />
-              
-              {/* Notes */}
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Notes</h3>
-                
-                {isEditing ? (
-                  <textarea
-                    placeholder="Add your notes about this repository..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={6}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-blue focus:border-transparent"
-                  />
-                ) : (
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    {notes ? (
-                      <p className="whitespace-pre-wrap">{notes}</p>
-                    ) : (
-                      <p className="text-gray-500">No notes added yet.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* README */}
-          {readme && (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                <h2 className="text-xl font-semibold">README</h2>
-              </div>
-              
-              <div className="p-6 markdown-content whitespace-pre-wrap">
-                {readme.content}
-              </div>
-            </div>
-          )}
-          
-          {/* Delete Confirmation Modal */}
-          {confirming && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-                <h3 className="text-xl font-semibold mb-4">Delete Repository</h3>
-                
-                <p className="mb-6">
-                  Are you sure you want to delete <strong>{repository.repo_name}</strong> from your saved repositories? This action cannot be undone.
-                </p>
-                
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => setConfirming(false)}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
                   
-                  <button
-                    onClick={handleDeleteRepository}
-                    className="btn bg-red-500 text-white hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
+                  <div className="mt-4 md:mt-0">
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
+                      Saved on {new Date(repository.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                
+                <hr className={`my-4 ${themeClasses.divider} transition-colors duration-300`} />
+                
+                {/* Tags */}
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Tags</h3>
+                  
+                  {isEditing ? (
+                    <div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="text"
+                          placeholder="Add tags..."
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={handleTagKeyDown}
+                          className={`flex-grow px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
+                        />
+                        
+                        <button
+                          type="button"
+                          onClick={addTag}
+                          className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300`}
+                        >
+                          Add
+                        </button>
+                      </div>
+                      
+                      {tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className={`${themeClasses.tag} px-3 py-1 rounded-full flex items-center transition-colors duration-300`}
+                            >
+                              <span>{tag}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeTag(tag)}
+                                className={`${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} ml-2 transition-colors duration-300`}
+                              >
+                                <FaTimes size={12} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>No tags added yet.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {tags && tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className={`${themeClasses.tag} px-3 py-1 rounded-full transition-colors duration-300`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>No tags added yet.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <hr className={`my-4 ${themeClasses.divider} transition-colors duration-300`} />
+                
+                {/* Notes */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Notes</h3>
+                  
+                  {isEditing ? (
+                    <textarea
+                      placeholder="Add your notes about this repository..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={6}
+                      className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
+                    />
+                  ) : (
+                    <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-md transition-colors duration-300`}>
+                      {notes ? (
+                        <p className="whitespace-pre-wrap">{notes}</p>
+                      ) : (
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>No notes added yet.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          )}
-        </div>
-      ) : null}
+            
+            {/* README */}
+            {readme && (
+              <div className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden mb-6 transition-colors duration-300`}>
+                <div className={`${themeClasses.readmeHeader} px-6 py-3 border-b transition-colors duration-300`}>
+                  <h2 className="text-xl font-semibold">README</h2>
+                </div>
+                
+                <div className={`p-6 markdown-content whitespace-pre-wrap ${themeClasses.readmeContent} transition-colors duration-300`}>
+                  {readme.content}
+                </div>
+              </div>
+            )}
+            
+            {/* Delete Confirmation Modal */}
+            {confirming && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className={`${themeClasses.modal} rounded-lg shadow-lg p-6 max-w-md w-full transition-colors duration-300`}>
+                  <h3 className="text-xl font-semibold mb-4">Delete Repository</h3>
+                  
+                  <p className="mb-6">
+                    Are you sure you want to delete <strong>{repository.repo_name}</strong> from your saved repositories? This action cannot be undone.
+                  </p>
+                  
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => setConfirming(false)}
+                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300`}
+                    >
+                      Cancel
+                    </button>
+                    
+                    <button
+                      onClick={handleDeleteRepository}
+                      className={`${themeClasses.dangerButton} px-4 py-2 rounded-md transition-colors duration-300`}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 };

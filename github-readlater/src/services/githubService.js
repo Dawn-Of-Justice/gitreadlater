@@ -52,6 +52,10 @@ export const getStarredRepositories = async (page = 1, perPage = 30) => {
   }
 };
 
+export const getUserStarredRepos = async (page = 1, perPage = 30) => {
+  return getStarredRepositories(page, perPage);
+};
+
 // Parse GitHub URL to extract owner and repo
 export const parseGitHubUrl = (url) => {
   try {
@@ -68,6 +72,23 @@ export const parseGitHubUrl = (url) => {
     };
   } catch (error) {
     console.error('Error parsing GitHub URL:', error);
+    throw error;
+  }
+};
+
+// Search repositories (needed for SaveRepository.jsx)
+export const searchRepositories = async (query) => {
+  try {
+    const octokit = await createOctokit();
+    
+    const { data } = await octokit.search.repos({
+      q: query,
+      per_page: 10,
+    });
+    
+    return data.items;
+  } catch (error) {
+    console.error('Error searching repositories:', error);
     throw error;
   }
 };
