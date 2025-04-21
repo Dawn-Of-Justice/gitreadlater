@@ -14,6 +14,12 @@ import RepositoryDetails from './pages/RepositoryDetails';
 import Subscription from './pages/Subscription';
 import NotFound from './pages/NotFound';
 
+// New static pages
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Contact from './pages/Contact';
+import Roadmap from './pages/Roadmap';
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -58,14 +64,20 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="flex flex-col min-h-screen bg-gray-50">
+        <div className="flex flex-col min-h-screen">
           <Header user={user} />
           
-          <main>
+          <main className="flex-grow">
             <Routes>
+              {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/roadmap" element={<Roadmap />} />
               
+              {/* Protected routes */}
               <Route path="/" element={
                 <ProtectedRoute>
                   <Dashboard />

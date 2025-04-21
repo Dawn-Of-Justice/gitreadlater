@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { FaGithub, FaHeart, FaBookmark, FaTwitter, FaEnvelope } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
 
@@ -8,7 +9,7 @@ const Footer = () => {
   return (
     <footer className={`${themeClasses.footer} py-8 transition-colors duration-300`}>
       <div className="container mx-auto px-6">
-        <div className="flex flex-col md:flex-row justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
           <div className="flex items-center space-x-2 mb-4 md:mb-0">
             <FaBookmark className="text-xl text-blue-500" />
             <span className="text-lg font-bold">GitHub ReadLater</span>
@@ -16,35 +17,40 @@ const Footer = () => {
           
           <div className="flex space-x-4">
             <a 
-              href="#" 
+              href="https://twitter.com/gitreadlater" 
               className={`${themeClasses.link} transition-colors duration-300`}
               aria-label="Twitter"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <FaTwitter />
             </a>
             <a 
-              href="#" 
+              href="https://github.com/gitreadlater" 
               className={`${themeClasses.link} transition-colors duration-300`}
               aria-label="GitHub"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <FaGithub />
             </a>
-            <a 
-              href="#" 
+            <Link 
+              to="/contact" 
               className={`${themeClasses.link} transition-colors duration-300`}
               aria-label="Contact us by email"
             >
               <FaEnvelope />
-            </a>
+            </Link>
           </div>
         </div>
         
-        <div className={`mt-4 pt-4 border-t ${themeClasses.divider} text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'} transition-colors duration-300`}>
-          <p>© 2025 GitHub ReadLater. Not affiliated with GitHub.</p>
-          <div className="mt-2">
-            <a href="#" className={`${themeClasses.link} mx-2 transition-colors duration-300`}>Terms</a>
-            <a href="#" className={`${themeClasses.link} mx-2 transition-colors duration-300`}>Privacy</a>
-            <a href="#" className={`${themeClasses.link} mx-2 transition-colors duration-300`}>Contact</a>
+        <div className={`pt-4 border-t ${themeClasses.divider} text-center ${themeClasses.textSecondary} transition-colors duration-300`}>
+          <p>© {new Date().getFullYear()} GitHub ReadLater. Not affiliated with GitHub.</p>
+          <div className="flex justify-center space-x-6 mt-4">
+            <Link to="/roadmap" className={`${themeClasses.link} transition-colors duration-300`}>Roadmap</Link>
+            <Link to="/contact" className={`${themeClasses.link} transition-colors duration-300`}>Contact</Link>
+            <Link to="/terms" className={`${themeClasses.link} transition-colors duration-300`}>Terms</Link>
+            <Link to="/privacy" className={`${themeClasses.link} transition-colors duration-300`}>Privacy</Link>
           </div>
         </div>
         
