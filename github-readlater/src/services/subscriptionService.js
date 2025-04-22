@@ -27,35 +27,65 @@ export const PREMIUM_FEATURES = [
   'Export to third-party services'
 ];
 
+// Add this near the top of your file
+let initializationAttempted = false;
+
 // Get user's current subscription tier
 export const getUserTier = async () => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      return null;
-    }
-    
-    const { data: subscription, error } = await supabase
-      .from('user_subscriptions')
-      .select('tier, valid_until')
-      .eq('user_id', session.user.id)
-      .single();
-    
-    if (error) {
-      // If no subscription found, user is on free tier
-      if (error.code === 'PGRST116') {
-        return TIERS.FREE;
-      }
-      throw error;
-    }
-    
-    // Check if subscription is still valid
-    if (subscription.valid_until && new Date(subscription.valid_until) < new Date()) {
       return TIERS.FREE;
     }
     
-    return subscription.tier || TIERS.FREE;
+    // First check if user has a subscription record at all
+    const { data, error: checkError } = await supabase
+      .from('user_subscriptions')
+      .select('id, tier, valid_until')  // Get all data in one query
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    
+    // If no subscription record exists, create one first
+    if (!data && !initializationAttempted) {
+      console.log('No subscription record found, creating one');
+      initializationAttempted = true; // Prevent multiple attempts in same session
+      
+      const success = await initializeUserSubscription(session.user.id);
+      
+      if (success) {
+        console.log('Subscription record created successfully');
+        
+        // Re-fetch the subscription data to make sure we have it
+        const { data: freshData } = await supabase
+          .from('user_subscriptions')
+          .select('tier, valid_until')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+          
+        if (freshData) {
+          return freshData.tier || TIERS.FREE;
+        }
+      } else {
+        console.error('Failed to create subscription record, continuing with free tier');
+        localStorage.setItem('subscription_init_attempted', 'true');
+      }
+      
+      return TIERS.FREE;
+    }
+    
+    // Handle case where no data was returned
+    if (!data) {
+      console.log('No subscription data found for user, using FREE tier');
+      return TIERS.FREE;
+    }
+    
+    // Check if subscription is still valid
+    if (data.valid_until && new Date(data.valid_until) < new Date()) {
+      return TIERS.FREE;
+    }
+    
+    return data.tier || TIERS.FREE;
   } catch (error) {
     console.error('Error getting user tier:', error);
     // Default to free tier on error
@@ -100,22 +130,60 @@ export const canSaveRepository = async () => {
   return count < REPOSITORY_LIMITS[tier];
 };
 
-// Initialize a new user's subscription record
+// Function to initialize user subscription if it doesn't exist
 export const initializeUserSubscription = async (userId) => {
   try {
-    const { error } = await supabase
-      .from('user_subscriptions')
-      .insert([
-        {
-          user_id: userId,
-          tier: TIERS.FREE,
-          created_at: new Date().toISOString(),
-          valid_until: null
+    console.log(`Attempting to initialize subscription for user ${userId}`);
+    
+    // The RPC function is returning false, so we need to check the actual value
+    const { data, error } = await supabase.rpc(
+      'initialize_user_subscription_func', 
+      { user_uuid: userId }
+    );
+    
+    console.log('RPC function response:', data);
+    
+    if (error || data === false) {
+      console.error('RPC function failed:', error || 'Function returned false');
+      
+      // Fallback direct insert if RPC fails
+      try {
+        console.log('Attempting direct insert as fallback');
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_subscriptions')
+          .insert({
+            user_id: userId,
+            tier: TIERS.FREE
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Fallback insert failed:', insertError);
+          return false;
         }
-      ]);
+        
+        console.log('Fallback insert succeeded:', insertData);
+        return true;
+      } catch (insertError) {
+        console.error('Error in fallback insert:', insertError);
+        return false;
+      }
+    }
     
-    if (error) throw error;
+    // Verify the record was created
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('user_subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (verifyError || !verifyData) {
+      console.error('Record verification failed:', verifyError || 'No record found after creation');
+      return false;
+    }
     
+    console.log('Subscription record verified:', verifyData);
     return true;
   } catch (error) {
     console.error('Error initializing user subscription:', error);

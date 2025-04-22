@@ -63,26 +63,18 @@ const Subscription = () => {
     try {
       setProcessingPayment(true);
       
-      // In a real implementation, this would create a Stripe checkout session
-      // and redirect the user to Stripe's checkout page
+      // Create a real Paddle checkout session
+      const { url } = await createCheckout();
       
-      // For development, we'll simulate the process
-      const priceId = 'price_mock_premium_monthly';
-      const { url } = await createCheckout(priceId);
-      
-      // Normally, we would redirect to the Stripe checkout page
-      // window.location.href = url;
-      
-      // For development, we'll simulate a successful subscription
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // Simulate successful subscription
-        setTimeout(() => {
-          setUserTier(TIERS.PREMIUM);
-          setProcessingPayment(false);
-        }, 2000);
+      // Redirect to the Paddle checkout page
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to generate checkout URL');
       }
+      
+      // Note: We don't need to set processingPayment to false here
+      // as the user will be redirected away from this page
     } catch (err) {
       console.error('Error processing subscription:', err);
       setError('Failed to process subscription. Please try again.');
@@ -94,18 +86,15 @@ const Subscription = () => {
     try {
       setProcessingPayment(true);
       
-      // In a real implementation, this would create a Stripe customer portal session
-      // and redirect the user to Stripe's customer portal
-      
-      // For development, we'll simulate the process
+      // Create a real Paddle customer portal session
       const { url } = await createCustomerPortalSession();
       
-      // Normally, we would redirect to the Stripe customer portal
-      // window.location.href = url;
-      
-      // For development, we'll just show a message
-      alert('In a production environment, you would be redirected to Stripe\'s customer portal.');
-      setProcessingPayment(false);
+      // Redirect to the Paddle customer portal
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to generate portal URL');
+      }
     } catch (err) {
       console.error('Error managing subscription:', err);
       setError('Failed to open subscription management. Please try again.');
@@ -121,7 +110,7 @@ const Subscription = () => {
     try {
       setProcessingPayment(true);
       
-      // In a real implementation, this would call Stripe to cancel the subscription
+      // In a real implementation, this would call paddle to cancel the subscription
       
       // For development, we'll simulate the process
       const { data: { session } } = await supabase.auth.getSession();

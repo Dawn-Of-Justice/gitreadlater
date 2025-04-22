@@ -93,25 +93,48 @@ export const searchRepositories = async (query) => {
   }
 };
 
-// Get README content
+// Helper function for Base64 decoding in browser
+const decodeBase64 = (str) => {
+  // Clean the string (remove newlines that might be present in GitHub responses)
+  const cleanedStr = str.replace(/\n/g, '');
+  
+  // First, get binary data from base64
+  const binaryStr = atob(cleanedStr);
+  
+  // Then convert to UTF-8
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  
+  // Use TextDecoder to properly handle UTF-8
+  return new TextDecoder().decode(bytes);
+};
+
 export const getReadmeContent = async (owner, repo) => {
   try {
-    const octokit = await createOctokit();
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`);
     
-    const { data } = await octokit.repos.getReadme({
-      owner,
-      repo,
-    });
+    if (!response.ok) {
+      throw new Error('README not found');
+    }
     
-    // Decode content from base64
-    const content = Buffer.from(data.content, 'base64').toString('utf-8');
+    const data = await response.json();
+    
+    // Use the helper function for Base64 decoding
+    let content;
+    if (data.encoding === 'base64') {
+      content = decodeBase64(data.content);
+    } else {
+      content = data.content;
+    }
     
     return {
       content,
-      url: data.html_url,
+      path: data.path
     };
   } catch (error) {
     console.error('Error fetching README:', error);
-    return null; // README might not exist
+    throw error;
   }
 };

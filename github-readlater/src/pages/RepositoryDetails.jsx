@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabaseClient';
 import { getReadmeContent } from '../services/githubService';
 import { updateRepository, deleteRepository } from '../services/repositoryService';
 import { useTheme } from '../context/ThemeContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const RepositoryDetails = () => {
   const { id } = useParams();
@@ -136,7 +138,7 @@ const RepositoryDetails = () => {
   };
   
   return (
-    <div className={`${themeClasses.body} min-h-screen transition-colors duration-300`}>
+    <div className={`${themeClasses.body} min-h-screen py-8`}>
       <div className="container mx-auto px-6 py-8">
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -345,13 +347,12 @@ const RepositoryDetails = () => {
             
             {/* README */}
             {readme && (
-              <div className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden mb-6 transition-colors duration-300`}>
-                <div className={`${themeClasses.readmeHeader} px-6 py-3 border-b transition-colors duration-300`}>
-                  <h2 className="text-xl font-semibold">README</h2>
-                </div>
-                
-                <div className={`p-6 markdown-content whitespace-pre-wrap ${themeClasses.readmeContent} transition-colors duration-300`}>
-                  {readme.content}
+              <div className={`${themeClasses.card} p-6 rounded-lg mt-6`}>
+                <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>README</h2>
+                <div className="prose dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {readme.content}
+                  </ReactMarkdown>
                 </div>
               </div>
             )}

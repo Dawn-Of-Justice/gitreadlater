@@ -48,6 +48,18 @@ function App() {
     checkSession();
   }, []);
 
+  useEffect(() => {
+    // Reset initialization flag when app loads
+    if (localStorage.getItem('subscription_init_attempted')) {
+      // Only clear it if we've actually logged in
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          localStorage.removeItem('subscription_init_attempted');
+        }
+      });
+    }
+  }, []);
+
   // Protected route component
   const ProtectedRoute = ({ children }) => {
     if (loading) {
