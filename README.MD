@@ -1,120 +1,209 @@
-"Read Later" Service for GitHub Repositories:
+# GitHub ReadLater
 
-Problem: Developers often star interesting GitHub repositories but forget why or lose track of them. It's not easy to categorize or add notes to starred repos directly.
-Idea: A web app or browser extension that lets you "save" GitHub repos (similar to Pocket/Instapaper for articles). Allows adding tags, notes, and categorizing saved repos. Could potentially fetch READMEs or key stats for easier recall.
-Free Start Tech: Browser extension (HTML/CSS/JS) or Web App (React/Vue on Vercel/Netlify). Backend API using serverless functions or free tier hosting (Render/Fly.io). Supabase/Firestore for storing user data, saved repos, tags, notes. GitHub API for fetching repo details. Use GitHub auth for login.
-Monetization: Free tier with a limit on saved repos (e.g., 100) and basic tagging. Paid tier (~$3/month) for unlimited repos, advanced search, richer tagging, maybe automatic categorization suggestions, or integrations (e.g., send to Notion).
+GitHub ReadLater is a web application that allows developers to save, organize, and manage GitHub repositories for later reference. It's like Pocket or Instapaper, but specifically designed for GitHub repositories.
 
+## Features
 
-Roadmap to Develop the "Read Later" Service for GitHub Repositories
-Phase 1: Planning and Design
+- Save GitHub repositories with personal notes and tags
+- Import repositories directly from your GitHub stars
+- Search and filter saved repositories
+- View repository details including README content
+- Organize repositories with custom tags
+- Responsive design for desktop and mobile
 
-Objective: Establish the foundation for development by defining the technical stack, database schema, and API endpoints.
-Actions:
-Choose the frontend framework (React or Vue.js) and hosting platform (Vercel or Netlify).
-Select the backend approach (serverless functions or a small server on Render/Fly.io).
-Decide on the database (Supabase or Firestore).
-Design the database schema:
-Users: user_id, github_id, email, access_token
-Saved Repositories: saved_repo_id, user_id, repo_owner, repo_name, tags, notes, created_at, updated_at
-Tags (optional): tag_id, user_id, tag_name
+### Premium Features (Subscription)
 
+- Unlimited saved repositories (free tier limited to 100)
+- Advanced search with multiple filters and sorting options
+- Rich tagging system with nested tags
+- Automatic categorization suggestions
+- Export to third-party services (Notion, etc.)
 
-Define API endpoints:
-/api/save-repo (POST)
-/api/saved-repos (GET)
-/api/saved-repo/{id} (PUT, DELETE)
-/api/import-stars (GET)
+## Tech Stack
 
+- **Frontend**: React with Vite, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Authentication, Storage)
+- **Authentication**: GitHub OAuth
+- **API Integration**: GitHub REST API via Octokit
+- **Payments**: Stripe integration for subscription management
 
-Phase 2: Authentication Setup
+## Getting Started
 
-Objective: Implement secure user authentication using GitHub OAuth.
-Actions:
-Set up GitHub OAuth application to obtain client ID and secret.
-Implement login flow to redirect users to GitHub for authentication.
-Handle callback to exchange code for access token and store it securely.
-Use the access token for authenticated API requests to GitHub.
+### Prerequisites
 
+- Node.js (v16 or higher)
+- npm or yarn
+- A Supabase account (free tier available)
+- A GitHub OAuth application
+- A Stripe account (for subscription features)
 
-Phase 3: Backend Development
+### Setup
 
-Objective: Develop the backend APIs to manage saved repositories.
-Actions:
-Implement /api/save-repo to save a repository with tags and notes, fetching details from GitHub API.
-Create /api/saved-repos to list saved repositories with optional filters.
-Develop /api/saved-repo/{id} for updating and deleting saved repositories.
-Add /api/import-stars to import user's starred repositories from GitHub.
-Ensure all endpoints are secured and accessible only to authenticated users.
+1. Clone the repository:
 
+```bash
+git clone https://github.com/your-username/github-readlater.git
+cd github-readlater
+```
 
-Phase 4: Frontend Development
+2. Install dependencies:
 
-Objective: Build a responsive and intuitive user interface.
-Actions:
-Create a login page using GitHub OAuth.
-Develop a dashboard to view saved repositories with search and filter options.
-Implement a form to save new repositories by URL or import from GitHub stars.
-Design a repository detail page to view and edit tags, notes, and fetched details.
-Ensure the frontend is mobile-friendly and hosted on Vercel or Netlify.
+```bash
+npm install
+```
 
+3. Create a `.env` file based on `.env.example`:
 
-Phase 5: GitHub API Integration
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_GITHUB_CLIENT_ID=your_github_client_id
+VITE_REDIRECT_URL=http://localhost:5173/auth/callback
+VITE_STRIPE_PRICE_ID=your_stripe_price_id
+VITE_API_URL=http://localhost:3000
+```
 
-Objective: Seamlessly integrate with the GitHub API to fetch repository details.
-Actions:
-Use GET /repos/{owner}/{repo} to fetch repository details.
-Optionally fetch GET /repos/{owner}/{repo}/readme for README content.
-Implement caching for frequently accessed data to handle rate limits.
-Add retry logic for API errors and rate limit handling.
+4. Set up Supabase:
+   - Create a new project in Supabase
+   - Run the SQL commands from `supabase-schema.sql` and `subscription-schema.sql` in the SQL Editor
+   - Set up GitHub OAuth in the Authentication settings
 
+5. Set up Stripe (for subscription features):
+   - Create a Stripe account and product with a monthly subscription price
+   - Add your Stripe price ID to the `.env` file
+   - Configure the webhook endpoint (see Server Setup below)
 
-Phase 6: Testing
+6. Start the development server:
 
-Objective: Ensure the service functions correctly and handles edge cases.
-Actions:
-Write unit tests for backend API endpoints.
-Develop integration tests for frontend components.
-Test authentication flow and GitHub API integration.
-Validate data storage and retrieval in the database.
-Check for performance issues and optimize as necessary.
+```bash
+npm run dev
+```
 
+7. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-Phase 7: Deployment
+### Server Setup (for Stripe integration)
 
-Objective: Launch the service on chosen hosting platforms.
-Actions:
-Deploy the frontend to Vercel or Netlify.
-Deploy the backend to AWS Lambda, Render, or Fly.io.
-Set up a CI/CD pipeline using GitHub Actions for automated testing and deployment.
-Configure environment variables for production settings.
-Ensure the database is properly connected and secured.
+1. Navigate to the server directory:
 
+```bash
+cd server
+```
 
-Phase 8: Maintenance and Iteration
+2. Install server dependencies:
 
-Objective: Monitor the service, handle updates, and improve based on user feedback.
-Actions:
-Set up monitoring tools to track performance and errors.
-Regularly review GitHub API changes and update the service accordingly.
-Collect user feedback to identify areas for improvement.
-Implement new features or enhancements based on user needs.
-Manage the monetization strategy, ensuring the paid tier offers value.
+```bash
+npm install
+```
 
+3. Create a `.env` file based on `.env.example` in the server directory:
 
-Monetization Implementation
+```
+# Stripe API Keys
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
-Free Tier: Limit to 100 saved repositories, basic tagging, and simple search.
-Paid Tier: Offer unlimited repositories, advanced search, richer tagging, automatic categorization, and integrations (e.g., Notion) for ~$3/month.
-Payment Processing: Use Stripe for subscription management and secure payments.
+# Supabase API Keys
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-Potential Challenges and Mitigation
+# Server
+PORT=3000
+```
 
-GitHub API Rate Limits: Implement caching and rate limit handling to avoid disruptions.
-Data Storage Costs: Optimize data storage by deciding what to cache and when.
-User Adoption: Highlight unique features like tagging and notes to attract users.
-Monetization Success: Continuously evaluate and adjust the paid tier based on user feedback.
-Maintenance: Stay proactive with updates and compatibility checks.
+4. Start the server:
 
-Conclusion
-This roadmap provides a clear, step-by-step guide to developing the "Read Later" service for GitHub repositories. By following these phases, the service can be built efficiently, ensuring a robust and user-friendly tool for developers.
+```bash
+npm start
+```
+
+For detailed server setup instructions, see the [server README](./server/README.md).
+
+## Supabase Setup
+
+1. Create a new project in Supabase
+2. Go to the SQL Editor and run the SQL commands from:
+   - `supabase-schema.sql` (core tables)
+   - `subscription-schema.sql` (subscription tables)
+3. Set up GitHub OAuth in Authentication > Providers:
+   - Enable GitHub provider
+   - Add your GitHub OAuth client ID and secret
+   - Set callback URL to `http://localhost:5173/auth/callback` (for local development)
+
+## GitHub OAuth Setup
+
+1. Go to GitHub Settings > Developer settings > OAuth Apps > New OAuth App
+2. Fill in the details:
+   - Application name: GitHub ReadLater (or your preferred name)
+   - Homepage URL: http://localhost:5173 (for local development)
+   - Authorization callback URL: https://[your-supabase-project].supabase.co/auth/v1/callback
+3. Register the application
+4. Copy the Client ID and Client Secret to your Supabase project
+
+## Stripe Setup
+
+1. Create a Stripe account at [stripe.com](https://stripe.com)
+2. In the Stripe Dashboard, create a product and price:
+   - Go to Products > Create Product
+   - Set the product name (e.g., "GitHub ReadLater Premium")
+   - Add a price (e.g., $3/month)
+   - Copy the Price ID (starts with "price_") to your frontend `.env` file
+3. Get your API keys from Developers > API keys
+4. Set up webhook for subscription lifecycle events:
+   - Go to Developers > Webhooks > Add endpoint
+   - Set the endpoint URL to your server's webhook endpoint
+   - Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Get the Webhook Secret for your server's `.env` file
+
+## Deployment
+
+### Frontend (Vercel/Netlify)
+
+1. Push your code to a GitHub repository
+2. Import your repository in Vercel or Netlify
+3. Set environment variables in your hosting platform
+4. Deploy!
+
+### Backend Server (for Stripe integration)
+
+The backend server can be deployed to Vercel, Heroku, or any Node.js hosting platform.
+
+For Vercel:
+1. Add a `vercel.json` file to the server directory
+2. Deploy with the Vercel CLI
+
+For Heroku:
+1. Create a new Heroku app
+2. Set environment variables in the Heroku dashboard
+3. Deploy using the Heroku CLI or GitHub integration
+
+## Project Structure
+
+```
+github-readlater/
+├── public/                # Static assets
+├── server/                # Backend server for Stripe integration
+├── src/
+│   ├── components/        # Reusable React components
+│   ├── lib/               # Utility functions and API clients
+│   ├── pages/             # Page components
+│   ├── services/          # Service modules for API interactions
+│   ├── App.jsx            # Main application component
+│   ├── index.css          # Global styles
+│   └── main.jsx           # Entry point
+├── .env.example           # Example environment variables
+├── subscription-schema.sql # SQL for subscription tables
+├── supabase-schema.sql    # SQL for core tables
+└── README.md              # Project documentation
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- GitHub API for providing access to repository data
+- Supabase for the excellent backend services
+- React and Vite for the frontend framework
+- Tailwind CSS for the styling
+- Stripe for the subscription payment system
