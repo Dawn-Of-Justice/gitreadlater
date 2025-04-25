@@ -20,7 +20,6 @@ export const TIER_PRICES = {
 
 // Premium features
 export const PREMIUM_FEATURES = [
-  'Unlimited saved repositories',
   'Advanced search with filters',
   'Rich tagging system with nested tags',
   'Automatic categorization suggestions',

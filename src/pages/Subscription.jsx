@@ -20,6 +20,9 @@ const Subscription = () => {
   const [userTier, setUserTier] = useState(TIERS.FREE);
   const [repoCount, setRepoCount] = useState(0);
   const [error, setError] = useState(null);
+  const [email, setEmail] = useState('');
+  const [notified, setNotified] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
   
   // Get theme from context
   const { darkMode, themeClasses } = useTheme();
@@ -116,6 +119,31 @@ const Subscription = () => {
       setProcessingPayment(false);
     }
   };
+
+  const handleNotifyMe = async (e) => {
+    e.preventDefault();
+    
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    
+    try {
+      setNotifyLoading(true);
+      
+      // Here you would typically send this to your backend
+      // For now, we'll just simulate a successful API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setNotified(true);
+      setError(null);
+    } catch (err) {
+      console.error('Error signing up for notifications:', err);
+      setError('Failed to sign up for notifications. Please try again.');
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
   
   return (
     <div className={`${themeClasses.body} min-h-screen transition-colors duration-300`}>
@@ -193,24 +221,17 @@ const Subscription = () => {
               
               {userTier === TIERS.FREE && (
                 <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} pt-6 transition-colors duration-300`}>
-                  <h3 className="text-lg font-semibold mb-4">Upgrade to Premium</h3>
+                  <h3 className="text-lg font-semibold mb-4">Premium Plan Coming Soon</h3>
                   
                   <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'} transition-colors duration-300`}>
-                    Upgrade to our Premium plan for unlimited repositories and more advanced features.
+                    We're working on our Premium plan with unlimited repositories and advanced features. Stay tuned!
                   </p>
                   
                   <button
-                    onClick={handleSubscribe}
-                    disabled={processingPayment}
-                    className={`${themeClasses.button} px-6 py-3 rounded-md flex items-center transition-colors duration-300`}
+                    onClick={() => document.getElementById('notify-me-form').scrollIntoView({ behavior: 'smooth' })}
+                    className={`${themeClasses.secondaryButton} px-6 py-3 rounded-md flex items-center transition-colors duration-300`}
                   >
-                    {processingPayment ? (
-                      <FaSpinner className="animate-spin mr-2" />
-                    ) : (
-                      <>
-                        Subscribe Now <FaArrowRight className="ml-2" />
-                      </>
-                    )}
+                    Get notified when available <FaArrowRight className="ml-2" />
                   </button>
                 </div>
               )}
@@ -254,6 +275,9 @@ const Subscription = () => {
                   {userTier === TIERS.FREE ? (
                     <div className="mt-6">
                       <p className="text-blue-500 font-semibold">Current Plan</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        The Premium plan is coming soon. Get notified when it's available!
+                      </p>
                     </div>
                   ) : (
                     <div className="mt-6">
@@ -269,9 +293,12 @@ const Subscription = () => {
                 </div>
               </div>
               
-              <div className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${userTier === TIERS.PREMIUM ? `border-2 ${themeClasses.cardHighlight}` : ''} transition-colors duration-300`}>
+              <div className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden transition-colors duration-300`}>
                 <div className={`${themeClasses.premiumHeader} px-6 py-4 border-b transition-colors duration-300`}>
-                  <h3 className="text-xl font-semibold">Premium Plan</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xl font-semibold">Premium Plan</h3>
+                    <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full font-semibold">Coming Soon</span>
+                  </div>
                   <p className="text-gray-200">${TIER_PRICES[TIERS.PREMIUM]} / month</p>
                 </div>
                 
@@ -293,25 +320,41 @@ const Subscription = () => {
                     ))}
                   </ul>
                   
-                  {userTier === TIERS.PREMIUM ? (
-                    <div className="mt-6">
-                      <p className="text-blue-500 font-semibold">Current Plan</p>
-                    </div>
-                  ) : (
-                    <div className="mt-6">
-                      <button
-                        onClick={handleSubscribe}
-                        disabled={processingPayment}
-                        className={`${themeClasses.button} w-full px-4 py-2 rounded-md transition-colors duration-300`}
-                      >
-                        {processingPayment ? (
-                          <FaSpinner className="animate-spin mr-2" />
-                        ) : (
-                          'Upgrade to Premium'
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  <div className="mt-6 border-t pt-6">
+                    <h4 className="font-semibold mb-3">Get notified when Premium is available</h4>
+                    
+                    {notified ? (
+                      <div className={`${themeClasses.infoBanner} p-4 rounded-md`}>
+                        <p>Thank you! We'll notify you when Premium is ready.</p>
+                      </div>
+                    ) : (
+                      <form id="notify-me-form" onSubmit={handleNotifyMe} className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Your email address"
+                          className={`${themeClasses.input} flex-grow px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                          required
+                        />
+                        <button
+                          type="submit"
+                          disabled={notifyLoading}
+                          className={`${themeClasses.button} px-4 py-2 rounded-md transition-colors duration-300`}
+                        >
+                          {notifyLoading ? (
+                            <FaSpinner className="animate-spin mx-auto" />
+                          ) : (
+                            'Notify Me'
+                          )}
+                        </button>
+                      </form>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 mt-2">
+                      We'll only email you about Premium availability. No spam.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
