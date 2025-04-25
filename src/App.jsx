@@ -118,7 +118,7 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       

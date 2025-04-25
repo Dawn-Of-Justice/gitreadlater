@@ -72,40 +72,49 @@ const RepositoryDetails = () => {
       try {
         setLoading(true);
         
-        // Get repository from Supabase
-        const { data, error } = await supabase
-          .from('saved_repositories')
+        // Try to fetch from both repository tables
+        let repoData = null;
+        
+        // Try main repositories table first
+        const { data: mainRepo, error: mainError } = await supabase
+          .from('repositories')
           .select('*')
           .eq('id', id)
           .single();
-        
-        if (error) throw error;
-        
-        if (data) {
-          setRepository(data);
-          setNotes(data.notes || '');
-          setTags(data.tags || []);
           
-          // Try to get README
-          try {
-            const readmeContent = await getReadmeContent(data.repo_owner, data.repo_name);
-            setReadme(readmeContent);
-          } catch (readmeError) {
-            console.log('No README found or error fetching README');
+        if (!mainError && mainRepo) {
+          repoData = mainRepo;
+        } else {
+          // Try saved_repositories table
+          const { data: savedRepo, error: savedError } = await supabase
+            .from('saved_repositories')
+            .select('*')
+            .eq('id', id)
+            .single();
+            
+          if (!savedError && savedRepo) {
+            repoData = savedRepo;
           }
         }
         
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching repository:', err);
-        setError('Failed to load repository. It may have been deleted or there was a network issue.');
+        if (repoData) {
+          setRepository(repoData);
+        } else {
+          // Repository not found - redirect to dashboard
+          console.log('Repository not found, redirecting to dashboard');
+          navigate('/', { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching repository:', error);
+        setError('Error loading repository details');
       } finally {
         setLoading(false);
       }
     };
     
     fetchRepository();
-  }, [id]);
+  }, [id, navigate]);
   
   // Handle save changes
   const handleSaveChanges = async () => {
@@ -142,6 +151,33 @@ const RepositoryDetails = () => {
       console.error('Error deleting repository:', err);
       setError('Failed to delete repository. Please try again.');
       setConfirming(false);
+    }
+  };
+
+  // In your RepositoryDetails.jsx or wherever you handle deletion
+  const handleDelete = async () => {
+    setDeleting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('repositories')
+        .delete()
+        .eq('id', repo.id);
+        
+      if (error) throw error;
+      
+      // Show success toast if you have toast notifications
+      if (typeof toast !== 'undefined') {
+        toast.success('Repository deleted successfully');
+      }
+      
+      // Redirect to dashboard immediately after successful deletion
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Error deleting repository:', error);
+      setError('Failed to delete repository. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
   
