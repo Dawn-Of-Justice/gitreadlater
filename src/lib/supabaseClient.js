@@ -30,22 +30,23 @@ export const getCurrentUser = async () => {
   return session.user;
 };
 
-// Helper for GitHub OAuth authentication
+// Update your GitHub sign-in function to request the repo scope
 export const signInWithGitHub = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'github',
-    options: {
-      redirectTo: import.meta.env.VITE_REDIRECT_URL,
-      scopes: 'read:user user:email read:org',
-    }
-  });
-  
-  if (error) {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: 'read:user repo', // Add 'repo' scope to access private repositories
+      }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
     console.error('Error signing in with GitHub:', error);
     throw error;
   }
-  
-  return data;
 };
 
 // Sign out helper

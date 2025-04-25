@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaCrown, FaArrowRight } from 'react-icons/fa';
-import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryDetails } from '../services/githubService';
+import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryDetails, getUserRepositories } from '../services/githubService';
 import { saveRepository, getUserTags } from '../services/repositoryService';
 import { getUserRepositoryCount, getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
@@ -48,6 +48,11 @@ const SaveRepository = () => {
   // State for previously used tags
   const [previousTags, setPreviousTags] = useState([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  
+  // New states for user repositories
+  const [userRepositories, setUserRepositories] = useState([]);
+  const [showUserRepos, setShowUserRepos] = useState(false);
+  const [loadingUserRepos, setLoadingUserRepos] = useState(false);
   
   // Check subscription status on load
   useEffect(() => {
@@ -286,6 +291,33 @@ const SaveRepository = () => {
   const repoLimit = REPOSITORY_LIMITS[userTier];
   const isAtLimit = !canSave;
   
+  // Load user repositories
+  const loadUserRepositories = async () => {
+    try {
+      setLoadingUserRepos(true);
+      const repos = await getUserRepositories();
+      setUserRepositories(repos);
+    } catch (error) {
+      console.error('Error loading user repositories:', error);
+      setError('Failed to load your repositories. Please try again.');
+    } finally {
+      setLoadingUserRepos(false);
+    }
+  };
+
+  // Handle selecting a user repository
+  const selectUserRepo = (repo) => {
+    setUrl(repo.html_url);
+    setRepoPreview({
+      name: repo.name,
+      owner: repo.owner.login,
+      description: repo.description,
+      language: repo.language,
+      stars: repo.stargazers_count
+    });
+    setShowUserRepos(false);
+  };
+
   // If user is at limit, show upgrade notice
   if (isAtLimit) {
     return (
@@ -431,6 +463,23 @@ const SaveRepository = () => {
                   )}
                   <span>Starred</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadUserRepositories();
+                    setShowUserRepos(!showUserRepos);
+                  }}
+                  disabled={loadingUserRepos}
+                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center space-x-1 transition-colors duration-300`}
+                >
+                  {loadingUserRepos ? (
+                    <FaSpinner className="animate-spin mr-1" />
+                  ) : (
+                    <FaGithub className="mr-1" />
+                  )}
+                  <span>My Repositories</span>
+                </button>
               </div>
             </div>
             
@@ -513,6 +562,50 @@ const SaveRepository = () => {
                       </li>
                     ))}
                   </ul>
+                )}
+              </div>
+            )}
+
+            {/* User Repositories List */}
+            {showUserRepos && (
+              <div className={`mt-4 p-4 rounded-md border ${themeClasses.card}`}>
+                <h3 className="font-medium mb-2">Your Repositories</h3>
+                {userRepositories.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto">
+                    {userRepositories.map(repo => (
+                      <div 
+                        key={repo.id} 
+                        onClick={() => selectUserRepo(repo)}
+                        className={`flex items-center p-2 cursor-pointer rounded-md ${themeClasses.starredItem}`}
+                      >
+                        <div className="flex-grow">
+                          <p className="font-medium">{repo.full_name}</p>
+                          <p className="text-sm text-gray-500 truncate">{repo.description || 'No description'}</p>
+                          <div className="flex items-center mt-1 space-x-3 text-xs">
+                            {repo.private && (
+                              <span className="flex items-center">
+                                <FaLock className="mr-1" />
+                                Private
+                              </span>
+                            )}
+                            {repo.language && (
+                              <span className="flex items-center">
+                                <FaCircle className="mr-1" style={{ color: 'blue', fontSize: '8px' }} />
+                                {repo.language}
+                              </span>
+                            )}
+                            <span className="flex items-center">
+                              <FaStar className="mr-1 text-yellow-500" />
+                              {repo.stargazers_count}
+                            </span>
+                          </div>
+                        </div>
+                        <FaArrowRight className="text-gray-400" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No repositories found.</p>
                 )}
               </div>
             )}

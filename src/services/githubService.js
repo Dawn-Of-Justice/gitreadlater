@@ -21,14 +21,29 @@ const createOctokit = async () => {
 // Get a repository's details
 export const getRepositoryDetails = async (owner, repo) => {
   try {
-    const octokit = await createOctokit();
+    // Get GitHub token from Supabase auth
+    const { data: { session } } = await supabase.auth.getSession();
+    const githubToken = session?.provider_token;
     
-    const { data } = await octokit.repos.get({
-      owner,
-      repo,
+    // Set up headers with authorization if token exists
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+    };
+    
+    if (githubToken) {
+      headers['Authorization'] = `Bearer ${githubToken}`;
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers
     });
-    
-    return data;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch repository details');
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Error fetching repository details:', error);
     throw error;
@@ -79,14 +94,30 @@ export const parseGitHubUrl = (url) => {
 // Search repositories (needed for SaveRepository.jsx)
 export const searchRepositories = async (query) => {
   try {
-    const octokit = await createOctokit();
+    // Get GitHub token
+    const { data: { session } } = await supabase.auth.getSession();
+    const githubToken = session?.provider_token;
     
-    const { data } = await octokit.search.repos({
-      q: query,
-      per_page: 10,
+    // Set up headers with authorization
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+    };
+    
+    if (githubToken) {
+      headers['Authorization'] = `Bearer ${githubToken}`;
+    }
+
+    const response = await fetch(`https://api.github.com/search/repositories?q=${query}`, {
+      headers
     });
-    
-    return data.items;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to search repositories');
+    }
+
+    const data = await response.json();
+    return data.items || [];
   } catch (error) {
     console.error('Error searching repositories:', error);
     throw error;
@@ -135,6 +166,42 @@ export const getReadmeContent = async (owner, repo) => {
     };
   } catch (error) {
     console.error('Error fetching README:', error);
+    throw error;
+  }
+};
+
+// Add a new function to get user's repositories (both public and private)
+export const getUserRepositories = async () => {
+  try {
+    // Get GitHub token and user info
+    const { data: { session } } = await supabase.auth.getSession();
+    const githubToken = session?.provider_token;
+    const username = session?.user?.user_metadata?.preferred_username;
+    
+    if (!githubToken || !username) {
+      throw new Error('GitHub authentication required');
+    }
+    
+    // Set up headers with authorization
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `Bearer ${githubToken}`
+    };
+
+    // Get all repositories, including private ones (100 per page)
+    const response = await fetch(
+      `https://api.github.com/user/repos?per_page=100&sort=updated`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch user repositories');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching user repositories:', error);
     throw error;
   }
 };
