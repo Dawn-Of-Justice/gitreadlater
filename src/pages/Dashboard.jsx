@@ -1,243 +1,236 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark } from 'react-icons/fa';
-import { getSavedRepositories, getUserTags } from '../services/repositoryService';
+import { getSavedRepositories, getUserTags, checkRepositoriesTableExists } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/ThemeContext'; // Make sure this import is added
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
-import { initializeUserSubscription } from '../services/subscriptionService';
 
 const Dashboard = () => {
-  const { userSubscription, repoCount, loading } = useSubscription();
-  const [repositories, setRepositories] = useState([]);
-  const [repoLoading, setRepoLoading] = useState(true);
-  const fetchedRef = useRef(false);
-  
-  useEffect(() => {
-    // Only fetch repositories once
-    if (fetchedRef.current) return;
-    
-    const fetchRepositories = async () => {
-      try {
-        fetchedRef.current = true;
-        setRepoLoading(true);
-        
-        // Check if table exists before querying
-        const tableExists = await checkRepositoriesTableExists();
-        if (!tableExists) {
-          setRepositories([]);
-          setRepoLoading(false);
-          return;
-        }
-        
-        // Fetch repositories
-        const { data, error } = await supabase
-          .from('repositories')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        setRepositories(data || []);
-      } catch (error) {
-        console.error('Error fetching repositories:', error);
-      } finally {
-        setRepoLoading(false);
-      }
-    };
-    
-    fetchRepositories();
-  }, []);
-  
   const navigate = useNavigate();
-  const [tags, setTags] = useState([]);
-  const [error, setError] = useState(null);
-  const [userTier, setUserTier] = useState(TIERS.FREE);
-  const [tableExists, setTableExists] = useState(true);
-  const fetchAttempts = useRef(0);
-  const maxFetchAttempts = 3;
+  const { darkMode, themeClasses } = useTheme();
+  const { userSubscription, repoCount, loading: subscriptionLoading } = useSubscription();
   
-  // Filter states
+  // State
+  const [repositories, setRepositories] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
+  const [tableExists, setTableExists] = useState(null); // null = unknown, true/false after check
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   
-  // Get theme from context instead of managing locally
-  const { darkMode, themeClasses } = useTheme();
-  
-  // Get cache from context
+  // Refs for tracking fetch status
+  const fetchAttemptedRef = useRef(false);
+  const userCheckedRef = useRef(false);
+
+  // Cache
   const { 
     repositories: cachedRepositories, 
     setRepositories: setCachedRepositories,
     tags: cachedTags,
-    setTags: setCachedTags,
-    userSubscription: cachedSubscription,
-    setUserSubscription: setCachedSubscription,
-    invalidateRepositories 
+    setTags: setCachedTags
   } = useCache();
-  
-  const initUserSubscription = async (userId) => {
-    try {
-      // Import the function from your service
-      await initializeUserSubscription(userId);
-    } catch (error) {
-      console.error('Error initializing subscription:', error);
-      // Continue anyway
-    }
-  };
 
+  // Set up user tier from subscription
+  const userTier = userSubscription?.tier || TIERS.FREE;
+
+  // Main effect for initial loading - runs once on component mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setRepoLoading(true);
-        
-        // Check if user subscription exists, if not initialize it
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user?.id) {
-            await initUserSubscription(session.user.id);
-          }
-        } catch (subError) {
-          console.error('Subscription initialization error:', subError);
-          // Continue anyway - don't block the rest of the loading
-        }
-        
-        // Rest of your loading code
-        const tier = await getUserTier();
-        setUserTier(tier);
-        
-        const repoData = await getSavedRepositories(
-          { tag: selectedTag, search: searchQuery },
-          cachedRepositories,
-          setCachedRepositories
-        );
-        setRepositories(repoData);
-        
-        // Continue with rest of your function...
-        
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load your saved repositories. Please try again.');
-      } finally {
-        setRepoLoading(false);
-      }
-    };
+    if (fetchAttemptedRef.current) return;
     
-    fetchData();
-    // Only re-run when these values actually change, not when cached objects reference changes
-  }, [searchQuery, selectedTag]);
-
-  // Add a check to prevent repeated calls
-
-  // In your useEffect or data fetching logic
-  useEffect(() => {
-    let isMounted = true;
-    const fetchRepositories = async () => {
+    const checkUserAndFetch = async () => {
       try {
-        // Don't try again if we've already determined the table doesn't exist
-        if (!tableExists) return;
-        
-        // Limit the number of fetch attempts
-        if (fetchAttempts.current >= maxFetchAttempts) {
-          console.log('Maximum fetch attempts reached, stopping retries');
-          if (isMounted) {
-            setRepoLoading(false);
-          }
+        // Check if user is logged in
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !session.user) {
+          setLoading(false);
+          navigate('/login');
           return;
         }
         
-        fetchAttempts.current += 1;
-        console.log(`Fetching repositories from database (attempt ${fetchAttempts.current})`);
-
-        // Add a delay for better UX and to prevent rapid retries
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const { data, error } = await supabase
-          .from('repositories')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          // Check for table not found error
-          if (error.code === '42P01') {
-            console.error('Repositories table does not exist:', error.message);
-            if (isMounted) {
-              setTableExists(false);
-              setRepositories([]);
-              setRepoLoading(false);
-            }
+        // Mark that we've checked the user status
+        userCheckedRef.current = true;
+        
+        // Check if repositories table exists - this determines if we're a new installation
+        const exists = await checkRepositoriesTableExists();
+        setTableExists(exists);
+        
+        if (!exists) {
+          console.log('Repositories table does not exist - new installation');
+          setIsFirstTimeUser(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Check for user's repositories - this determines if it's a first-time user
+        try {
+          const { data, count } = await supabase
+            .from('repositories')
+            .select('*', { count: 'exact', head: false })
+            .eq('user_id', session.user.id)
+            .limit(1);
+          
+          // If no repos, this is a first-time user or someone who deleted all repos
+          if (!data || data.length === 0) {
+            console.log('User has no repositories');
+            setRepositories([]);
+            setIsFirstTimeUser(true);
+            setLoading(false);
             return;
           }
           
-          throw error;
+          // If we get here, user has repositories, so fetch them all
+          const { data: allRepos, error: reposError } = await supabase
+            .from('repositories')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+            
+          if (reposError) throw reposError;
+          
+          setRepositories(allRepos || []);
+          
+          // Fetch tags if we have repositories
+          const userTags = await getUserTags();
+          setTags(userTags);
+          
+          setIsFirstTimeUser(false);
+        } catch (repoError) {
+          console.error('Error fetching user repositories:', repoError);
+          // If the error is about missing table, treat as first time user
+          if (repoError.code === '42P01') {
+            setIsFirstTimeUser(true);
+          } else {
+            setError('Error loading your repositories. Please refresh the page.');
+          }
         }
-
-        if (isMounted) {
-          setRepositories(data || []);
-          setRepoLoading(false);
-        }
-      } catch (error) {
-        console.error('Error fetching repositories:', error);
-        if (isMounted) {
-          setError('Failed to load repositories');
-          setRepoLoading(false);
-        }
+      } catch (err) {
+        console.error('Error in initial user check:', err);
+        setError('Failed to load your saved repositories. Please try refreshing the page.');
+      } finally {
+        fetchAttemptedRef.current = true;
+        setLoading(false);
       }
     };
 
-    fetchRepositories();
+    checkUserAndFetch();
+  }, [navigate]);
 
-    return () => {
-      isMounted = false;
+  // Effect for handling search and tag filters - only runs when filters change
+  useEffect(() => {
+    // Skip if we haven't done the initial load yet or user has no repositories
+    if (!fetchAttemptedRef.current || isFirstTimeUser) return;
+    
+    const fetchFilteredRepositories = async () => {
+      try {
+        setLoading(true);
+        
+        // Apply filters
+        let query = supabase
+          .from('repositories')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        // Add search filter if needed
+        if (searchQuery) {
+          query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        }
+        
+        // Add tag filter if needed
+        if (selectedTag) {
+          query = query.contains('tags', [selectedTag]);
+        }
+        
+        const { data, error: filterError } = await query;
+        
+        if (filterError) throw filterError;
+        
+        setRepositories(data || []);
+      } catch (err) {
+        console.error('Error filtering repositories:', err);
+        setError('Error applying filters. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [tableExists]); // Only depends on tableExists, not repositories
+    
+    fetchFilteredRepositories();
+  }, [searchQuery, selectedTag, isFirstTimeUser]);
 
-  // Rest of the component remains the same, but uses themeClasses from context
   const handleSearch = (e) => {
     e.preventDefault();
-    // The actual search is handled by the useEffect
+    // The state update triggers the filter useEffect
   };
   
   const handleTagClick = (tag) => {
     setSelectedTag(tag === selectedTag ? '' : tag);
   };
   
-  // Calculate repository limit
+  // Calculate repository limit details
   const repoLimit = REPOSITORY_LIMITS[userTier];
   const isNearLimit = userTier === TIERS.FREE && repoCount >= repoLimit * 0.8;
   const isAtLimit = userTier === TIERS.FREE && repoCount >= repoLimit;
-  
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
-  // No repositories state - either table doesn't exist or user has no repos
-  if (!repoLoading && repositories.length === 0) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center bg-white shadow rounded-lg p-6">
-          <h1 className="text-2xl font-bold mb-4">Welcome to ReadLater!</h1>
-          <p className="mb-6">You haven't saved any GitHub repositories yet.</p>
-          <Link
-            to="/save"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Save Your First Repository
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (repoLoading) {
+  // =======================================================================
+  // RENDERING LOGIC
+  // =======================================================================
+  
+  // Initial loading state
+  if (loading || subscriptionLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
-
+  
+  // Error state
+  if (error) {
+    return (
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
+        <div className={`${themeClasses.dangerBanner} p-6 rounded-lg`}>
+          <h2 className="text-xl font-bold mb-2">Error</h2>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // First time user or user with no repositories
+  if (isFirstTimeUser || repositories.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className={`text-center ${themeClasses.card} shadow rounded-lg p-8`}>
+          <h1 className="text-2xl font-bold mb-4">Welcome to ReadLater!</h1>
+          <p className="mb-6">You haven't saved any GitHub repositories yet.</p>
+          <Link
+            to="/save"
+            className={`${themeClasses.button} px-6 py-3 rounded-md inline-flex items-center space-x-2 text-white`}
+          >
+            <FaBookmark className="mr-2" />
+            <span>Save Your First Repository</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
+  // Main dashboard with repositories
   return (
     <div className={`min-h-screen ${themeClasses.body} transition-colors duration-300`}>
       <div className="container mx-auto px-6 py-8">
+        {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <h1 className="text-3xl font-bold mb-4 md:mb-0">My Saved Repositories</h1>
           
@@ -250,7 +243,7 @@ const Dashboard = () => {
           </Link>
         </div>
         
-        {/* Subscription status banner */}
+        {/* Subscription warnings */}
         {isNearLimit && (
           <div className={`mb-6 p-4 rounded-md ${isAtLimit ? themeClasses.dangerBanner : themeClasses.warningBanner} transition-colors duration-300`}>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -280,6 +273,7 @@ const Dashboard = () => {
           </div>
         )}
         
+        {/* Premium banner */}
         {userTier === TIERS.PREMIUM && (
           <div className={`mb-6 p-4 rounded-md ${themeClasses.infoBanner} transition-colors duration-300`}>
             <div className="flex items-center">
@@ -292,6 +286,7 @@ const Dashboard = () => {
           </div>
         )}
         
+        {/* Search and filter section */}
         <div className={`${themeClasses.card} rounded-lg shadow-md p-4 mb-8 transition-colors duration-300`}>
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
@@ -309,148 +304,118 @@ const Dashboard = () => {
             </div>
             
             {/* Tags filter */}
-            <div className="min-w-[200px]">
-              <div className="relative">
-                <select
-                  value={selectedTag}
-                  onChange={(e) => setSelectedTag(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none ${themeClasses.input} transition-colors duration-300`}
-                >
-                  <option value="">All Tags</option>
-                  {tags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-                <FaTags className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {!tableExists && (
-          <div className={themeClasses.infoBanner + " p-4 mb-4 rounded"}>
-            <h3 className="font-bold">Welcome to ReadLater!</h3>
-            <p>It looks like this is your first time here. Get started by saving your first GitHub repository.</p>
-            <div className="mt-3">
-              <Link to="/save" className={themeClasses.button + " px-4 py-2 rounded inline-block"}>
-                Save Your First Repository
-              </Link>
-            </div>
-          </div>
-        )}
-        
-        {repoLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : error ? (
-          <div className={`${themeClasses.dangerBanner} p-4 rounded-md transition-colors duration-300`}>
-            <p>{error}</p>
-          </div>
-        ) : repositories.length === 0 ? (
-          <div className={`${themeClasses.emptyState} p-8 rounded-lg text-center transition-colors duration-300`}>
-            <h2 className="text-xl font-semibold mb-2">No Repositories Found</h2>
-            {searchQuery || selectedTag ? (
-              <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>No repositories match your current filters. Try adjusting your search or tags.</p>
-            ) : (
-              <div>
-                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-4`}>You haven't saved any repositories yet.</p>
-                <Link to="/save" className={`${themeClasses.button} px-4 py-2 rounded-md transition-colors duration-300 ${isAtLimit ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={(e) => isAtLimit && e.preventDefault()}>
-                  Save Your First Repository
-                </Link>
+            {tags.length > 0 && (
+              <div className="min-w-[200px]">
+                <div className="relative">
+                  <select
+                    value={selectedTag}
+                    onChange={(e) => setSelectedTag(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none ${themeClasses.input} transition-colors duration-300`}
+                  >
+                    <option value="">All Tags</option>
+                    {tags.map((tag) => (
+                      <option key={tag} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </select>
+                  <FaTags className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {repositories.map((repo) => (
-              <div 
-                key={repo.id} 
-                className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer`}
-                onClick={() => navigate(`/repository/${repo.id}`)}
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <h2 className="text-xl font-semibold">
-                      <span className={`hover:text-blue-500 transition-colors duration-300`}>
-                        {repo.repo_name}
-                      </span>
-                    </h2>
-                    
-                    <div className="flex items-center space-x-1 text-sm">
-                      <FaStar className="text-yellow-500" />
-                      <span>{repo.stars || 0}</span>
-                    </div>
-                  </div>
+        </div>
+        
+        {/* Repository cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {repositories.map((repo) => (
+            <div 
+              key={repo.id} 
+              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer`}
+              onClick={() => navigate(`/repository/${repo.id}`)}
+            >
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-3">
+                  <h2 className="text-xl font-semibold">
+                    <span className={`hover:text-blue-500 transition-colors duration-300`}>
+                      {repo.repo_name || repo.name}
+                    </span>
+                  </h2>
                   
-                  <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-3 transition-colors duration-300`}>
-                    {repo.repo_owner}/{repo.repo_name}
-                  </p>
-                  
-                  {repo.description && (
-                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 line-clamp-2 transition-colors duration-300`}>
-                      {repo.description}
-                    </p>
-                  )}
-                  
-                  {repo.language && (
-                    <div className="flex items-center space-x-1 text-sm text-gray-600 mb-3">
-                      <FaCircle className="text-blue-500" style={{ fontSize: '10px' }} />
-                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                        {repo.language}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {repo.tags && repo.tags.length > 0 && (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {repo.tags.map((tag) => (
-                        <span 
-                          key={tag} 
-                          onClick={() => handleTagClick(tag)}
-                          className={`px-2 py-1 text-xs rounded-full cursor-pointer transition-colors duration-300 ${
-                            selectedTag === tag 
-                              ? themeClasses.tagSelected
-                              : themeClasses.tag
-                          }`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {repo.notes && (
-                    <div className="mb-4">
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} italic line-clamp-2 transition-colors duration-300`}>
-                        {repo.notes}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between items-center mt-4">
-                    <div className="invisible">
-                      {/* Placeholder for flex layout balance */}
-                    </div>
-                    
-                    <a 
-                      href={repo.repo_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className={`text-sm flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'} transition-colors duration-300`}
-                      onClick={(e) => e.stopPropagation()} // Prevent the card click event from triggering
-                    >
-                      <span>GitHub</span>
-                      <FaExternalLinkAlt className="text-xs ml-1" />
-                    </a>
+                  <div className="flex items-center space-x-1 text-sm">
+                    <FaStar className="text-yellow-500" />
+                    <span>{repo.stars || 0}</span>
                   </div>
                 </div>
+                
+                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-3 transition-colors duration-300`}>
+                  {repo.repo_owner || repo.owner}/{repo.repo_name || repo.name}
+                </p>
+                
+                {repo.description && (
+                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 line-clamp-2 transition-colors duration-300`}>
+                    {repo.description}
+                  </p>
+                )}
+                
+                {repo.language && (
+                  <div className="flex items-center space-x-1 text-sm text-gray-600 mb-3">
+                    <FaCircle className="text-blue-500" style={{ fontSize: '10px' }} />
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                      {repo.language}
+                    </span>
+                  </div>
+                )}
+                
+                {repo.tags && repo.tags.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {repo.tags.map((tag) => (
+                      <span 
+                        key={tag} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTagClick(tag);
+                        }}
+                        className={`px-2 py-1 text-xs rounded-full cursor-pointer transition-colors duration-300 ${
+                          selectedTag === tag 
+                            ? themeClasses.tagSelected
+                            : themeClasses.tag
+                        }`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {repo.notes && (
+                  <div className="mb-4">
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} italic line-clamp-2 transition-colors duration-300`}>
+                      {repo.notes}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center mt-4">
+                  <div className="invisible">
+                    {/* Placeholder for flex layout balance */}
+                  </div>
+                  
+                  <a 
+                    href={repo.repo_url || repo.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`text-sm flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'} transition-colors duration-300`}
+                    onClick={(e) => e.stopPropagation()} // Prevent the card click event from triggering
+                  >
+                    <span>GitHub</span>
+                    <FaExternalLinkAlt className="text-xs ml-1" />
+                  </a>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
