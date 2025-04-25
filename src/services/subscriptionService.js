@@ -43,6 +43,7 @@ const THROTTLE_MS = 2000; // Only check once every 2 seconds
 
 // Get user's subscription tier with caching
 export const getUserTier = async (cachedSubscription = null, setUserSubscription = null) => {
+  console.log('getUserTier called from:', new Error().stack.split('\n')[2]);
   try {
     // Use cached subscription if available
     if (cachedSubscription) {
