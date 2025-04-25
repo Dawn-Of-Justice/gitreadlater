@@ -162,19 +162,35 @@ export const SubscriptionProvider = ({ children }) => {
   const [userSubscription, setUserSubscription] = useState(null);
   const [repoCount, setRepoCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [attemptedInitialization, setAttemptedInitialization] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const fetchSubscriptionData = async () => {
+      if (attemptedInitialization) {
+        console.log('Already attempted initialization, skipping');
+        return;
+      }
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session && isMounted) {
+          setAttemptedInitialization(true); // Mark that we've tried
           const tier = await getUserTier(userSubscription, setUserSubscription);
-          const count = await getUserRepositoryCount();
           
-          if (isMounted) {
-            setRepoCount(count);
+          // Handle missing repositories table
+          try {
+            const count = await getUserRepositoryCount();
+            if (isMounted) {
+              setRepoCount(count);
+            }
+          } catch (repoError) {
+            console.error('Error fetching repository count:', repoError);
+            // If table doesn't exist, just set count to 0
+            if (isMounted) {
+              setRepoCount(0);
+            }
           }
         }
       } catch (error) {
@@ -206,7 +222,7 @@ export const SubscriptionProvider = ({ children }) => {
         authListener.subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [attemptedInitialization]);
 
   return (
     <SubscriptionContext.Provider

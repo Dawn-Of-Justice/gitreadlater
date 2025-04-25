@@ -142,31 +142,31 @@ export const isPremiumUser = async () => {
 };
 
 // Get repository count with caching
-export const getUserRepositoryCount = async (cachedRepos = []) => {
+export const getUserRepositoryCount = async () => {
   try {
-    // If we have cached repositories, use the count from there
-    if (cachedRepos.length > 0) {
-      console.log('Using cached repository count');
-      return cachedRepos.length;
-    }
-    
     console.log('Fetching repository count from database');
     const { data: { session } } = await supabase.auth.getSession();
     
-    if (!session) {
-      return 0;
-    }
+    if (!session) return 0;
     
     const { count, error } = await supabase
-      .from('saved_repositories')
+      .from('repositories')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', session.user.id);
     
-    if (error) throw error;
+    if (error) {
+      // Check if the error is about the missing table
+      if (error.code === '42P01') {
+        console.log('Repositories table does not exist yet');
+        return 0; // Return 0 if table doesn't exist
+      }
+      console.error('Error counting repositories:', error);
+      return 0;
+    }
     
     return count || 0;
   } catch (error) {
-    console.error('Error getting repository count:', error);
+    console.error('Error in getUserRepositoryCount:', error);
     return 0;
   }
 };

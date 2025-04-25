@@ -2,13 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services.subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
 import { initializeUserSubscription } from '../services/subscriptionService';
-
-
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -18,6 +16,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [userTier, setUserTier] = useState(TIERS.FREE);
   const [repoCount, setRepoCount] = useState(0);
+  const [tableExists, setTableExists] = useState(true);
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,21 +102,21 @@ const Dashboard = () => {
           .select('*')
           .order('created_at', { ascending: false });
         
-        if (error) throw error;
-        
-        if (isMounted) {
-          setRepositories(repos || []);
-          // Only poll if there are no repositories and we haven't reached the polling limit
-          if ((repos?.length === 0) && pollCount < MAX_POLLS) {
-            setPollCount(prev => prev + 1);
-            pollingTimeout = setTimeout(fetchRepositories, 10000); // Poll every 10 seconds
-          } else {
-            // Stop polling once we have repos or reached limit
-            clearTimeout(pollingTimeout);
+        if (error) {
+          // Check if error is about missing table
+          if (error.code === '42P01') {
+            setRepositories([]);
+            setTableExists(false);
+            return; // Early return - don't try to fetch again
           }
+          throw error;
         }
+        
+        setRepositories(repos || []);
+        setTableExists(true);
       } catch (error) {
         console.error('Error fetching repositories:', error);
+        setError('Failed to load repositories');
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -243,6 +242,18 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        
+        {!tableExists && (
+          <div className={themeClasses.infoBanner + " p-4 mb-4 rounded"}>
+            <h3 className="font-bold">Welcome to ReadLater!</h3>
+            <p>It looks like this is your first time here. Get started by saving your first GitHub repository.</p>
+            <div className="mt-3">
+              <Link to="/save" className={themeClasses.button + " px-4 py-2 rounded inline-block"}>
+                Save Your First Repository
+              </Link>
+            </div>
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center items-center h-64">
