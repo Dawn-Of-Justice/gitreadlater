@@ -6,6 +6,8 @@ import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionS
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
+import { initializeUserSubscription } from './services/subscriptionService';
+
 
 
 const Dashboard = () => {
