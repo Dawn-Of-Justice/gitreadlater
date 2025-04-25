@@ -45,6 +45,12 @@ const Dashboard = () => {
     if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
     
     const checkUserAndFetch = async () => {
+      console.log('Dashboard: Starting fetch process', { 
+        forceRefresh: location.state?.forceRefresh,
+        refreshFlag,
+        fetchAttempted: fetchAttemptedRef.current
+      });
+      
       try {
         // Reset force refresh flag if it was set
         if (location.state?.forceRefresh) {
@@ -68,6 +74,11 @@ const Dashboard = () => {
         const exists = await checkRepositoriesTableExists();
         setTableExists(exists);
         
+        console.log('Dashboard: User session', { 
+          userId: session.user.id,
+          tableExists
+        });
+        
         if (!exists) {
           console.log('Repositories table does not exist - new installation');
           setIsFirstTimeUser(true);
@@ -77,11 +88,40 @@ const Dashboard = () => {
         
         // Check for user's repositories - this determines if it's a first-time user
         try {
-          const { data, count } = await supabase
-            .from('repositories')
-            .select('*', { count: 'exact', head: false })
-            .eq('user_id', session.user.id)
-            .limit(1);
+          let data, count;
+          try {
+            // Try main repositories table first
+            const response = await supabase
+              .from('repositories')
+              .select('*', { count: 'exact', head: false })
+              .eq('user_id', session.user.id)
+              .limit(1);
+              
+            data = response.data;
+            count = response.count;
+            
+            // If no results, try saved_repositories table
+            if (!data || data.length === 0) {
+              console.log('No repos in main table, checking saved_repositories');
+              const savedResponse = await supabase
+                .from('saved_repositories')
+                .select('*', { count: 'exact', head: false })
+                .eq('user_id', session.user.id)
+                .limit(1);
+                
+              data = savedResponse.data;
+              count = savedResponse.count;
+            }
+          } catch (error) {
+            console.error('Error checking repositories:', error);
+            throw error;
+          }
+          
+          console.log('Dashboard: Repository check', {
+            repositoriesFound: data && data.length > 0,
+            count,
+            isFirstTimeUser
+          });
           
           // If no repos, this is a first-time user or someone who deleted all repos
           if (!data || data.length === 0) {
@@ -93,21 +133,43 @@ const Dashboard = () => {
           }
           
           // If we get here, user has repositories, so fetch them all
-          const { data: allRepos, error: reposError } = await supabase
-            .from('repositories')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: false });
+          let allRepos;
+          try {
+            // Try main repositories table first
+            const { data: mainRepos, error: mainError } = await supabase
+              .from('repositories')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false });
+              
+            if (mainError) throw mainError;
             
-          if (reposError) throw reposError;
-          
-          setRepositories(allRepos || []);
-          
-          // Fetch tags if we have repositories
-          const userTags = await getUserTags();
-          setTags(userTags);
-          
-          setIsFirstTimeUser(false);
+            // If no results or very few, also check saved_repositories table
+            if (!mainRepos || mainRepos.length === 0) {
+              console.log('Checking saved_repositories table');
+              const { data: savedRepos, error: savedError } = await supabase
+                .from('saved_repositories')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false });
+                
+              if (savedError) throw savedError;
+              allRepos = savedRepos || [];
+            } else {
+              allRepos = mainRepos;
+            }
+            
+            setRepositories(allRepos || []);
+            
+            // Fetch tags if we have repositories
+            const userTags = await getUserTags();
+            setTags(userTags);
+            
+            setIsFirstTimeUser(false);
+          } catch (repoError) {
+            console.error('Error fetching user repositories:', repoError);
+            // Rest of your error handling...
+          }
         } catch (repoError) {
           console.error('Error fetching user repositories:', repoError);
           // If the error is about missing table, treat as first time user
@@ -123,6 +185,11 @@ const Dashboard = () => {
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
+        
+        console.log('Dashboard: Fetch complete', {
+          repositories: repositories.length,
+          tags: tags.length
+        });
       }
     };
 
@@ -243,7 +310,7 @@ const Dashboard = () => {
   
   // Main dashboard with repositories
   return (
-    <div className={`min-h-screen ${themeClasses.body} transition-colors duration-300`}>
+    <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
       <div className="container mx-auto px-6 py-8">
         {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">

@@ -339,14 +339,21 @@ const SaveRepository = () => {
     setIsSaving(true);
     
     try {
+      // Save the repository
       const result = await saveRepository(url, notes, selectedTags);
       
-      if (result.success) {
-        // Show success message
-        toast.success('Repository saved successfully!');
+      if (!result.error) {
+        // Show success message if you have toast
+        if (typeof toast !== 'undefined') {
+          toast.success('Repository saved successfully!');
+        }
         
-        // Navigate back to dashboard with refresh flag
-        navigate('/', { state: { forceRefresh: true } });
+        // Force reload the dashboard by clearing flag and navigating
+        console.log('Repository saved, redirecting to dashboard');
+        navigate('/', { 
+          replace: true,
+          state: { forceRefresh: true, timestamp: Date.now() } 
+        });
       } else {
         setError(result.error || 'Failed to save repository');
       }

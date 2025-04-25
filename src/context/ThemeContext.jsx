@@ -34,6 +34,18 @@ export function ThemeProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.setProperty('--bg-color', '#121212'); // Dark background
+      document.documentElement.style.setProperty('--text-color', '#e5e5e5');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.setProperty('--bg-color', '#f5f7fa'); // Light background
+      document.documentElement.style.setProperty('--text-color', '#333333');
+    }
+  }, [darkMode]);
+
   const toggleTheme = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
