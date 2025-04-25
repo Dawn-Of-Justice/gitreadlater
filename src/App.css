@@ -40,3 +40,78 @@
 .read-the-docs {
   color: #888;
 }
+
+.readme-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.readme-content div[align="center"] {
+  text-align: center;
+}
+
+.readme-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.readme-content table td, 
+.readme-content table th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.readme-content pre {
+  overflow-x: auto;
+}
+
+/* Dark mode adjustments */
+.dark .readme-content table td,
+.dark .readme-content table th {
+  border-color: #444;
+}
+
+/* Badge container styling */
+.readme-content p:has(img[src*="shields.io"]),
+.readme-content p:has(img[src*="badge"]),
+.readme-content p:has(a > img[src*="shields.io"]),
+.readme-content p:has(a > img[src*="badge"]) {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  align-items: center !important;
+}
+
+/* Center badges in centered content */
+.readme-content div[align="center"] p {
+  justify-content: center !important;
+}
+
+/* Badge styling */
+.readme-content img[src*="shields.io"],
+.readme-content img[src*="badge"] {
+  height: 20px !important;
+  margin: 0 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* Hide line breaks between badges */
+.readme-content p br {
+  display: none !important;
+}
+
+/* For browsers that don't support :has */
+@supports not (selector(:has(*))) {
+  .readme-content p {
+    display: block !important;
+    line-height: 2 !important;
+  }
+  
+  .readme-content a {
+    display: inline-block !important;
+    margin-right: 4px !important;
+    margin-bottom: 4px !important;
+  }
+}
