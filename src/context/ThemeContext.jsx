@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { getUserTier, getUserRepositoryCount } from '../services/subscriptionService';
 import { supabase } from '../lib/supabaseClient';
 
@@ -162,57 +162,55 @@ export const SubscriptionProvider = ({ children }) => {
   const [userSubscription, setUserSubscription] = useState(null);
   const [repoCount, setRepoCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [attemptedInitialization, setAttemptedInitialization] = useState(false);
+  const [initialized, setInitialized] = useState(false); 
+  const fetchingRef = useRef(false); // Use a ref to track fetch in progress
 
   useEffect(() => {
     let isMounted = true;
     
     const fetchSubscriptionData = async () => {
+      // Prevent concurrent fetches
+      if (fetchingRef.current) {
+        return;
+      }
+      
+      // Skip if already initialized
+      if (initialized) {
+        return;
+      }
+      
       try {
+        fetchingRef.current = true;
+        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
           if (isMounted) {
             setLoading(false);
+            setInitialized(true);
           }
           return;
         }
         
         // Fetch subscription tier
-        try {
-          const tier = await getUserTier(userSubscription, setUserSubscription);
-        } catch (subError) {
-          console.error('Error fetching user tier:', subError);
-        }
+        const tier = await getUserTier(userSubscription, setUserSubscription);
         
-        // Check if repositories table exists before attempting to count
+        // Get repository count
         try {
-          const tableExists = await checkRepositoriesTableExists();
-          
-          if (!tableExists) {
-            if (isMounted) {
-              setRepoCount(0);
-              setLoading(false);
-            }
-            return;
-          }
-          
-          // Only try to count if table exists
           const count = await getUserRepositoryCount();
           if (isMounted) {
             setRepoCount(count);
           }
         } catch (repoError) {
           console.error('Error fetching repository count:', repoError);
-          if (isMounted) {
-            setRepoCount(0);
-          }
         }
       } catch (error) {
         console.error('Error fetching subscription data:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
+          setInitialized(true);
+          fetchingRef.current = false;
         }
       }
     };
@@ -222,67 +220,30 @@ export const SubscriptionProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, [userSubscription]);
+  }, [userSubscription, initialized]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchSubscriptionData = async () => {
-      if (attemptedInitialization) {
-        console.log('Already attempted initialization, skipping');
-        return;
-      }
+  // Provide method to manually refetch data
+  const refetchData = async () => {
+    if (fetchingRef.current) return;
+    
+    try {
+      fetchingRef.current = true;
+      setLoading(true);
       
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session && isMounted) {
-          setAttemptedInitialization(true); // Mark that we've tried
-          const tier = await getUserTier(userSubscription, setUserSubscription);
-          
-          // Handle missing repositories table
-          try {
-            const count = await getUserRepositoryCount();
-            if (isMounted) {
-              setRepoCount(count);
-            }
-          } catch (repoError) {
-            console.error('Error fetching repository count:', repoError);
-            // If table doesn't exist, just set count to 0
-            if (isMounted) {
-              setRepoCount(0);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching subscription data:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchSubscriptionData();
-    
-    // Set up auth state change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && isMounted) {
-          fetchSubscriptionData();
-        } else if (event === 'SIGNED_OUT' && isMounted) {
-          setUserSubscription(null);
-          setRepoCount(0);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
-    };
-  }, [attemptedInitialization]);
+      // Clear cache first
+      clearSubscriptionCache();
+      
+      // Re-fetch data
+      const tier = await getUserTier(null, setUserSubscription);
+      const count = await getUserRepositoryCount();
+      setRepoCount(count);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setLoading(false);
+      fetchingRef.current = false;
+    }
+  };
 
   return (
     <SubscriptionContext.Provider
@@ -290,13 +251,7 @@ export const SubscriptionProvider = ({ children }) => {
         userSubscription,
         repoCount,
         loading,
-        refetchData: async () => {
-          setLoading(true);
-          const tier = await getUserTier(null, setUserSubscription);
-          const count = await getUserRepositoryCount();
-          setRepoCount(count);
-          setLoading(false);
-        }
+        refetchData
       }}
     >
       {children}

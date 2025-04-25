@@ -41,25 +41,71 @@ let initializationTimeout = null;
 let lastCheckTimestamp = 0;
 const THROTTLE_MS = 2000; // Only check once every 2 seconds
 
-// Get user's subscription tier with caching
+// Add these variables at the top of your file
+let cachedTierValue = null;
+let cacheValidUntil = 0;
+const CACHE_DURATION = 60000; // Cache for 1 minute
+
+// At the top of your subscriptionService.js file
+const CALL_TRACKING = {
+  enabled: true,
+  callers: {},
+  maxCalls: 5,
+  log() {
+    if (!this.enabled) return;
+    
+    console.log('---------- getUserTier Call Frequency ----------');
+    Object.entries(this.callers)
+      .sort(([, countA], [, countB]) => countB - countA)
+      .forEach(([caller, count]) => {
+        if (count > this.maxCalls) {
+          console.warn(`⚠️ Excessive calls (${count}) from: ${caller}`);
+        } else {
+          console.log(`Calls (${count}) from: ${caller}`);
+        }
+      });
+    console.log('----------------------------------------------');
+  }
+};
+
+// Get user's subscription tier with strong caching
 export const getUserTier = async (cachedSubscription = null, setUserSubscription = null) => {
-  console.log('getUserTier called from:', new Error().stack.split('\n')[2]);
   try {
-    // Use cached subscription if available
-    if (cachedSubscription) {
+    // Track who's calling this function
+    if (CALL_TRACKING.enabled) {
+      const stack = new Error().stack;
+      const caller = stack.split('\n')[2].trim();
+      CALL_TRACKING.callers[caller] = (CALL_TRACKING.callers[caller] || 0) + 1;
+      
+      // Log the tracking data periodically
+      if (Object.keys(CALL_TRACKING.callers).length > 0 && 
+          Math.random() < 0.1) { // Log ~10% of the time to avoid console spam
+        CALL_TRACKING.log();
+      }
+    }
+    
+    // CACHING STRATEGY 1: Use the passed cached subscription
+    if (cachedSubscription && cachedSubscription.tier) {
       return cachedSubscription.tier;
     }
     
-    // Throttle checks to prevent loops
+    // CACHING STRATEGY 2: Use module-level cache if valid
     const now = Date.now();
-    if (now - lastCheckTimestamp < THROTTLE_MS) {
-      console.log('Throttling subscription check');
-      return cachedSubscription?.tier || 'free';
+    if (cachedTierValue && now < cacheValidUntil) {
+      return cachedTierValue;
     }
     
+    // CACHING STRATEGY 3: Throttle repeated calls
+    if (now - lastCheckTimestamp < THROTTLE_MS) {
+      console.log('Throttling subscription check');
+      return cachedTierValue || 'free';
+    }
+    
+    // Update access timestamp
     lastCheckTimestamp = now;
     console.log('Fetching subscription from database');
     
+    // Get session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       return 'free';
@@ -77,63 +123,47 @@ export const getUserTier = async (cachedSubscription = null, setUserSubscription
       return 'free';
     }
     
-    if (!data) {
-      // We need to create a subscription
-      console.log(`Attempting to initialize subscription for user ${session.user.id}`);
-      
-      try {
-        // Try to find again (double-check to prevent race conditions)
-        const { data: doubleCheck } = await supabase
-          .from('user_subscriptions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (doubleCheck) {
-          console.log('Subscription already exists for user');
-          if (setUserSubscription) {
-            setUserSubscription(doubleCheck);
-          }
-          return doubleCheck.tier || 'free';
-        }
-        
-        // If we got here, we need to create it
-        const { data: newSubscription, error: insertError } = await supabase
-          .from('user_subscriptions')
-          .insert({
-            user_id: session.user.id,
-            tier: 'free',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error('Error creating subscription:', insertError);
-          return 'free';
-        }
-        
-        if (setUserSubscription) {
-          setUserSubscription(newSubscription);
-        }
-        
-        return newSubscription.tier || 'free';
-      } catch (initError) {
-        console.error('Error initializing subscription:', initError);
-        return 'free';
+    // If we found data, use it
+    if (data) {
+      if (setUserSubscription) {
+        setUserSubscription(data);
       }
+      // Update cache
+      cachedTierValue = data.tier || 'free';
+      cacheValidUntil = now + CACHE_DURATION;
+      return cachedTierValue;
     }
     
-    if (setUserSubscription) {
-      setUserSubscription(data);
+    // Otherwise need to create it (this block is rarely reached after the first call)
+    try {
+      console.log(`Attempting to initialize subscription for user ${session.user.id}`);
+      const result = await initializeUserSubscription(session.user.id);
+      
+      if (result) {
+        if (setUserSubscription) {
+          setUserSubscription(result);
+        }
+        // Update cache
+        cachedTierValue = result.tier || 'free';
+        cacheValidUntil = now + CACHE_DURATION;
+        return cachedTierValue;
+      }
+      
+      return 'free';
+    } catch (initError) {
+      console.error('Error initializing subscription:', initError);
+      return 'free';
     }
-    
-    return data.tier || 'free';
   } catch (error) {
     console.error('Error in getUserTier:', error);
     return 'free';
   }
+};
+
+// Add a function to explicitly clear the cache when needed
+export const clearSubscriptionCache = () => {
+  cachedTierValue = null;
+  cacheValidUntil = 0;
 };
 
 // Check if user is on premium tier

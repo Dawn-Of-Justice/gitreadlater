@@ -9,13 +9,51 @@ import { supabase } from '../lib/supabaseClient';
 import { initializeUserSubscription } from '../services/subscriptionService';
 
 const Dashboard = () => {
-  const navigate = useNavigate();
+  const { userSubscription, repoCount, loading } = useSubscription();
   const [repositories, setRepositories] = useState([]);
+  const [repoLoading, setRepoLoading] = useState(true);
+  const fetchedRef = useRef(false);
+  
+  useEffect(() => {
+    // Only fetch repositories once
+    if (fetchedRef.current) return;
+    
+    const fetchRepositories = async () => {
+      try {
+        fetchedRef.current = true;
+        setRepoLoading(true);
+        
+        // Check if table exists before querying
+        const tableExists = await checkRepositoriesTableExists();
+        if (!tableExists) {
+          setRepositories([]);
+          setRepoLoading(false);
+          return;
+        }
+        
+        // Fetch repositories
+        const { data, error } = await supabase
+          .from('repositories')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        setRepositories(data || []);
+      } catch (error) {
+        console.error('Error fetching repositories:', error);
+      } finally {
+        setRepoLoading(false);
+      }
+    };
+    
+    fetchRepositories();
+  }, []);
+  
+  const navigate = useNavigate();
   const [tags, setTags] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userTier, setUserTier] = useState(TIERS.FREE);
-  const [repoCount, setRepoCount] = useState(0);
   const [tableExists, setTableExists] = useState(true);
   const fetchAttempts = useRef(0);
   const maxFetchAttempts = 3;
@@ -51,7 +89,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        setRepoLoading(true);
         
         // Check if user subscription exists, if not initialize it
         try {
@@ -74,7 +112,6 @@ const Dashboard = () => {
           setCachedRepositories
         );
         setRepositories(repoData);
-        setRepoCount(repoData.length);
         
         // Continue with rest of your function...
         
@@ -82,7 +119,7 @@ const Dashboard = () => {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load your saved repositories. Please try again.');
       } finally {
-        setLoading(false);
+        setRepoLoading(false);
       }
     };
     
@@ -104,7 +141,7 @@ const Dashboard = () => {
         if (fetchAttempts.current >= maxFetchAttempts) {
           console.log('Maximum fetch attempts reached, stopping retries');
           if (isMounted) {
-            setLoading(false);
+            setRepoLoading(false);
           }
           return;
         }
@@ -127,7 +164,7 @@ const Dashboard = () => {
             if (isMounted) {
               setTableExists(false);
               setRepositories([]);
-              setLoading(false);
+              setRepoLoading(false);
             }
             return;
           }
@@ -137,13 +174,13 @@ const Dashboard = () => {
 
         if (isMounted) {
           setRepositories(data || []);
-          setLoading(false);
+          setRepoLoading(false);
         }
       } catch (error) {
         console.error('Error fetching repositories:', error);
         if (isMounted) {
           setError('Failed to load repositories');
-          setLoading(false);
+          setRepoLoading(false);
         }
       }
     };
@@ -173,7 +210,7 @@ const Dashboard = () => {
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
   // No repositories state - either table doesn't exist or user has no repos
-  if (!loading && repositories.length === 0) {
+  if (!repoLoading && repositories.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center bg-white shadow rounded-lg p-6">
@@ -190,7 +227,7 @@ const Dashboard = () => {
     );
   }
 
-  if (loading) {
+  if (repoLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -304,7 +341,7 @@ const Dashboard = () => {
           </div>
         )}
         
-        {loading ? (
+        {repoLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>

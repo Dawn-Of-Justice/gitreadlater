@@ -8,6 +8,39 @@ let loggedRepoFetch = false;
 let loggedTagCache = false;
 let loggedTagFetch = false;
 
+// In your repositoryService.js
+// Add a cache for the repositories table existence check
+let repositoriesTableExists = null; // null = unknown, true/false = checked
+
+export const checkRepositoriesTableExists = async () => {
+  // Return cached result if available
+  if (repositoriesTableExists !== null) {
+    return repositoriesTableExists;
+  }
+  
+  try {
+    // Try a count query which will fail if table doesn't exist
+    const { count, error } = await supabase
+      .from('repositories')
+      .select('*', { count: 'exact', head: true })
+      .limit(1);
+      
+    if (error && error.code === '42P01') {
+      console.log('Repositories table does not exist');
+      repositoriesTableExists = false;
+      return false;
+    }
+    
+    repositoriesTableExists = true;
+    return true;
+  } catch (error) {
+    console.error('Error checking repositories table:', error);
+    // Assume table exists on error to avoid blocking UI
+    repositoriesTableExists = true;
+    return true;
+  }
+};
+
 // Get current user
 const getCurrentUser = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
