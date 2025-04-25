@@ -292,17 +292,20 @@ const Dashboard = () => {
   // First time user or user with no repositories
   if (isFirstTimeUser || repositories.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className={`text-center ${themeClasses.card} shadow rounded-lg p-8`}>
-          <h1 className="text-2xl font-bold mb-4">Welcome to ReadLater!</h1>
-          <p className="mb-6">You haven't saved any GitHub repositories yet.</p>
-          <Link
-            to="/save"
-            className={`${themeClasses.button} px-6 py-3 rounded-md inline-flex items-center space-x-2 text-white`}
-          >
-            <FaBookmark className="mr-2" />
-            <span>Save Your First Repository</span>
-          </Link>
+      // Add the same theme class and style as your main dashboard
+      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className={`text-center ${themeClasses.card} shadow rounded-lg p-8`}>
+            <h1 className="text-2xl font-bold mb-4">Welcome to ReadLater!</h1>
+            <p className="mb-6">You haven't saved any GitHub repositories yet.</p>
+            <Link
+              to="/save"
+              className={`${themeClasses.button} px-6 py-3 rounded-md inline-flex items-center space-x-2`}
+            >
+              <FaBookmark className="mr-2" />
+              <span>Save Your First Repository</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
