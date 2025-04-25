@@ -89,6 +89,50 @@ const Dashboard = () => {
     // Only re-run when these values actually change, not when cached objects reference changes
   }, [searchQuery, selectedTag]);
 
+  // Add a check to prevent repeated calls
+
+  // In your useEffect or data fetching logic
+  useEffect(() => {
+    let isMounted = true;
+    let pollingTimeout = null;
+    
+    const fetchRepositories = async () => {
+      try {
+        const { data: repos, error } = await supabase
+          .from('repositories')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (isMounted) {
+          setRepositories(repos || []);
+          // Only poll if there are no repositories and we haven't reached the polling limit
+          if ((repos?.length === 0) && pollCount < MAX_POLLS) {
+            setPollCount(prev => prev + 1);
+            pollingTimeout = setTimeout(fetchRepositories, 10000); // Poll every 10 seconds
+          } else {
+            // Stop polling once we have repos or reached limit
+            clearTimeout(pollingTimeout);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching repositories:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchRepositories();
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(pollingTimeout);
+    };
+  }, []);
+
   // Rest of the component remains the same, but uses themeClasses from context
   const handleSearch = (e) => {
     e.preventDefault();

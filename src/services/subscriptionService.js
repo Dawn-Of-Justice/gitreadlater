@@ -37,21 +37,34 @@ let loggedDatabaseFetch = false;
 let initializationInProgress = false;
 let initializationTimeout = null;
 
+// Add these variables at the top of your file
+let lastCheckTimestamp = 0;
+const THROTTLE_MS = 2000; // Only check once every 2 seconds
+
 // Get user's subscription tier with caching
 export const getUserTier = async (cachedSubscription = null, setUserSubscription = null) => {
-  // If we have a cached subscription, use it
-  if (cachedSubscription) {
-    return cachedSubscription.tier;
-  }
-  
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return 'free'; // Default tier
+    // Use cached subscription if available
+    if (cachedSubscription) {
+      return cachedSubscription.tier;
     }
     
+    // Throttle checks to prevent loops
+    const now = Date.now();
+    if (now - lastCheckTimestamp < THROTTLE_MS) {
+      console.log('Throttling subscription check');
+      return cachedSubscription?.tier || 'free';
+    }
+    
+    lastCheckTimestamp = now;
     console.log('Fetching subscription from database');
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return 'free';
+    }
+    
+    // Check if subscription exists
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
@@ -60,33 +73,64 @@ export const getUserTier = async (cachedSubscription = null, setUserSubscription
     
     if (error) {
       console.error('Error fetching subscription:', error);
-      return 'free'; // Default to free on error
+      return 'free';
     }
     
-    if (!data && !initializationInProgress) {
-      // Subscription doesn't exist yet, initialize it
+    if (!data) {
+      // We need to create a subscription
+      console.log(`Attempting to initialize subscription for user ${session.user.id}`);
+      
       try {
-        const newSubscription = await initializeUserSubscription(session.user.id);
-        if (setUserSubscription && newSubscription) {
+        // Try to find again (double-check to prevent race conditions)
+        const { data: doubleCheck } = await supabase
+          .from('user_subscriptions')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+          
+        if (doubleCheck) {
+          console.log('Subscription already exists for user');
+          if (setUserSubscription) {
+            setUserSubscription(doubleCheck);
+          }
+          return doubleCheck.tier || 'free';
+        }
+        
+        // If we got here, we need to create it
+        const { data: newSubscription, error: insertError } = await supabase
+          .from('user_subscriptions')
+          .insert({
+            user_id: session.user.id,
+            tier: 'free',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Error creating subscription:', insertError);
+          return 'free';
+        }
+        
+        if (setUserSubscription) {
           setUserSubscription(newSubscription);
         }
-        return newSubscription?.tier || 'free';
-      } catch (err) {
-        console.error('Failed to initialize subscription in getUserTier', err);
+        
+        return newSubscription.tier || 'free';
+      } catch (initError) {
+        console.error('Error initializing subscription:', initError);
         return 'free';
       }
-    } else if (!data) {
-      return 'free'; // Return free while initialization is in progress
     }
     
-    // Update the cached subscription if there's a setter
     if (setUserSubscription) {
       setUserSubscription(data);
     }
     
     return data.tier || 'free';
-  } catch (err) {
-    console.error('Error in getUserTier:', err);
+  } catch (error) {
+    console.error('Error in getUserTier:', error);
     return 'free';
   }
 };

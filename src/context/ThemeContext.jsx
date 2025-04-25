@@ -164,20 +164,25 @@ export const SubscriptionProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchSubscriptionData = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session) {
+        if (session && isMounted) {
           const tier = await getUserTier(userSubscription, setUserSubscription);
           const count = await getUserRepositoryCount();
           
-          setRepoCount(count);
+          if (isMounted) {
+            setRepoCount(count);
+          }
         }
       } catch (error) {
         console.error('Error fetching subscription data:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -186,9 +191,9 @@ export const SubscriptionProvider = ({ children }) => {
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && isMounted) {
           fetchSubscriptionData();
-        } else if (event === 'SIGNED_OUT') {
+        } else if (event === 'SIGNED_OUT' && isMounted) {
           setUserSubscription(null);
           setRepoCount(0);
         }
@@ -196,6 +201,7 @@ export const SubscriptionProvider = ({ children }) => {
     );
 
     return () => {
+      isMounted = false;
       if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
