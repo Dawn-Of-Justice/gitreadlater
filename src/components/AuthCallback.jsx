@@ -8,18 +8,8 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      // The hash contains the token information
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      
-      if (!accessToken) {
-        // Handle the case where no auth data is present
-        setError('No authentication data found. Please try logging in again.');
-        return;
-      }
-
       try {
-        // Session should be automatically set by supabase
+        // Get session after OAuth redirect
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
