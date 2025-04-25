@@ -20,7 +20,7 @@ const PADDLE_PUBLIC_KEY_BILLING = process.env.PADDLE_PUBLIC_KEY_BILLING;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://your-production-domain.com'],
+  origin: ['http://localhost:5173', 'https://gitreadlater.vercel.app/'],
   credentials: true
 }));
 app.use(express.json());
