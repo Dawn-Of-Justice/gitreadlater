@@ -253,13 +253,16 @@ const SaveRepository = () => {
     
     if (!trimmedTag) return;
     
+    // Limit tag length to 30 characters
+    const limitedTag = trimmedTag.substring(0, 30);
+    
     // Prevent duplicates
-    if (tags.includes(trimmedTag)) {
+    if (tags.includes(limitedTag)) {
       setTagInput('');
       return;
     }
     
-    setTags([...tags, trimmedTag]);
+    setTags([...tags, limitedTag]);
     setTagInput('');
   };
   
@@ -668,13 +671,20 @@ const SaveRepository = () => {
                   <input
                     type="text"
                     id="tags"
-                    placeholder="Add tags..."
+                    placeholder="Add tags... (max 30 characters)"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={handleTagKeyDown}
                     onFocus={handleTagInputFocus}
-                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
+                    maxLength={30}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300 ${tagInput.length >= 30 ? 'border-yellow-500' : ''}`}
                   />
+                  
+                  {tagInput.length > 0 && (
+                    <div className={`absolute right-3 top-3 text-xs ${tagInput.length >= 30 ? 'text-yellow-500' : 'text-gray-400'}`}>
+                      {tagInput.length}/30
+                    </div>
+                  )}
                   
                   {/* Tag Suggestions Dropdown */}
                   {showTagSuggestions && filteredTagSuggestions.length > 0 && (
