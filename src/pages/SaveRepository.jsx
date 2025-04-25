@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaCrown, FaArrowRight } from 'react-icons/fa';
+import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaCrown, FaArrowRight, FaLock } from 'react-icons/fa';
 import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryDetails, getUserRepositories } from '../services/githubService';
 import { saveRepository, getUserTags } from '../services/repositoryService';
-import { getUserRepositoryCount, getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserRepositoryCount, getUserTier, initializeUserSubscription, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
 import { supabase } from '../lib/supabaseClient'; 
