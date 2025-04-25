@@ -154,59 +154,38 @@ export const initializeUserSubscription = async (userId) => {
   try {
     console.log(`Attempting to initialize subscription for user ${userId}`);
     
-    // The RPC function is returning false, so we need to check the actual value
-    const { data, error } = await supabase.rpc(
-      'initialize_user_subscription_func', 
-      { user_uuid: userId }
-    );
-    
-    console.log('RPC function response:', data);
-    
-    if (error || data === false) {
-      console.error('RPC function failed:', error || 'Function returned false');
-      
-      // Fallback direct insert if RPC fails
-      try {
-        console.log('Attempting direct insert as fallback');
-        const { data: insertData, error: insertError } = await supabase
-          .from('user_subscriptions')
-          .insert({
-            user_id: userId,
-            tier: TIERS.FREE
-          })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error('Fallback insert failed:', insertError);
-          return false;
-        }
-        
-        console.log('Fallback insert succeeded:', insertData);
-        return true;
-      } catch (insertError) {
-        console.error('Error in fallback insert:', insertError);
-        return false;
-      }
-    }
-    
-    // Verify the record was created
-    const { data: verifyData, error: verifyError } = await supabase
+    // First check if subscription already exists
+    const { data: existingSub, error: checkError } = await supabase
       .from('user_subscriptions')
-      .select('id')
+      .select('*')
       .eq('user_id', userId)
-      .maybeSingle();
+      .single();
       
-    if (verifyError || !verifyData) {
-      console.error('Record verification failed:', verifyError || 'No record found after creation');
-      return false;
+    if (existingSub) {
+      console.log('Subscription already exists for user');
+      return existingSub;
     }
     
-    console.log('Subscription record verified:', verifyData);
-    return true;
+    // Create a new subscription entry directly
+    console.log('Creating new subscription entry');
+    const { data: insertData, error: insertError } = await supabase
+      .from('user_subscriptions')
+      .insert([{
+        user_id: userId,
+        tier: 'free',
+        valid_until: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select();
+      
+    if (insertError) throw insertError;
+    
+    console.log('Subscription initialized successfully');
+    return insertData[0];
   } catch (error) {
     console.error('Error initializing user subscription:', error);
-    return false;
+    throw error;
   }
 };
 

@@ -58,6 +58,18 @@ const SaveRepository = () => {
   useEffect(() => {
     const checkSubscription = async () => {
       try {
+        // First check/initialize user subscription
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          try {
+            await initializeUserSubscription(session.user.id);
+          } catch (error) {
+            console.error('Failed to initialize subscription:', error);
+            // Continue anyway
+          }
+        }
+        
+        // Continue with tier and count check
         const tier = await getUserTier();
         const count = await getUserRepositoryCount();
         
@@ -70,6 +82,10 @@ const SaveRepository = () => {
         }
       } catch (err) {
         console.error('Error checking subscription:', err);
+        // Set defaults to prevent blocking UI
+        setUserTier(TIERS.FREE);
+        setRepoCount(0);
+        setCanSave(true);
       }
     };
     

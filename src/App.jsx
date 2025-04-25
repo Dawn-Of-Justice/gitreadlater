@@ -34,13 +34,38 @@ function AppContent() {
     // Check for an existing session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      
+      if (session?.user) {
+        setUser(session.user);
+        
+        // Initialize subscription for new users
+        try {
+          await initializeUserSubscription(session.user.id);
+        } catch (error) {
+          console.error('Failed to initialize subscription:', error);
+          // Continue anyway
+        }
+      }
+      
       setLoading(false);
       
       // Set up auth listener
       const { data: authListener } = supabase.auth.onAuthStateChange(
-        (event, session) => {
-          setUser(session?.user || null);
+        async (event, session) => {
+          if (session?.user) {
+            setUser(session.user);
+            
+            // For new sign-ins, initialize subscription
+            if (event === 'SIGNED_IN') {
+              try {
+                await initializeUserSubscription(session.user.id);
+              } catch (error) {
+                console.error('Failed to initialize subscription on sign in:', error);
+              }
+            }
+          } else {
+            setUser(null);
+          }
         }
       );
       

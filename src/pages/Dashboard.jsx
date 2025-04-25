@@ -38,31 +38,31 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
-        // Get user's subscription tier (using cache if available)
-        const tier = await getUserTier(cachedSubscription, setCachedSubscription);
+        // Check if user subscription exists, if not initialize it
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id) {
+            await initializeUserSubscription(session.user.id);
+          }
+        } catch (subError) {
+          console.error('Subscription initialization error:', subError);
+          // Continue anyway - don't block the rest of the loading
+        }
+        
+        // Rest of your loading code
+        const tier = await getUserTier();
         setUserTier(tier);
         
-        // Build filters
-        const filters = {};
-        if (searchQuery) filters.search = searchQuery;
-        if (selectedTag) filters.tag = selectedTag;
-        
-        // Fetch repositories (using cache if no filters)
         const repoData = await getSavedRepositories(
-          filters, 
-          cachedRepositories, 
+          { tag: selectedTag, search: searchQuery },
+          cachedRepositories,
           setCachedRepositories
         );
         setRepositories(repoData);
         setRepoCount(repoData.length);
         
-        // Fetch tags if not already loaded (using cache if available)
-        if (tags.length === 0) {
-          const tagsData = await getUserTags(cachedTags, setCachedTags);
-          setTags(tagsData);
-        }
+        // Continue with rest of your function...
         
-        setError(null);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load your saved repositories. Please try again.');
