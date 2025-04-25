@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
-import { SpeedInsights } from "@vercel/speed-insights/next"
+
 
 // Components
 import Header from './components/Header';
