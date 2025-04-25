@@ -120,30 +120,66 @@ const Subscription = () => {
     }
   };
 
-  const handleNotifyMe = async (e) => {
-    e.preventDefault();
+  // Update the handleNotifyMe function to check for existing entries
+const handleNotifyMe = async (e) => {
+  e.preventDefault();
+  
+  if (!email.trim()) {
+    setError('Please enter your email address');
+    return;
+  }
+  
+  try {
+    setNotifyLoading(true);
     
-    if (!email.trim()) {
-      setError('Please enter your email address');
+    // Get current user ID if logged in
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    
+    // Check if email already exists
+    const { data: existingEntries } = await supabase
+      .from('premium_notifications')
+      .select()
+      .eq('email', email.trim())
+      .limit(1);
+    
+    if (existingEntries && existingEntries.length > 0) {
+      // Already signed up
+      setNotified(true);
+      setError(null);
       return;
     }
     
-    try {
-      setNotifyLoading(true);
+    // Save to "premium_notifications" table in Supabase
+    const { error: insertError } = await supabase
+      .from('premium_notifications')
+      .insert([
+        { 
+          email: email.trim(),
+          user_id: userId || null,  // Associate with user if logged in
+          created_at: new Date().toISOString()
+        }
+      ]);
       
-      // Here you would typically send this to your backend
-      // For now, we'll just simulate a successful API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+    if (insertError) throw insertError;
+    
+    // Set local state to show success message
+    setNotified(true);
+    setError(null);
+    
+  } catch (err) {
+    console.error('Error signing up for notifications:', err);
+    // Check for unique constraint violation (email already exists)
+    if (err.code === '23505') { // PostgreSQL unique constraint violation code
+      // Show already subscribed message
       setNotified(true);
-      setError(null);
-    } catch (err) {
-      console.error('Error signing up for notifications:', err);
+    } else {
       setError('Failed to sign up for notifications. Please try again.');
-    } finally {
-      setNotifyLoading(false);
     }
-  };
+  } finally {
+    setNotifyLoading(false);
+  }
+};
   
   return (
     <div className={`${themeClasses.body} min-h-screen transition-colors duration-300`}>
