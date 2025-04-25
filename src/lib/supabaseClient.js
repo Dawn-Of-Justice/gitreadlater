@@ -30,10 +30,16 @@ export const getCurrentUser = async () => {
   return session.user;
 };
 
-// Update your GitHub sign-in function to request the repo scope
+// Update your GitHub sign-in function with better error handling
 export const signInWithGitHub = async () => {
   try {
+    // Clear any existing session first to avoid conflicts
+    await supabase.auth.signOut();
+    
     const redirectUrl = import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/auth/callback`;
+    
+    // Log the redirect URL to make sure it's correct
+    console.log('Redirect URL:', redirectUrl);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
@@ -43,10 +49,16 @@ export const signInWithGitHub = async () => {
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('OAuth error:', error);
+      throw error;
+    }
+    
     return data;
   } catch (error) {
     console.error('Error signing in with GitHub:', error);
+    // Show user-friendly error
+    alert('Failed to sign in with GitHub. Please try again later.');
     throw error;
   }
 };
