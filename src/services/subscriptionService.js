@@ -145,21 +145,20 @@ export const isPremiumUser = async () => {
 // Get repository count with caching
 export const getUserRepositoryCount = async () => {
   try {
-    console.log('Fetching repository count from database');
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) return 0;
     
+    // Try a count query which will fail if table doesn't exist
     const { count, error } = await supabase
       .from('repositories')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', session.user.id);
-    
+      
     if (error) {
-      // Check if the error is about the missing table
       if (error.code === '42P01') {
-        console.log('Repositories table does not exist yet');
-        return 0; // Return 0 if table doesn't exist
+        console.log('Repositories table does not exist');
+        return 0;
       }
       console.error('Error counting repositories:', error);
       return 0;

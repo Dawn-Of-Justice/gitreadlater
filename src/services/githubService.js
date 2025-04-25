@@ -170,38 +170,51 @@ export const getReadmeContent = async (owner, repo) => {
   }
 };
 
-// Add a new function to get user's repositories (both public and private)
-export const getUserRepositories = async () => {
+// Add this function to your repository service
+export const checkRepositoriesTableExists = async () => {
   try {
-    // Get GitHub token and user info
-    const { data: { session } } = await supabase.auth.getSession();
-    const githubToken = session?.provider_token;
-    const username = session?.user?.user_metadata?.preferred_username;
-    
-    if (!githubToken || !username) {
-      throw new Error('GitHub authentication required');
+    // Try a count query which will fail if table doesn't exist
+    const { count, error } = await supabase
+      .from('repositories')
+      .select('*', { count: 'exact', head: true })
+      .limit(1);
+      
+    if (error && error.code === '42P01') {
+      console.log('Repositories table does not exist');
+      return false;
     }
     
-    // Set up headers with authorization
-    const headers = {
-      'Accept': 'application/vnd.github.v3+json',
-      'Authorization': `Bearer ${githubToken}`
-    };
-
-    // Get all repositories, including private ones (100 per page)
-    const response = await fetch(
-      `https://api.github.com/user/repos?per_page=100&sort=updated`,
-      { headers }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch user repositories');
-    }
-
-    return await response.json();
+    return true;
   } catch (error) {
-    console.error('Error fetching user repositories:', error);
+    console.error('Error checking repositories table:', error);
+    return false;
+  }
+};
+
+// Update your repository fetching function
+export const getUserRepositories = async (options = {}) => {
+  const { page = 1, limit = 10, orderBy = 'created_at', ascending = false } = options;
+  const startIndex = (page - 1) * limit;
+  
+  try {
+    // Check if table exists first
+    const tableExists = await checkRepositoriesTableExists();
+    if (!tableExists) {
+      return { data: [], count: 0, tableExists: false };
+    }
+    
+    // Fetch data if table exists
+    const { data, error, count } = await supabase
+      .from('repositories')
+      .select('*', { count: 'exact' })
+      .order(orderBy, { ascending })
+      .range(startIndex, startIndex + limit - 1);
+      
+    if (error) throw error;
+    
+    return { data: data || [], count: count || 0, tableExists: true };
+  } catch (error) {
+    console.error('Error fetching repositories:', error);
     throw error;
   }
 };

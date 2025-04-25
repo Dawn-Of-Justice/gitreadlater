@@ -166,6 +166,66 @@ export const SubscriptionProvider = ({ children }) => {
 
   useEffect(() => {
     let isMounted = true;
+    
+    const fetchSubscriptionData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // Fetch subscription tier
+        try {
+          const tier = await getUserTier(userSubscription, setUserSubscription);
+        } catch (subError) {
+          console.error('Error fetching user tier:', subError);
+        }
+        
+        // Check if repositories table exists before attempting to count
+        try {
+          const tableExists = await checkRepositoriesTableExists();
+          
+          if (!tableExists) {
+            if (isMounted) {
+              setRepoCount(0);
+              setLoading(false);
+            }
+            return;
+          }
+          
+          // Only try to count if table exists
+          const count = await getUserRepositoryCount();
+          if (isMounted) {
+            setRepoCount(count);
+          }
+        } catch (repoError) {
+          console.error('Error fetching repository count:', repoError);
+          if (isMounted) {
+            setRepoCount(0);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching subscription data:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchSubscriptionData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [userSubscription]);
+
+  useEffect(() => {
+    let isMounted = true;
     const fetchSubscriptionData = async () => {
       if (attemptedInitialization) {
         console.log('Already attempted initialization, skipping');

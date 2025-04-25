@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags } from '../services/repositoryService';
@@ -17,6 +17,8 @@ const Dashboard = () => {
   const [userTier, setUserTier] = useState(TIERS.FREE);
   const [repoCount, setRepoCount] = useState(0);
   const [tableExists, setTableExists] = useState(true);
+  const fetchAttempts = useRef(0);
+  const maxFetchAttempts = 3;
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,44 +95,65 @@ const Dashboard = () => {
   // In your useEffect or data fetching logic
   useEffect(() => {
     let isMounted = true;
-    let pollingTimeout = null;
-    
     const fetchRepositories = async () => {
       try {
-        const { data: repos, error } = await supabase
+        // Don't try again if we've already determined the table doesn't exist
+        if (!tableExists) return;
+        
+        // Limit the number of fetch attempts
+        if (fetchAttempts.current >= maxFetchAttempts) {
+          console.log('Maximum fetch attempts reached, stopping retries');
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        fetchAttempts.current += 1;
+        console.log(`Fetching repositories from database (attempt ${fetchAttempts.current})`);
+
+        // Add a delay for better UX and to prevent rapid retries
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const { data, error } = await supabase
           .from('repositories')
           .select('*')
           .order('created_at', { ascending: false });
-        
+
         if (error) {
-          // Check if error is about missing table
+          // Check for table not found error
           if (error.code === '42P01') {
-            setRepositories([]);
-            setTableExists(false);
-            return; // Early return - don't try to fetch again
+            console.error('Repositories table does not exist:', error.message);
+            if (isMounted) {
+              setTableExists(false);
+              setRepositories([]);
+              setLoading(false);
+            }
+            return;
           }
+          
           throw error;
         }
-        
-        setRepositories(repos || []);
-        setTableExists(true);
+
+        if (isMounted) {
+          setRepositories(data || []);
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Error fetching repositories:', error);
-        setError('Failed to load repositories');
-      } finally {
         if (isMounted) {
+          setError('Failed to load repositories');
           setLoading(false);
         }
       }
     };
-    
+
     fetchRepositories();
-    
+
     return () => {
       isMounted = false;
-      clearTimeout(pollingTimeout);
     };
-  }, []);
+  }, [tableExists]); // Only depends on tableExists, not repositories
 
   // Rest of the component remains the same, but uses themeClasses from context
   const handleSearch = (e) => {
@@ -149,6 +172,32 @@ const Dashboard = () => {
   
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
+  // No repositories state - either table doesn't exist or user has no repos
+  if (!loading && repositories.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center bg-white shadow rounded-lg p-6">
+          <h1 className="text-2xl font-bold mb-4">Welcome to ReadLater!</h1>
+          <p className="mb-6">You haven't saved any GitHub repositories yet.</p>
+          <Link
+            to="/save"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Save Your First Repository
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen ${themeClasses.body} transition-colors duration-300`}>
       <div className="container mx-auto px-6 py-8">
