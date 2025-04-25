@@ -454,53 +454,61 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Update the GET /subscription/:userId endpoint
+// Get user subscription 
 app.get('/subscription/:userId', async (req, res) => {
   try {
-    console.log('--- Fetching subscription ---');
     const { userId } = req.params;
     console.log('Fetching subscription for user:', userId);
     
+    // First check if user has a subscription
     let { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    // If no subscription exists, create one for new user
-    if (error && error.code === 'PGRST116') { // Supabase "not found" error code
-      console.log('No subscription found, creating default subscription for new user');
+      .eq('user_id', userId);
       
-      const { data: newSub, error: insertError } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: userId,
-          tier: 'free',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
-      if (insertError) {
-        console.error('Error creating subscription:', insertError);
-        throw insertError;
-      }
-      
-      data = newSub;
-      console.log('Created new subscription for user:', userId);
-    } else if (error) {
+    if (error) {
       console.error('Error fetching subscription:', error);
       throw error;
     }
     
-    console.log('Fetched/created subscription data:', JSON.stringify(data, null, 2));
-    console.log('--- Subscription fetch complete ---');
+    // If no subscription exists, create one
+    if (!data || data.length === 0) {
+      console.log('No subscription found for user, creating default subscription');
+      
+      const { data: newSub, error: createError } = await supabase
+        .from('user_subscriptions')
+        .insert([{
+          user_id: userId,
+          tier: 'free',
+          valid_until: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select();
+        
+      if (createError) {
+        console.error('Error creating subscription:', createError);
+        throw createError;
+      }
+      
+      data = newSub;
+      console.log('Created new subscription for user');
+    }
     
-    res.json({ subscription: data });
+    // Return the first subscription (there should only be one)
+    res.json({ subscription: data[0] });
   } catch (error) {
-    console.error('Error getting subscription:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error in subscription endpoint:', error);
+    // Return a default subscription instead of an error
+    res.json({ 
+      subscription: {
+        tier: 'free',
+        valid_until: null,
+        user_id: req.params.userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } 
+    });
   }
 });
 
