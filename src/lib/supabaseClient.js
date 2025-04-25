@@ -36,8 +36,8 @@ export const signInWithGitHub = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: 'read:user repo', // Add 'repo' scope to access private repositories
+        redirectTo: import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
+        scopes: 'read:user repo',
       }
     });
 
