@@ -71,36 +71,31 @@ export const getUserTier = async (cachedSubscription = null, setUserSubscription
     
     const subscription = data && data.length > 0 ? data[0] : null;
     
-    if (!subscription) {
-      await initializeUserSubscription(session.user.id);
+    // Only try to initialize once until timeout expires
+    if (!subscription && !initializationAttempted) {
+      console.log('No subscription found, attempting to initialize');
+      initializationAttempted = true;
+      try {
+        const newSubscription = await initializeUserSubscription(session.user.id);
+        if (setUserSubscription) setUserSubscription(newSubscription);
+        // Reset the flag after some time
+        setTimeout(() => { initializationAttempted = false; }, 60000);
+        return TIERS.FREE;
+      } catch (initError) {
+        console.error('Failed to initialize subscription:', initError);
+        return TIERS.FREE;
+      }
+    } else if (!subscription) {
+      console.log('Already attempted initialization recently, returning FREE tier');
       return TIERS.FREE;
     }
     
-    // Check if subscription is valid
-    if (subscription.tier === TIERS.PREMIUM) {
-      if (subscription.valid_until && new Date(subscription.valid_until) < new Date()) {
-        console.log('Premium subscription expired');
-        subscription.tier = TIERS.FREE;
-        
-        // Update in database
-        await supabase
-          .from('user_subscriptions')
-          .update({
-            tier: TIERS.FREE,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', session.user.id);
-      }
-    }
+    if (setUserSubscription) setUserSubscription(subscription);
     
-    // Update cache
-    if (setUserSubscription) {
-      setUserSubscription(subscription);
-    }
-    
-    return subscription.tier;
+    // Return the tier from the subscription
+    return subscription.tier || TIERS.FREE;
   } catch (error) {
-    console.error('Error getting user tier:', error);
+    console.error('Error in getUserTier:', error);
     return TIERS.FREE;
   }
 };
@@ -159,14 +154,14 @@ export const initializeUserSubscription = async (userId) => {
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
       
     if (existingSub) {
       console.log('Subscription already exists for user');
       return existingSub;
     }
     
-    // Create a new subscription entry directly
+    // Create a new subscription entry
     console.log('Creating new subscription entry');
     const { data: insertData, error: insertError } = await supabase
       .from('user_subscriptions')
@@ -179,7 +174,19 @@ export const initializeUserSubscription = async (userId) => {
       }])
       .select();
       
-    if (insertError) throw insertError;
+    if (insertError) {
+      // Check if error is due to uniqueness constraint (subscription created by another request)
+      if (insertError.code === '23505') { // PostgreSQL unique violation code
+        console.log('Subscription was created by another concurrent request');
+        const { data: fetchedSub } = await supabase
+          .from('user_subscriptions')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        return fetchedSub;
+      }
+      throw insertError;
+    }
     
     console.log('Subscription initialized successfully');
     return insertData[0];

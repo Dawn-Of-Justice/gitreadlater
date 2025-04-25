@@ -1,6 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getUserTier, getUserRepositoryCount } from '../services/subscriptionService';
+import { supabase } from '../lib/supabaseClient';
 
 const ThemeContext = createContext();
+const SubscriptionContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [darkMode, setDarkMode] = useState(() => {
@@ -154,3 +157,69 @@ export function ThemeProvider({ children }) {
 export function useTheme() {
   return useContext(ThemeContext);
 }
+
+export const SubscriptionProvider = ({ children }) => {
+  const [userSubscription, setUserSubscription] = useState(null);
+  const [repoCount, setRepoCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const tier = await getUserTier(userSubscription, setUserSubscription);
+          const count = await getUserRepositoryCount();
+          
+          setRepoCount(count);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubscriptionData();
+    
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          fetchSubscriptionData();
+        } else if (event === 'SIGNED_OUT') {
+          setUserSubscription(null);
+          setRepoCount(0);
+        }
+      }
+    );
+
+    return () => {
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
+  }, []);
+
+  return (
+    <SubscriptionContext.Provider
+      value={{
+        userSubscription,
+        repoCount,
+        loading,
+        refetchData: async () => {
+          setLoading(true);
+          const tier = await getUserTier(null, setUserSubscription);
+          const count = await getUserRepositoryCount();
+          setRepoCount(count);
+          setLoading(false);
+        }
+      }}
+    >
+      {children}
+    </SubscriptionContext.Provider>
+  );
+};
+
+export const useSubscription = () => useContext(SubscriptionContext);

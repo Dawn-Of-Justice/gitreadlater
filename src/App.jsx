@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 import { initializeUserSubscription } from './services/subscriptionService';
 
@@ -162,11 +162,13 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <CacheProvider>
-          <AppContent />
-        </CacheProvider>
-      </Router>
+      <SubscriptionProvider>
+        <Router>
+          <CacheProvider>
+            <AppContent />
+          </CacheProvider>
+        </Router>
+      </SubscriptionProvider>
     </ThemeProvider>
   );
 }
