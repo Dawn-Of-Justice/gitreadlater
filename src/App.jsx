@@ -4,7 +4,7 @@ import { supabase } from './lib/supabaseClient';
 import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 
-// Componentsss
+// Components
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
