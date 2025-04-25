@@ -62,25 +62,25 @@ export const getUserTier = async (cachedSubscription = null, setUserSubscription
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
-      .eq('user_id', session.user.id)
-      .single();
+      .eq('user_id', session.user.id);
     
     if (error) {
       console.error('Error fetching subscription:', error);
       return TIERS.FREE;
     }
     
-    if (!data) {
-      // Initialize subscription if it doesn't exist
+    const subscription = data && data.length > 0 ? data[0] : null;
+    
+    if (!subscription) {
       await initializeUserSubscription(session.user.id);
       return TIERS.FREE;
     }
     
     // Check if subscription is valid
-    if (data.tier === TIERS.PREMIUM) {
-      if (data.valid_until && new Date(data.valid_until) < new Date()) {
+    if (subscription.tier === TIERS.PREMIUM) {
+      if (subscription.valid_until && new Date(subscription.valid_until) < new Date()) {
         console.log('Premium subscription expired');
-        data.tier = TIERS.FREE;
+        subscription.tier = TIERS.FREE;
         
         // Update in database
         await supabase
@@ -95,10 +95,10 @@ export const getUserTier = async (cachedSubscription = null, setUserSubscription
     
     // Update cache
     if (setUserSubscription) {
-      setUserSubscription(data);
+      setUserSubscription(subscription);
     }
     
-    return data.tier;
+    return subscription.tier;
   } catch (error) {
     console.error('Error getting user tier:', error);
     return TIERS.FREE;
