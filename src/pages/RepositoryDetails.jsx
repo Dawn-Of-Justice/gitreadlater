@@ -142,44 +142,65 @@ const RepositoryDetails = () => {
     }
   };
   
-  // Handle delete repository
-  const handleDeleteRepository = async () => {
-    try {
-      await deleteRepository(id, invalidateRepositories); // Pass the cache invalidation function
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('Error deleting repository:', err);
-      setError('Failed to delete repository. Please try again.');
-      setConfirming(false);
+  // Replace both handleDeleteRepository and handleDelete with this unified function:
+const handleDeleteRepository = async () => {
+  try {
+    // Check for active session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('No active session');
+      setError('Authentication required. Please log in again.');
+      return;
     }
-  };
-
-  // In your RepositoryDetails.jsx or wherever you handle deletion
-  const handleDelete = async () => {
-    setDeleting(true);
     
-    try {
-      const { error } = await supabase
-        .from('repositories')
-        .delete()
-        .eq('id', repo.id);
-        
-      if (error) throw error;
-      
-      // Show success toast if you have toast notifications
-      if (typeof toast !== 'undefined') {
-        toast.success('Repository deleted successfully');
-      }
-      
-      // Redirect to dashboard immediately after successful deletion
-      navigate('/', { replace: true });
-    } catch (error) {
-      console.error('Error deleting repository:', error);
-      setError('Failed to delete repository. Please try again.');
-    } finally {
-      setDeleting(false);
+    // Only allow deletion if this repo belongs to the user
+    if (repository.user_id !== session.user.id) {
+      console.error('Unauthorized deletion attempt');
+      setError('You can only delete your own repositories.');
+      return;
     }
-  };
+    
+    // First, try to delete from the main repositories table
+    const { error: mainError } = await supabase
+      .from('repositories')
+      .delete()
+      .eq('id', id);
+    
+    // If that fails or if we also need to check saved_repositories
+    if (mainError) {
+      console.log('Trying saved_repositories table after error:', mainError);
+      
+      // Try deleting from saved_repositories table
+      const { error: savedError } = await supabase
+        .from('saved_repositories')
+        .delete()
+        .eq('id', id);
+      
+      if (savedError) {
+        throw savedError;
+      }
+    }
+    
+    // If we have invalidateRepositories, call it to refresh cache
+    if (typeof invalidateRepositories === 'function') {
+      invalidateRepositories();
+    }
+    
+    // Show a success message if toast is available
+    if (typeof toast !== 'undefined') {
+      toast.success('Repository deleted successfully');
+    } else {
+      console.log('Repository deleted successfully');
+    }
+    
+    // Navigate back to the dashboard
+    navigate('/', { replace: true });
+  } catch (err) {
+    console.error('Error deleting repository:', err);
+    setError('Failed to delete repository. Please try again.');
+    setConfirming(false);
+  }
+};
   
   // Add a tag
   const addTag = () => {
