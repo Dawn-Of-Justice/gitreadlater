@@ -39,7 +39,7 @@ export const signInWithGitHub = async () => {
       provider: 'github',
       options: {
         redirectTo: redirectUrl,
-        scopes: 'read:user repo',
+        scopes: 'read:user user:email public_repo',
       }
     });
 
