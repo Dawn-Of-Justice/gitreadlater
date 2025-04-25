@@ -33,10 +33,13 @@ export const getCurrentUser = async () => {
 // Update your GitHub sign-in function to request the repo scope
 export const signInWithGitHub = async () => {
   try {
+    const redirectUrl = import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/auth/callback`;
+    console.log("Using redirect URL:", redirectUrl);
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
         scopes: 'read:user repo',
       }
     });
