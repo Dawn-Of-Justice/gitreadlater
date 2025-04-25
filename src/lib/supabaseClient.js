@@ -34,7 +34,6 @@ export const getCurrentUser = async () => {
 export const signInWithGitHub = async () => {
   try {
     const redirectUrl = import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/auth/callback`;
-    console.log("Using redirect URL:", redirectUrl);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
