@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
+import { useCache } from '../context/CacheContext'; // Import the cache hook
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [repositories, setRepositories] = useState([]);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,13 +22,24 @@ const Dashboard = () => {
   // Get theme from context instead of managing locally
   const { darkMode, themeClasses } = useTheme();
   
+  // Get cache from context
+  const { 
+    repositories: cachedRepositories, 
+    setRepositories: setCachedRepositories,
+    tags: cachedTags,
+    setTags: setCachedTags,
+    userSubscription: cachedSubscription,
+    setUserSubscription: setCachedSubscription,
+    invalidateRepositories 
+  } = useCache();
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Get user's subscription tier
-        const tier = await getUserTier();
+        // Get user's subscription tier (using cache if available)
+        const tier = await getUserTier(cachedSubscription, setCachedSubscription);
         setUserTier(tier);
         
         // Build filters
@@ -34,14 +47,18 @@ const Dashboard = () => {
         if (searchQuery) filters.search = searchQuery;
         if (selectedTag) filters.tag = selectedTag;
         
-        // Fetch repositories
-        const repoData = await getSavedRepositories(filters);
+        // Fetch repositories (using cache if no filters)
+        const repoData = await getSavedRepositories(
+          filters, 
+          cachedRepositories, 
+          setCachedRepositories
+        );
         setRepositories(repoData);
         setRepoCount(repoData.length);
         
-        // Fetch tags if not already loaded
+        // Fetch tags if not already loaded (using cache if available)
         if (tags.length === 0) {
-          const tagsData = await getUserTags();
+          const tagsData = await getUserTags(cachedTags, setCachedTags);
           setTags(tagsData);
         }
         
@@ -55,8 +72,9 @@ const Dashboard = () => {
     };
     
     fetchData();
-  }, [searchQuery, selectedTag, tags.length]);
-  
+    // Only re-run when these values actually change, not when cached objects reference changes
+  }, [searchQuery, selectedTag]);
+
   // Rest of the component remains the same, but uses themeClasses from context
   const handleSearch = (e) => {
     e.preventDefault();
@@ -193,13 +211,17 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {repositories.map((repo) => (
-              <div key={repo.id} className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300`}>
+              <div 
+                key={repo.id} 
+                className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer`}
+                onClick={() => navigate(`/repository/${repo.id}`)}
+              >
                 <div className="p-5">
                   <div className="flex justify-between items-start mb-3">
                     <h2 className="text-xl font-semibold">
-                      <Link to={`/repository/${repo.id}`} className={`hover:text-blue-500 transition-colors duration-300`}>
+                      <span className={`hover:text-blue-500 transition-colors duration-300`}>
                         {repo.repo_name}
-                      </Link>
+                      </span>
                     </h2>
                     
                     <div className="flex items-center space-x-1 text-sm">
@@ -254,18 +276,16 @@ const Dashboard = () => {
                   )}
                   
                   <div className="flex justify-between items-center mt-4">
-                    <Link 
-                      to={`/repository/${repo.id}`}
-                      className="text-blue-500 hover:underline text-sm"
-                    >
-                      View Details
-                    </Link>
+                    <div className="invisible">
+                      {/* Placeholder for flex layout balance */}
+                    </div>
                     
                     <a 
                       href={repo.repo_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className={`text-sm flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'} transition-colors duration-300`}
+                      onClick={(e) => e.stopPropagation()} // Prevent the card click event from triggering
                     >
                       <span>GitHub</span>
                       <FaExternalLinkAlt className="text-xs ml-1" />

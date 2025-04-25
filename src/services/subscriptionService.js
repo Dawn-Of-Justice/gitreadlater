@@ -30,65 +30,78 @@ export const PREMIUM_FEATURES = [
 // Add this near the top of your file
 let initializationAttempted = false;
 
-// Get user's current subscription tier
-export const getUserTier = async () => {
+// Add a flag to track if we've logged cache usage recently
+let loggedCacheUsage = false;
+let loggedDatabaseFetch = false;
+
+// Get user's subscription tier with caching
+export const getUserTier = async (cachedSubscription = null, setUserSubscription = null) => {
   try {
+    // Use cached subscription if available
+    if (cachedSubscription) {
+      if (!loggedCacheUsage) {
+        console.log('Using cached subscription tier');
+        // Reset after 1 second to allow for occasional logs
+        loggedCacheUsage = true;
+        setTimeout(() => { loggedCacheUsage = false; }, 1000);
+      }
+      return cachedSubscription.tier;
+    }
+    
+    if (!loggedDatabaseFetch) {
+      console.log('Fetching subscription from database');
+      loggedDatabaseFetch = true;
+      setTimeout(() => { loggedDatabaseFetch = false; }, 1000);
+    }
+    
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
       return TIERS.FREE;
     }
     
-    // First check if user has a subscription record at all
-    const { data, error: checkError } = await supabase
+    const { data, error } = await supabase
       .from('user_subscriptions')
-      .select('id, tier, valid_until')  // Get all data in one query
+      .select('*')
       .eq('user_id', session.user.id)
-      .maybeSingle();
+      .single();
     
-    // If no subscription record exists, create one first
-    if (!data && !initializationAttempted) {
-      console.log('No subscription record found, creating one');
-      initializationAttempted = true; // Prevent multiple attempts in same session
-      
-      const success = await initializeUserSubscription(session.user.id);
-      
-      if (success) {
-        console.log('Subscription record created successfully');
-        
-        // Re-fetch the subscription data to make sure we have it
-        const { data: freshData } = await supabase
-          .from('user_subscriptions')
-          .select('tier, valid_until')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (freshData) {
-          return freshData.tier || TIERS.FREE;
-        }
-      } else {
-        console.error('Failed to create subscription record, continuing with free tier');
-        localStorage.setItem('subscription_init_attempted', 'true');
-      }
-      
+    if (error) {
+      console.error('Error fetching subscription:', error);
       return TIERS.FREE;
     }
     
-    // Handle case where no data was returned
     if (!data) {
-      console.log('No subscription data found for user, using FREE tier');
+      // Initialize subscription if it doesn't exist
+      await initializeUserSubscription(session.user.id);
       return TIERS.FREE;
     }
     
-    // Check if subscription is still valid
-    if (data.valid_until && new Date(data.valid_until) < new Date()) {
-      return TIERS.FREE;
+    // Check if subscription is valid
+    if (data.tier === TIERS.PREMIUM) {
+      if (data.valid_until && new Date(data.valid_until) < new Date()) {
+        console.log('Premium subscription expired');
+        data.tier = TIERS.FREE;
+        
+        // Update in database
+        await supabase
+          .from('user_subscriptions')
+          .update({
+            tier: TIERS.FREE,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', session.user.id);
+      }
     }
     
-    return data.tier || TIERS.FREE;
+    // Update cache
+    if (setUserSubscription) {
+      setUserSubscription(data);
+    }
+    
+    return data.tier;
   } catch (error) {
     console.error('Error getting user tier:', error);
-    // Default to free tier on error
     return TIERS.FREE;
   }
 };
@@ -99,9 +112,16 @@ export const isPremiumUser = async () => {
   return tier === TIERS.PREMIUM;
 };
 
-// Get user's repository count
-export const getUserRepositoryCount = async () => {
+// Get repository count with caching
+export const getUserRepositoryCount = async (cachedRepos = []) => {
   try {
+    // If we have cached repositories, use the count from there
+    if (cachedRepos.length > 0) {
+      console.log('Using cached repository count');
+      return cachedRepos.length;
+    }
+    
+    console.log('Fetching repository count from database');
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {

@@ -2,6 +2,12 @@ import { supabase } from '../lib/supabaseClient';
 import { getRepositoryDetails, parseGitHubUrl } from './githubService';
 import { canSaveRepository } from './subscriptionService';
 
+// Add similar flags at the top of the file
+let loggedRepoCache = false;
+let loggedRepoFetch = false;
+let loggedTagCache = false;
+let loggedTagFetch = false;
+
 // Get current user
 const getCurrentUser = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -14,7 +20,7 @@ const getCurrentUser = async () => {
 };
 
 // Save repository to user's collection
-export const saveRepository = async (url, notes = '', tags = []) => {
+export const saveRepository = async (url, notes = '', tags = [], invalidateCache) => {
   try {
     const user = await getCurrentUser();
     
@@ -57,6 +63,11 @@ export const saveRepository = async (url, notes = '', tags = []) => {
     
     if (error) throw error;
     
+    // Invalidate repositories cache after saving a new one
+    if (invalidateCache) {
+      invalidateCache();
+    }
+    
     return data[0];
   } catch (error) {
     console.error('Error saving repository:', error);
@@ -65,12 +76,29 @@ export const saveRepository = async (url, notes = '', tags = []) => {
 };
 
 // Get user's saved repositories
-export const getSavedRepositories = async (filters = {}) => {
+export const getSavedRepositories = async (filters = {}, cachedRepos = [], setCachedRepos = null) => {
   try {
     const user = await getCurrentUser();
     
     if (!user) {
       throw new Error('User not authenticated');
+    }
+    
+    // If we have filters, we need to get fresh data from the database
+    // If we have cached repositories and no filters, return the cached data
+    if (cachedRepos.length > 0 && !filters.tag && !filters.search) {
+      if (!loggedRepoCache) {
+        console.log('Using cached repositories');
+        loggedRepoCache = true;
+        setTimeout(() => { loggedRepoCache = false; }, 1000);
+      }
+      return cachedRepos;
+    }
+    
+    if (!loggedRepoFetch) {
+      console.log('Fetching repositories from database');
+      loggedRepoFetch = true;
+      setTimeout(() => { loggedRepoFetch = false; }, 1000);
     }
     
     let query = supabase
@@ -92,6 +120,11 @@ export const getSavedRepositories = async (filters = {}) => {
     
     if (error) throw error;
     
+    // Update cache if we're getting all repositories
+    if (!filters.tag && !filters.search && setCachedRepos) {
+      setCachedRepos(data);
+    }
+    
     return data;
   } catch (error) {
     console.error('Error getting saved repositories:', error);
@@ -100,7 +133,7 @@ export const getSavedRepositories = async (filters = {}) => {
 };
 
 // Update repository notes and tags
-export const updateRepository = async (id, updates = {}) => {
+export const updateRepository = async (id, updates = {}, invalidateCache = null) => {
   try {
     const user = await getCurrentUser();
     
@@ -131,6 +164,11 @@ export const updateRepository = async (id, updates = {}) => {
     
     if (error) throw error;
     
+    // Invalidate cache since we updated a repository
+    if (invalidateCache) {
+      invalidateCache();
+    }
+    
     return data[0];
   } catch (error) {
     console.error('Error updating repository:', error);
@@ -139,7 +177,7 @@ export const updateRepository = async (id, updates = {}) => {
 };
 
 // Delete repository
-export const deleteRepository = async (id) => {
+export const deleteRepository = async (id, invalidateCache = null) => {
   try {
     const user = await getCurrentUser();
     
@@ -155,6 +193,11 @@ export const deleteRepository = async (id) => {
     
     if (error) throw error;
     
+    // Invalidate cache after deletion
+    if (invalidateCache) {
+      invalidateCache();
+    }
+    
     return true;
   } catch (error) {
     console.error('Error deleting repository:', error);
@@ -163,12 +206,28 @@ export const deleteRepository = async (id) => {
 };
 
 // Get unique tags used by the user
-export const getUserTags = async () => {
+export const getUserTags = async (cachedTags = [], setCachedTags = null) => {
   try {
+    // If we have cached tags, return them
+    if (cachedTags.length > 0) {
+      if (!loggedTagCache) {
+        console.log('Using cached tags');
+        loggedTagCache = true;
+        setTimeout(() => { loggedTagCache = false; }, 1000);
+      }
+      return cachedTags;
+    }
+    
     const user = await getCurrentUser();
     
     if (!user) {
       throw new Error('User not authenticated');
+    }
+    
+    if (!loggedTagFetch) {
+      console.log('Fetching tags from database');
+      loggedTagFetch = true;
+      setTimeout(() => { loggedTagFetch = false; }, 1000);
     }
     
     const { data, error } = await supabase
@@ -181,6 +240,11 @@ export const getUserTags = async () => {
     // Extract unique tags
     const allTags = data.flatMap(repo => repo.tags || []);
     const uniqueTags = [...new Set(allTags)];
+    
+    // Update cache
+    if (setCachedTags) {
+      setCachedTags(uniqueTags);
+    }
     
     return uniqueTags;
   } catch (error) {

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinner, FaCheck } from 'react-icons/fa';
+import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinner, FaCheck, FaArrowLeft, FaArrowUp } from 'react-icons/fa';
 import { supabase } from '../lib/supabaseClient';
 import { getReadmeContent } from '../services/githubService';
 import { updateRepository, deleteRepository } from '../services/repositoryService';
@@ -26,8 +26,35 @@ const RepositoryDetails = () => {
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   
+  // Scroll state
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
   // Get theme from context
   const { darkMode, themeClasses } = useTheme();
+
+  // Check scroll position to show/hide the scroll to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  
+  // Function to scroll back to top
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
   
   // Fetch repository data
   useEffect(() => {
@@ -78,7 +105,7 @@ const RepositoryDetails = () => {
       await updateRepository(id, {
         notes,
         tags,
-      });
+      }, invalidateRepositories); // Pass the cache invalidation function
       
       // Update local state
       setRepository({
@@ -99,8 +126,8 @@ const RepositoryDetails = () => {
   // Handle delete repository
   const handleDeleteRepository = async () => {
     try {
-      await deleteRepository(id);
-      navigate('/');
+      await deleteRepository(id, invalidateRepositories); // Pass the cache invalidation function
+      navigate('/dashboard');
     } catch (err) {
       console.error('Error deleting repository:', err);
       setError('Failed to delete repository. Please try again.');
@@ -140,6 +167,17 @@ const RepositoryDetails = () => {
   return (
     <div className={`${themeClasses.body} min-h-screen py-8`}>
       <div className="container mx-auto px-6 py-8">
+        {/* Back button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/')}
+            className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+          >
+            <FaArrowLeft className="mr-2" />
+            <span>Back to Dashboard</span>
+          </button>
+        </div>
+        
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -388,6 +426,17 @@ const RepositoryDetails = () => {
           </div>
         ) : null}
       </div>
+      
+      {/* Scroll to top button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className={`fixed bottom-8 right-8 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded-full p-3 shadow-md transition-all duration-300 z-50`}
+          aria-label="Scroll to top"
+        >
+          <FaArrowUp />
+        </button>
+      )}
     </div>
   );
 };

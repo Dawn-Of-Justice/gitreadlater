@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider } from './context/ThemeContext';
+import { CacheProvider, useCache } from './context/CacheContext';
 
 // Components
 import Header from './components/Header';
@@ -20,9 +21,13 @@ import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
 import Roadmap from './pages/Roadmap';
 
-function App() {
+// Create an AppContent component that will use the hooks
+function AppContent() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Now useNavigate is inside the Router context
+  const navigate = useNavigate();
+  const { clearCache } = useCache();
 
   useEffect(() => {
     // Check for an existing session
@@ -73,53 +78,68 @@ function App() {
     return children;
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    clearCache(); // Clear cache on logout
+    navigate('/login');
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header user={user} onLogout={handleLogout} />
+      
+      <main className="flex-grow">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          
+          {/* Protected routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/save" element={
+            <ProtectedRoute>
+              <SaveRepository />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/repository/:id" element={
+            <ProtectedRoute>
+              <RepositoryDetails />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/subscription" element={
+            <ProtectedRoute>
+              <Subscription />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+}
+
+// Main App component now just provides context providers and the router
+function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="flex flex-col min-h-screen">
-          <Header user={user} />
-          
-          <main className="flex-grow">
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/roadmap" element={<Roadmap />} />
-              
-              {/* Protected routes */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/save" element={
-                <ProtectedRoute>
-                  <SaveRepository />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/repository/:id" element={
-                <ProtectedRoute>
-                  <RepositoryDetails />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/subscription" element={
-                <ProtectedRoute>
-                  <Subscription />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          
-          <Footer />
-        </div>
+        <CacheProvider>
+          <AppContent />
+        </CacheProvider>
       </Router>
     </ThemeProvider>
   );
