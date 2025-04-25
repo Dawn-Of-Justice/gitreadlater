@@ -4,7 +4,9 @@ import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrow
 import { getSavedRepositories, getUserTags } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
-import { useCache } from '../context/CacheContext'; // Import the cache hook
+import { useCache } from '../context/CacheContext'; 
+import { supabase } from '../lib/supabaseClient';
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
