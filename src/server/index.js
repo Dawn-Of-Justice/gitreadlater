@@ -5,13 +5,6 @@ const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 require('dotenv').config();
 
-// Add this at the top of your index.js to debug env variables
-console.log('Environment variables:');
-console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
-console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Missing');
-console.log('PADDLE_API_KEY:', process.env.PADDLE_API_KEY ? 'Set' : 'Missing');
-console.log('PADDLE_PUBLIC_KEY_BILLING:', process.env.PADDLE_PUBLIC_KEY_BILLING ? 'Set' : 'Missing');
-
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
