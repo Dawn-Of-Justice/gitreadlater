@@ -115,3 +115,12 @@
     margin-bottom: 4px !important;
   }
 }
+
+/* Add to App.css */
+.underline-hover {
+  text-decoration: none;
+}
+
+.underline-hover:hover {
+  text-decoration: underline;
+}

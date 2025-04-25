@@ -85,10 +85,32 @@ const Header = ({ user }) => {
                 </Link>
                 
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <FaUser className="text-gray-400" />
-                    <span>{user.user_metadata?.preferred_username || user.email}</span>
-                  </div>
+                  {/* A more robust version with fallback to GitHub icon */}
+                  <a 
+                    href={`https://github.com/${user.user_metadata?.preferred_username || ''}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 hover:text-blue-500 transition-colors duration-300"
+                    title="View GitHub Profile"
+                  >
+                    {user.user_metadata?.avatar_url ? (
+                      <img 
+                        src={user.user_metadata?.avatar_url} 
+                        alt="Profile" 
+                        className="h-8 w-8 rounded-full border border-gray-300"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <FaGithub className="text-gray-600" />
+                      </div>
+                    )}
+                    <span className="underline-hover">{user.user_metadata?.preferred_username || user.email}</span>
+                  </a>
                   
                   <button 
                     onClick={handleSignOut}
@@ -199,10 +221,32 @@ const Header = ({ user }) => {
                   )}
                 </Link>
                 
-                <div className="flex items-center space-x-2 text-gray-400">
-                  <FaUser />
-                  <span>{user.user_metadata?.preferred_username || user.email}</span>
-                </div>
+                {/* A more robust version with fallback to GitHub icon */}
+                <a 
+                  href={`https://github.com/${user.user_metadata?.preferred_username || ''}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-gray-400 hover:text-blue-500 transition-colors duration-300"
+                  title="View GitHub Profile"
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    <img 
+                      src={user.user_metadata?.avatar_url} 
+                      alt="Profile" 
+                      className="h-8 w-8 rounded-full border border-gray-300"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <FaGithub className="text-gray-600" />
+                    </div>
+                  )}
+                  <span className="underline-hover">{user.user_metadata?.preferred_username || user.email}</span>
+                </a>
                 
                 <button 
                   onClick={() => {

@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": false,  // Keep this as false for referenced projects
-    "outDir": "./dist",  // Add an output directory
+    "outDir": "./dist", 
 
     /* Linting */
     "strict": true,
