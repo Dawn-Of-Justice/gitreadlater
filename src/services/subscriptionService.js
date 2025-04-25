@@ -23,7 +23,7 @@ export const PREMIUM_FEATURES = [
   'Advanced search with filters',
   'Rich tagging system with nested tags',
   'Automatic categorization suggestions',
-  'Export to third-party services (Notion, Google Calandar, etc.)',
+  'Integration to third-party services (Notion, Google Calandar, etc.)',
 ];
 
 // Add this near the top of your file

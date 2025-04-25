@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { darkMode, themeClasses } = useTheme();
   const { userSubscription, repoCount, loading: subscriptionLoading } = useSubscription();
   
@@ -22,6 +23,7 @@ const Dashboard = () => {
   const [selectedTag, setSelectedTag] = useState('');
   const [tableExists, setTableExists] = useState(null); // null = unknown, true/false after check
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
+  const [refreshFlag, setRefreshFlag] = useState(0);
   
   // Refs for tracking fetch status
   const fetchAttemptedRef = useRef(false);
@@ -40,10 +42,17 @@ const Dashboard = () => {
 
   // Main effect for initial loading - runs once on component mount
   useEffect(() => {
-    if (fetchAttemptedRef.current) return;
+    if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
     
     const checkUserAndFetch = async () => {
       try {
+        // Reset force refresh flag if it was set
+        if (location.state?.forceRefresh) {
+          const newState = { ...location.state };
+          delete newState.forceRefresh;
+          navigate(location.pathname, { state: newState, replace: true });
+        }
+        
         // Check if user is logged in
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || !session.user) {
@@ -118,7 +127,7 @@ const Dashboard = () => {
     };
 
     checkUserAndFetch();
-  }, [navigate]);
+  }, [navigate, location.state?.forceRefresh, refreshFlag]);
 
   // Effect for handling search and tag filters - only runs when filters change
   useEffect(() => {
@@ -176,6 +185,12 @@ const Dashboard = () => {
   const isAtLimit = userTier === TIERS.FREE && repoCount >= repoLimit;
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
+  // Add a manual refresh function
+  const refreshRepositories = () => {
+    fetchAttemptedRef.current = false;
+    setRefreshFlag(prev => prev + 1);
+  };
+
   // =======================================================================
   // RENDERING LOGIC
   // =======================================================================
@@ -184,7 +199,7 @@ const Dashboard = () => {
   if (loading || subscriptionLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
       </div>
     );
   }
@@ -263,7 +278,7 @@ const Dashboard = () => {
               
               <Link 
                 to="/subscription" 
-                className={`btn mt-3 md:mt-0 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors duration-300 ${isAtLimit ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-yellow-600 hover:bg-yellow-700 text-white'}`}
+                className={`btn mt-3 md:mt-0 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors duration-300 ${isAtLimit ? themeClasses.dangerButton : themeClasses.warningButton}`}
               >
                 <FaCrown className="mr-1" />
                 <span>Upgrade to Premium</span>
@@ -277,7 +292,7 @@ const Dashboard = () => {
         {userTier === TIERS.PREMIUM && (
           <div className={`mb-6 p-4 rounded-md ${themeClasses.infoBanner} transition-colors duration-300`}>
             <div className="flex items-center">
-              <FaCrown className="text-yellow-500 mr-2" />
+              <FaCrown className={`${darkMode ? 'text-yellow-400' : 'text-yellow-500'} mr-2`} />
               <p>
                 <span className="font-medium">Premium Plan Active: </span>
                 You have unlimited repository storage and access to all premium features.
@@ -297,7 +312,7 @@ const Dashboard = () => {
                   placeholder="Search repositories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none ${themeClasses.focusRing} ${themeClasses.input} transition-colors duration-300`}
                 />
                 <FaSearch className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
               </form>
@@ -310,7 +325,7 @@ const Dashboard = () => {
                   <select
                     value={selectedTag}
                     onChange={(e) => setSelectedTag(e.target.value)}
-                    className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none ${themeClasses.input} transition-colors duration-300`}
+                    className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none ${themeClasses.focusRing} appearance-none ${themeClasses.input} transition-colors duration-300`}
                   >
                     <option value="">All Tags</option>
                     {tags.map((tag) => (
@@ -337,7 +352,7 @@ const Dashboard = () => {
               <div className="p-5">
                 <div className="flex justify-between items-start mb-3">
                   <h2 className="text-xl font-semibold">
-                    <span className={`hover:text-blue-500 transition-colors duration-300`}>
+                    <span className={`hover:${themeClasses.linkHover} transition-colors duration-300`}>
                       {repo.repo_name || repo.name}
                     </span>
                   </h2>
@@ -360,7 +375,7 @@ const Dashboard = () => {
                 
                 {repo.language && (
                   <div className="flex items-center space-x-1 text-sm text-gray-600 mb-3">
-                    <FaCircle className="text-blue-500" style={{ fontSize: '10px' }} />
+                    <FaCircle className={themeClasses.languageIndicator} style={{ fontSize: '10px' }} />
                     <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
                       {repo.language}
                     </span>

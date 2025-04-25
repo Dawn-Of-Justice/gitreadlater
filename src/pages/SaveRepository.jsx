@@ -335,6 +335,29 @@ const SaveRepository = () => {
     setShowUserRepos(false);
   };
 
+  const handleSaveRepository = async () => {
+    setIsSaving(true);
+    
+    try {
+      const result = await saveRepository(url, notes, selectedTags);
+      
+      if (result.success) {
+        // Show success message
+        toast.success('Repository saved successfully!');
+        
+        // Navigate back to dashboard with refresh flag
+        navigate('/', { state: { forceRefresh: true } });
+      } else {
+        setError(result.error || 'Failed to save repository');
+      }
+    } catch (error) {
+      console.error('Error saving repository:', error);
+      setError(error.message || 'An error occurred while saving the repository');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // If user is at limit, show upgrade notice
   if (isAtLimit) {
     return (

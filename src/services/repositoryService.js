@@ -101,10 +101,13 @@ export const saveRepository = async (url, notes = '', tags = [], invalidateCache
       invalidateCache();
     }
     
-    return data[0];
+    const savedRepo = data[0];
+    
+    // Return the data and a success flag
+    return { data: savedRepo, success: true };
   } catch (error) {
     console.error('Error saving repository:', error);
-    throw error;
+    return { error: error.message, success: false };
   }
 };
 
