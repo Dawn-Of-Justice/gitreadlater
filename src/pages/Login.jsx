@@ -134,17 +134,18 @@ const Login = () => {
       {showDemo && <DemoModal />}
       {/* Hero Section */}
       <section className="py-16 md:py-24">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row items-center">
-            {/* Left Side - Text Content */}
-            <div className="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12">
+        {/* Change from "container mx-auto px-6" to ensure better centering */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center justify-center">
+            {/* Left Side - Text Content - Add text-center for mobile, adjust width */}
+            <div className="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12 text-center lg:text-left">
               <h1 className={`text-4xl md:text-5xl font-bold mb-6 ${themeClasses.text}`}>
                 Never Lose Track of Useful GitHub Repositories Again
               </h1>
               <p className={`text-xl ${themeClasses.textSecondary} mb-8`}>
                 Git ReadLater helps you save, organize, and rediscover repositories with custom tags and notes - your personal GitHub bookmarking system.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
                 <button 
                   onClick={handleLogin}
                   className={`${themeClasses.button} px-6 py-3 rounded-md font-medium flex items-center`}
@@ -162,9 +163,9 @@ const Login = () => {
               </div>
             </div>
             
-            {/* Right Side - Repository Card Animation */}
-            <div className="lg:w-1/2 relative">
-              <div className="space-y-4 max-w-md mx-auto lg:mx-0">
+            {/* Right Side - Repository Card Animation - Center cards better */}
+            <div className="lg:w-1/2 relative w-full max-w-md mx-auto lg:mx-0">
+              <div className="space-y-4">
                 {repositories.map((repo, index) => (
                   <div 
                     key={index}
