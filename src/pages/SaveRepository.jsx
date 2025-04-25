@@ -6,7 +6,7 @@ import { saveRepository, getUserTags } from '../services/repositoryService';
 import { getUserRepositoryCount, getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
-import { supabase } from '../services/supabaseClient'; 
+import { supabase } from '../lib/supabaseClient'; 
 
 const SaveRepository = () => {
   const navigate = useNavigate();
