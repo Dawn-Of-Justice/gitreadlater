@@ -265,7 +265,7 @@ const Dashboard = () => {
   // Initial loading state
   if (loading || subscriptionLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
         <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
       </div>
     );
@@ -274,16 +274,18 @@ const Dashboard = () => {
   // Error state
   if (error) {
     return (
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
-        <div className={`${themeClasses.dangerBanner} p-6 rounded-lg`}>
-          <h2 className="text-xl font-bold mb-2">Error</h2>
-          <p>{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Refresh Page
-          </button>
+      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
+          <div className={`${themeClasses.dangerBanner} p-6 rounded-lg`}>
+            <h2 className="text-xl font-bold mb-2">Error</h2>
+            <p>{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className={`${themeClasses.dangerButton} mt-4 px-4 py-2 rounded`}
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
       </div>
     );

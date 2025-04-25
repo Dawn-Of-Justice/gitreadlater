@@ -11,6 +11,30 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://api.github.com; img-src 'self' data: https:; font-src 'self' data:;" />
     <meta name="description" content="Save and organize GitHub repositories for later reference" />
     <title>Git ReadLater</title>
+    <!-- Add this in the <head> of your index.html file, before any other scripts -->
+    <script>
+      (function() {
+        try {
+          // Check for saved theme preference
+          const savedTheme = localStorage.getItem('theme');
+          // Check user's system preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          // Apply appropriate theme early
+          if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.setProperty('--bg-color', '#121212');
+            document.documentElement.style.setProperty('--text-color', '#e5e5e5');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.setProperty('--bg-color', '#f5f7fa');
+            document.documentElement.style.setProperty('--text-color', '#333333');
+          }
+        } catch (e) {
+          // Fail silently
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

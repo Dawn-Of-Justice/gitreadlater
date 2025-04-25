@@ -5,70 +5,37 @@ import { supabase } from '../lib/supabaseClient';
 const ThemeContext = createContext();
 const SubscriptionContext = createContext();
 
-export function ThemeProvider({ children }) {
+export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(() => {
+    // Get the initial state from localStorage or system preference
     const savedTheme = localStorage.getItem('theme');
-    return savedTheme ? savedTheme === 'dark' : true; // Default to dark mode
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return savedTheme === 'dark' || (!savedTheme && prefersDark);
   });
-
+  
+  // Theme toggle function
+  const toggleTheme = () => {
+    setDarkMode(prev => !prev);
+  };
+  
+  // Effect for updating theme when darkMode changes
   useEffect(() => {
-    // Listen for theme changes from other windows
-    const handleStorageChange = (e) => {
-      if (e.key === 'theme') {
-        setDarkMode(e.newValue === 'dark');
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
+    // Save setting to localStorage
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
     
-    // Listen for custom events within same window
-    const handleCustomThemeChange = (e) => {
-      setDarkMode(e.detail.darkMode);
-    };
-    
-    document.addEventListener('themeChange', handleCustomThemeChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('themeChange', handleCustomThemeChange);
-    };
-  }, []);
-
-  useEffect(() => {
+    // Update document classes and CSS variables
     if (darkMode) {
       document.documentElement.classList.add('dark');
-      document.documentElement.style.setProperty('--bg-color', '#121212'); // Dark background
+      document.documentElement.style.setProperty('--bg-color', '#121212');
       document.documentElement.style.setProperty('--text-color', '#e5e5e5');
     } else {
       document.documentElement.classList.remove('dark');
-      document.documentElement.style.setProperty('--bg-color', '#f5f7fa'); // Light background
+      document.documentElement.style.setProperty('--bg-color', '#f5f7fa');
       document.documentElement.style.setProperty('--text-color', '#333333');
     }
   }, [darkMode]);
-
-  const toggleTheme = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem('theme', newMode ? 'dark' : 'light');
-    
-    // Dispatch custom event for same-window components
-    document.dispatchEvent(new CustomEvent('themeChange', { 
-      detail: { darkMode: newMode } 
-    }));
-    
-    // Force a storage event for other windows
-    try {
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'theme',
-        newValue: newMode ? 'dark' : 'light',
-        url: window.location.href
-      }));
-    } catch (err) {
-      console.error('Error dispatching storage event:', err);
-    }
-  };
-
-  // GitHub-like theme classes
+  
+  // Additional theme classes
   const themeClasses = {
     body: darkMode 
       ? "bg-[#0d1117] text-[#f0f6fc]" 
@@ -158,13 +125,13 @@ export function ThemeProvider({ children }) {
       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
   };
-
+  
   return (
     <ThemeContext.Provider value={{ darkMode, toggleTheme, themeClasses }}>
       {children}
     </ThemeContext.Provider>
   );
-}
+};
 
 export function useTheme() {
   return useContext(ThemeContext);
