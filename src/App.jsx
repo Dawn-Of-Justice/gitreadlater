@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
-import { initializeUserSubscription } from './services/subscriptionService';
 
 // Components
 import Header from './components/Header';
@@ -26,7 +25,6 @@ import Roadmap from './pages/Roadmap';
 function AppContent() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Now useNavigate is inside the Router context
   const navigate = useNavigate();
   const { clearCache } = useCache();
 
@@ -37,14 +35,6 @@ function AppContent() {
       
       if (session?.user) {
         setUser(session.user);
-        
-        // Initialize subscription for new users
-        try {
-          await initializeUserSubscription(session.user.id);
-        } catch (error) {
-          console.error('Failed to initialize subscription:', error);
-          // Continue anyway
-        }
       }
       
       setLoading(false);
@@ -54,15 +44,6 @@ function AppContent() {
         async (event, session) => {
           if (session?.user) {
             setUser(session.user);
-            
-            // For new sign-ins, initialize subscription
-            if (event === 'SIGNED_IN') {
-              try {
-                await initializeUserSubscription(session.user.id);
-              } catch (error) {
-                console.error('Failed to initialize subscription on sign in:', error);
-              }
-            }
           } else {
             setUser(null);
           }
@@ -77,18 +58,6 @@ function AppContent() {
     };
     
     checkSession();
-  }, []);
-
-  useEffect(() => {
-    // Reset initialization flag when app loads
-    if (localStorage.getItem('subscription_init_attempted')) {
-      // Only clear it if we've actually logged in
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) {
-          localStorage.removeItem('subscription_init_attempted');
-        }
-      });
-    }
   }, []);
 
   // Protected route component

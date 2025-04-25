@@ -33,70 +33,61 @@ let initializationAttempted = false;
 let loggedCacheUsage = false;
 let loggedDatabaseFetch = false;
 
+// Add these variables at the top of your file
+let initializationInProgress = false;
+let initializationTimeout = null;
+
 // Get user's subscription tier with caching
 export const getUserTier = async (cachedSubscription = null, setUserSubscription = null) => {
+  // If we have a cached subscription, use it
+  if (cachedSubscription) {
+    return cachedSubscription.tier;
+  }
+  
   try {
-    // Use cached subscription if available
-    if (cachedSubscription) {
-      if (!loggedCacheUsage) {
-        console.log('Using cached subscription tier');
-        // Reset after 1 second to allow for occasional logs
-        loggedCacheUsage = true;
-        setTimeout(() => { loggedCacheUsage = false; }, 1000);
-      }
-      return cachedSubscription.tier;
-    }
-    
-    if (!loggedDatabaseFetch) {
-      console.log('Fetching subscription from database');
-      loggedDatabaseFetch = true;
-      setTimeout(() => { loggedDatabaseFetch = false; }, 1000);
-    }
-    
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      return TIERS.FREE;
+      return 'free'; // Default tier
     }
     
+    console.log('Fetching subscription from database');
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
-      .eq('user_id', session.user.id);
+      .eq('user_id', session.user.id)
+      .maybeSingle();
     
     if (error) {
       console.error('Error fetching subscription:', error);
-      return TIERS.FREE;
+      return 'free'; // Default to free on error
     }
     
-    const subscription = data && data.length > 0 ? data[0] : null;
-    
-    // Only try to initialize once until timeout expires
-    if (!subscription && !initializationAttempted) {
-      console.log('No subscription found, attempting to initialize');
-      initializationAttempted = true;
+    if (!data && !initializationInProgress) {
+      // Subscription doesn't exist yet, initialize it
       try {
         const newSubscription = await initializeUserSubscription(session.user.id);
-        if (setUserSubscription) setUserSubscription(newSubscription);
-        // Reset the flag after some time
-        setTimeout(() => { initializationAttempted = false; }, 60000);
-        return TIERS.FREE;
-      } catch (initError) {
-        console.error('Failed to initialize subscription:', initError);
-        return TIERS.FREE;
+        if (setUserSubscription && newSubscription) {
+          setUserSubscription(newSubscription);
+        }
+        return newSubscription?.tier || 'free';
+      } catch (err) {
+        console.error('Failed to initialize subscription in getUserTier', err);
+        return 'free';
       }
-    } else if (!subscription) {
-      console.log('Already attempted initialization recently, returning FREE tier');
-      return TIERS.FREE;
+    } else if (!data) {
+      return 'free'; // Return free while initialization is in progress
     }
     
-    if (setUserSubscription) setUserSubscription(subscription);
+    // Update the cached subscription if there's a setter
+    if (setUserSubscription) {
+      setUserSubscription(data);
+    }
     
-    // Return the tier from the subscription
-    return subscription.tier || TIERS.FREE;
-  } catch (error) {
-    console.error('Error in getUserTier:', error);
-    return TIERS.FREE;
+    return data.tier || 'free';
+  } catch (err) {
+    console.error('Error in getUserTier:', err);
+    return 'free';
   }
 };
 
@@ -147,6 +138,19 @@ export const canSaveRepository = async () => {
 // Function to initialize user subscription if it doesn't exist
 export const initializeUserSubscription = async (userId) => {
   try {
+    // Prevent multiple concurrent calls for the same user
+    if (initializationInProgress) {
+      console.log('Initialization already in progress, skipping');
+      return null;
+    }
+    
+    initializationInProgress = true;
+    
+    // Clear any existing timeout
+    if (initializationTimeout) {
+      clearTimeout(initializationTimeout);
+    }
+    
     console.log(`Attempting to initialize subscription for user ${userId}`);
     
     // First check if subscription already exists
@@ -158,6 +162,7 @@ export const initializeUserSubscription = async (userId) => {
       
     if (existingSub) {
       console.log('Subscription already exists for user');
+      initializationInProgress = false;
       return existingSub;
     }
     
@@ -175,23 +180,34 @@ export const initializeUserSubscription = async (userId) => {
       .select();
       
     if (insertError) {
-      // Check if error is due to uniqueness constraint (subscription created by another request)
-      if (insertError.code === '23505') { // PostgreSQL unique violation code
+      // Check if error is due to uniqueness constraint
+      if (insertError.code === '23505') {
         console.log('Subscription was created by another concurrent request');
         const { data: fetchedSub } = await supabase
           .from('user_subscriptions')
           .select('*')
           .eq('user_id', userId)
           .maybeSingle();
+          
+        initializationInProgress = false;
         return fetchedSub;
       }
+      
+      initializationInProgress = false;
       throw insertError;
     }
     
     console.log('Subscription initialized successfully');
+    
+    // Release lock after a short delay to prevent race conditions
+    initializationTimeout = setTimeout(() => {
+      initializationInProgress = false;
+    }, 5000);
+    
     return insertData[0];
   } catch (error) {
     console.error('Error initializing user subscription:', error);
+    initializationInProgress = false;
     throw error;
   }
 };
