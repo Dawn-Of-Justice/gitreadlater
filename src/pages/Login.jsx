@@ -134,18 +134,17 @@ const Login = () => {
       {showDemo && <DemoModal />}
       {/* Hero Section */}
       <section className="py-16 md:py-24">
-        {/* Change from "container mx-auto px-6" to ensure better centering */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center justify-center">
-            {/* Left Side - Text Content - Add text-center for mobile, adjust width */}
-            <div className="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12 text-center lg:text-left">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center">
+            {/* Left Side - Text Content - Keep your original layout */}
+            <div className="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12">
               <h1 className={`text-4xl md:text-5xl font-bold mb-6 ${themeClasses.text}`}>
                 Never Lose Track of Useful GitHub Repositories Again
               </h1>
               <p className={`text-xl ${themeClasses.textSecondary} mb-8`}>
                 Git ReadLater helps you save, organize, and rediscover repositories with custom tags and notes - your personal GitHub bookmarking system.
               </p>
-              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+              <div className="flex flex-wrap gap-4">
                 <button 
                   onClick={handleLogin}
                   className={`${themeClasses.button} px-6 py-3 rounded-md font-medium flex items-center`}
@@ -163,46 +162,49 @@ const Login = () => {
               </div>
             </div>
             
-            {/* Right Side - Repository Card Animation - Center cards better */}
-            <div className="lg:w-1/2 relative w-full max-w-md mx-auto lg:mx-0">
-              <div className="space-y-4">
-                {repositories.map((repo, index) => (
-                  <div 
-                    key={index}
-                    className={`${themeClasses.card} rounded-lg p-4 transform transition-all duration-500 ${
-                      showCards 
-                        ? 'translate-y-0 opacity-100' 
-                        : 'translate-y-8 opacity-0'
-                    }`}
-                    style={{ transitionDelay: `${index * 200}ms` }}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className={`font-bold ${themeClasses.text}`}>{repo.name}</h3>
-                        <p className={`text-sm ${themeClasses.textSecondary}`}>
-                          {repo.description}
-                        </p>
+            {/* Right Side - Repository Card Animation - Fix centering */}
+            <div className="lg:w-1/2 flex justify-center w-full">
+              {/* Changed from max-w-md to max-w-lg for more width on larger screens */}
+              <div className="w-full max-w-lg">
+                <div className="space-y-4">
+                  {repositories.map((repo, index) => (
+                    <div 
+                      key={index}
+                      className={`${themeClasses.card} rounded-lg p-4 transform transition-all duration-500 ${
+                        showCards 
+                          ? 'translate-y-0 opacity-100' 
+                          : 'translate-y-8 opacity-0'
+                      }`}
+                      style={{ transitionDelay: `${index * 200}ms` }}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className={`font-bold ${themeClasses.text}`}>{repo.name}</h3>
+                          <p className={`text-sm ${themeClasses.textSecondary}`}>
+                            {repo.description}
+                          </p>
+                        </div>
+                        <div className="text-yellow-500 flex items-center">
+                          <FaStar className="mr-1" />
+                          <span>{repo.stars}</span>
+                        </div>
                       </div>
-                      <div className="text-yellow-500 flex items-center">
-                        <FaStar className="mr-1" />
-                        <span>{repo.stars}</span>
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {repo.tags.map((tag) => (
+                          <span 
+                            key={tag} 
+                            className={`${getTagColorClass(tag)} text-white text-xs px-2 py-1 rounded-full`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
                       </div>
+                      <p className={`text-xs ${themeClasses.textSecondary} border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} pt-2 mt-2`}>
+                        My note: {repo.note}
+                      </p>
                     </div>
-                    <div className="mb-2 flex flex-wrap gap-1">
-                      {repo.tags.map((tag) => (
-                        <span 
-                          key={tag} 
-                          className={`${getTagColorClass(tag)} text-white text-xs px-2 py-1 rounded-full`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <p className={`text-xs ${themeClasses.textSecondary} border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} pt-2 mt-2`}>
-                      My note: {repo.note}
-                    </p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
