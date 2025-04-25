@@ -106,7 +106,7 @@ Monetization Implementation
 
 Free Tier: Limit to 100 saved repositories, basic tagging, and simple search.
 Paid Tier: Offer unlimited repositories, advanced search, richer tagging, automatic categorization, and integrations (e.g., Notion) for ~$3/month.
-Payment Processing: Use Stripe for subscription management and secure payments.
+Payment Processing: Use Paddle for subscription management and secure payments.
 
 Potential Challenges and Mitigation
 

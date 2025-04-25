@@ -1,19 +1,19 @@
 # Git ReadLater Backend Server
 
-This is the backend server for the Git ReadLater application, handling Stripe integration for subscription management.
+This is the backend server for the Git ReadLater application, handling Paddle integration for subscription management.
 
 ## Features
 
-- Create Stripe checkout sessions for subscription purchases
-- Create Stripe customer portal sessions for subscription management
-- Process Stripe webhooks for subscription lifecycle events
+- Create Paddle checkout sessions for subscription purchases
+- Create Paddle customer portal sessions for subscription management
+- Process Paddle webhooks for subscription lifecycle events
 - Update Supabase database based on subscription changes
 
 ## Prerequisites
 
 - Node.js (v16 or higher)
 - npm or yarn
-- Stripe account
+- Paddle account
 - Supabase project with appropriate tables set up
 
 ## Setup
@@ -27,9 +27,9 @@ npm install
 2. Create a `.env` file based on `.env.example`:
 
 ```
-# Stripe API Keys
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+# Paddle API Keys
+Paddle_SECRET_KEY=your_Paddle_secret_key
+Paddle_WEBHOOK_SECRET=your_Paddle_webhook_secret
 
 # Supabase API Keys
 SUPABASE_URL=your_supabase_url
@@ -51,10 +51,10 @@ For development with automatic restarts:
 npm run dev
 ```
 
-## Stripe Setup
+## Paddle Setup
 
-1. Create a Stripe account at [stripe.com](https://stripe.com)
-2. In the Stripe Dashboard, go to Developers > API keys and copy your Secret Key
+1. Create a Paddle account at [Paddle.com](https://Paddle.com)
+2. In the Paddle Dashboard, go to Developers > API keys and copy your Secret Key
 3. Create a product and subscription price:
    - Go to Products > Create Product
    - Set the product name (e.g., "Git ReadLater Premium")
@@ -84,13 +84,13 @@ The server uses the Supabase Service Role Key to update user subscription data. 
 
 ### POST /create-checkout-session
 
-Creates a Stripe checkout session for subscription purchase.
+Creates a Paddle checkout session for subscription purchase.
 
 Request body:
 ```json
 {
   "userId": "user_id_from_supabase",
-  "priceId": "price_id_from_stripe",
+  "priceId": "price_id_from_Paddle",
   "successUrl": "https://your-app.com/success",
   "cancelUrl": "https://your-app.com/cancel"
 }
@@ -98,7 +98,7 @@ Request body:
 
 ### POST /create-portal-session
 
-Creates a Stripe customer portal session for subscription management.
+Creates a Paddle customer portal session for subscription management.
 
 Request body:
 ```json
@@ -110,7 +110,7 @@ Request body:
 
 ### POST /webhook
 
-Endpoint for Stripe webhook events. This URL needs to be configured in your Stripe dashboard.
+Endpoint for Paddle webhook events. This URL needs to be configured in your Paddle dashboard.
 
 ## Deployment
 
@@ -148,7 +148,7 @@ git push heroku main
 Set environment variables in Heroku dashboard or using CLI:
 
 ```bash
-heroku config:set STRIPE_SECRET_KEY=your_key
+heroku config:set Paddle_SECRET_KEY=your_key
 ```
 
 ## License

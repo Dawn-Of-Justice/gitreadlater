@@ -25,7 +25,7 @@ Git ReadLater is a web application that allows developers to save, organize, and
 - **Backend**: Supabase (PostgreSQL, Authentication, Storage)
 - **Authentication**: GitHub OAuth
 - **API Integration**: GitHub REST API via Octokit
-- **Payments**: Stripe integration for subscription management
+- **Payments**: Paddle integration for subscription management
 
 ## Getting Started
 
@@ -35,7 +35,7 @@ Git ReadLater is a web application that allows developers to save, organize, and
 - npm or yarn
 - A Supabase account (free tier available)
 - A GitHub OAuth application
-- A Stripe account (for subscription features)
+- A Paddle account (for subscription features)
 
 ### Setup
 
@@ -59,7 +59,7 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_GITHUB_CLIENT_ID=your_github_client_id
 VITE_REDIRECT_URL=http://localhost:5173/auth/callback
-VITE_STRIPE_PRICE_ID=your_stripe_price_id
+VITE_Paddle_PRICE_ID=your_Paddle_price_id
 VITE_API_URL=http://localhost:3000
 ```
 
@@ -68,9 +68,9 @@ VITE_API_URL=http://localhost:3000
    - Run the SQL commands from `supabase-schema.sql` and `subscription-schema.sql` in the SQL Editor
    - Set up GitHub OAuth in the Authentication settings
 
-5. Set up Stripe (for subscription features):
-   - Create a Stripe account and product with a monthly subscription price
-   - Add your Stripe price ID to the `.env` file
+5. Set up Paddle (for subscription features):
+   - Create a Paddle account and product with a monthly subscription price
+   - Add your Paddle price ID to the `.env` file
    - Configure the webhook endpoint (see Server Setup below)
 
 6. Start the development server:
@@ -81,7 +81,7 @@ npm run dev
 
 7. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Server Setup (for Stripe integration)
+### Server Setup (for Paddle integration)
 
 1. Navigate to the server directory:
 
@@ -98,9 +98,9 @@ npm install
 3. Create a `.env` file based on `.env.example` in the server directory:
 
 ```
-# Stripe API Keys
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+# Paddle API Keys
+Paddle_SECRET_KEY=your_Paddle_secret_key
+Paddle_WEBHOOK_SECRET=your_Paddle_webhook_secret
 
 # Supabase API Keys
 SUPABASE_URL=your_supabase_url
@@ -139,10 +139,10 @@ For detailed server setup instructions, see the [server README](./server/README.
 3. Register the application
 4. Copy the Client ID and Client Secret to your Supabase project
 
-## Stripe Setup
+## Paddle Setup
 
-1. Create a Stripe account at [stripe.com](https://stripe.com)
-2. In the Stripe Dashboard, create a product and price:
+1. Create a Paddle account at [Paddle.com](https://Paddle.com)
+2. In the Paddle Dashboard, create a product and price:
    - Go to Products > Create Product
    - Set the product name (e.g., "Git ReadLater Premium")
    - Add a price (e.g., $3/month)
@@ -163,7 +163,7 @@ For detailed server setup instructions, see the [server README](./server/README.
 3. Set environment variables in your hosting platform
 4. Deploy!
 
-### Backend Server (for Stripe integration)
+### Backend Server (for Paddle integration)
 
 The backend server can be deployed to Vercel, Heroku, or any Node.js hosting platform.
 
@@ -181,7 +181,7 @@ For Heroku:
 ```
 github-readlater/
 ├── public/                # Static assets
-├── server/                # Backend server for Stripe integration
+├── server/                # Backend server for Paddle integration
 ├── src/
 │   ├── components/        # Reusable React components
 │   ├── lib/               # Utility functions and API clients
@@ -206,4 +206,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Supabase for the excellent backend services
 - React and Vite for the frontend framework
 - Tailwind CSS for the styling
-- Stripe for the subscription payment system
+- Paddle for the subscription payment system

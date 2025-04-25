@@ -30,19 +30,19 @@ The system tracks user subscription status and enforces repository limits:
 - The system notifies free users when they approach their limit (80% and above)
 - When a free user reaches their limit, they cannot save additional repositories
 
-### Stripe Integration
+### Paddle Integration
 
-Stripe handles all payment processing, subscription management, and invoicing:
+Paddle handles all payment processing, subscription management, and invoicing:
 
 1. **Checkout Process:**
    - User clicks "Upgrade to Premium" button
-   - System creates a Stripe checkout session
-   - User is redirected to Stripe's hosted checkout page
-   - After successful payment, Stripe webhook notifies our system
+   - System creates a Paddle checkout session
+   - User is redirected to Paddle's hosted checkout page
+   - After successful payment, Paddle webhook notifies our system
    - User's tier is updated in the database
 
 2. **Subscription Management:**
-   - Users can access Stripe's Customer Portal to:
+   - Users can access Paddle's Customer Portal to:
      - Update payment methods
      - View invoices
      - Cancel subscription
@@ -62,8 +62,8 @@ CREATE TABLE user_subscriptions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   tier TEXT NOT NULL DEFAULT 'free',
-  stripe_customer_id TEXT,
-  stripe_subscription_id TEXT,
+  Paddle_customer_id TEXT,
+  Paddle_subscription_id TEXT,
   valid_until TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -84,11 +84,11 @@ The system enforces feature availability based on subscription tier:
    - Rich tagging features are only available to premium users
    - Export functionality is limited to premium subscribers
 
-## Stripe Setup Instructions
+## Paddle Setup Instructions
 
 ### 1. Create Products and Prices
 
-In the Stripe Dashboard:
+In the Paddle Dashboard:
 
 1. Go to **Products** > **Add Product**
 2. Create a product for "Git ReadLater Premium"
@@ -97,7 +97,7 @@ In the Stripe Dashboard:
 
 ### 2. API Keys
 
-Get your API keys from the Stripe Dashboard:
+Get your API keys from the Paddle Dashboard:
 
 1. Go to **Developers** > **API keys**
 2. Use the **Publishable key** for your frontend
@@ -119,10 +119,10 @@ Set up webhooks to receive subscription events:
 
 ### Test Mode
 
-All Stripe development should be done in Test Mode:
+All Paddle development should be done in Test Mode:
 
-1. Make sure you're in Test Mode in the Stripe Dashboard
-2. Use Stripe's test credit cards for payments:
+1. Make sure you're in Test Mode in the Paddle Dashboard
+2. Use Paddle's test credit cards for payments:
    - Success: `4242 4242 4242 4242`
    - Decline: `4000 0000 0000 0002`
 
@@ -180,13 +180,13 @@ Potential expansion of the monetization strategy:
 ## Implementation Checklist
 
 - [x] Define subscription tiers and pricing
-- [x] Set up Stripe product and price
+- [x] Set up Paddle product and price
 - [x] Create subscription database tables
 - [x] Implement repository limit checking
 - [x] Create subscription management UI
 - [x] Add upgrade prompts for free tier users
-- [x] Implement Stripe checkout process
-- [x] Handle Stripe webhooks for subscription events
+- [x] Implement Paddle checkout process
+- [x] Handle Paddle webhooks for subscription events
 - [x] Test the complete subscription lifecycle
 - [ ] Set up analytics for conversion tracking
 - [ ] Monitor key subscription metrics
@@ -194,6 +194,6 @@ Potential expansion of the monetization strategy:
 
 ## References
 
-- [Stripe Documentation](https://stripe.com/docs)
+- [Paddle Documentation](https://Paddle.com/docs)
 - [Supabase Authentication](https://supabase.com/docs/guides/auth)
 - [Freemium Business Model](https://en.wikipedia.org/wiki/Freemium)
