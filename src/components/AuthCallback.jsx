@@ -1,84 +1,81 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
 const AuthCallback = () => {
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
+    const handleCallback = async () => {
       try {
-        // Check URL for error parameters
-        const url = new URL(window.location.href);
-        const errorParam = url.searchParams.get('error');
-        const errorDescription = url.searchParams.get('error_description');
+        setLoading(true);
         
-        if (errorParam) {
-          console.error('Auth error:', errorParam, errorDescription);
-          setError(`Authentication error: ${errorDescription || 'Unknown error'}`);
+        // Parse URL for errors
+        const hash = location.hash.substring(1);
+        const params = new URLSearchParams(hash || location.search);
+        
+        if (params.get('error')) {
+          const errorMessage = params.get('error_description') || 'Unknown error';
+          setError(decodeURIComponent(errorMessage));
+          setLoading(false);
           return;
         }
-        
-        // Get session and verify
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        // Get session from URL if available
+        const { data, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           console.error('Session error:', sessionError);
-          setError('Failed to establish a session. Please try logging in again.');
+          setError('Failed to establish session. Please try again.');
+          setLoading(false);
           return;
         }
         
-        if (!session) {
-          console.log('No session found, redirecting to login');
-          navigate('/login');
-          return;
-        }
-        
-        // Get or create user subscription as needed
-        try {
-          const { data: existingUser } = await supabase
-            .from('user_subscriptions')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
+        if (!data.session) {
+          // Try to exchange the code for a session
+          console.log('No session found, attempting to exchange code');
+          // This happens automatically with the Supabase client, just wait a moment
+          setTimeout(async () => {
+            const { data: retryData } = await supabase.auth.getSession();
+            if (!retryData.session) {
+              setError('Failed to authenticate. Please try again.');
+              setLoading(false);
+              return;
+            }
             
-          if (!existingUser) {
-            console.log('Creating new user subscription');
-            await supabase.from('user_subscriptions').insert({
-              user_id: session.user.id,
-              tier: 'free',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-          }
-        } catch (subError) {
-          console.error('Error checking/creating subscription:', subError);
-          // Continue anyway - we'll try again later
+            // Success! Redirect to the home page
+            navigate('/');
+          }, 2000);
+          return;
         }
         
-        // Redirect to dashboard
+        // We have a session, redirect to home
         navigate('/');
       } catch (err) {
         console.error('Error in auth callback:', err);
-        setError('An unexpected error occurred. Please try logging in again.');
+        setError('An unexpected error occurred. Please try again.');
+        setLoading(false);
       }
     };
 
-    handleAuthCallback();
-  }, [navigate]);
+    handleCallback();
+  }, [navigate, location]);
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
-          <h2 className="font-bold mb-2">Authentication Error</h2>
-          <p>{error}</p>
-          <button 
-            className="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+      <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
+        <div className="max-w-md w-full bg-white shadow-md rounded-lg p-6">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <p className="text-sm text-gray-500 mb-6">Please try signing in again or contact support if the problem persists.</p>
+          <button
+            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
             onClick={() => navigate('/login')}
           >
-            Return to Login
+            Back to Login
           </button>
         </div>
       </div>
@@ -86,10 +83,10 @@ const AuthCallback = () => {
   }
 
   return (
-    <div className="flex justify-center items-center h-screen">
+    <div className="flex justify-center items-center min-h-screen">
       <div className="text-center">
-        <h1 className="text-xl mb-4">Completing your sign-in...</h1>
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-lg">Completing authentication...</p>
       </div>
     </div>
   );
