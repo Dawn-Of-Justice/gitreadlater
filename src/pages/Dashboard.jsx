@@ -33,6 +33,16 @@ const Dashboard = () => {
     invalidateRepositories 
   } = useCache();
   
+  const initUserSubscription = async (userId) => {
+    try {
+      // Import the function from your service
+      await initializeUserSubscription(userId);
+    } catch (error) {
+      console.error('Error initializing subscription:', error);
+      // Continue anyway
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -42,7 +52,7 @@ const Dashboard = () => {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user?.id) {
-            await initializeUserSubscription(session.user.id);
+            await initUserSubscription(session.user.id);
           }
         } catch (subError) {
           console.error('Subscription initialization error:', subError);
