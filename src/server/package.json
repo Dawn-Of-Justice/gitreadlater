@@ -1,7 +1,7 @@
 {
   "name": "github-readlater-server",
   "version": "1.0.0",
-  "description": "Backend server for GitHub ReadLater subscription management using Paddle",
+  "description": "Backend server for Git ReadLater subscription management using Paddle",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

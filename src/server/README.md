@@ -1,6 +1,6 @@
-# GitHub ReadLater Backend Server
+# Git ReadLater Backend Server
 
-This is the backend server for the GitHub ReadLater application, handling Stripe integration for subscription management.
+This is the backend server for the Git ReadLater application, handling Stripe integration for subscription management.
 
 ## Features
 
@@ -57,7 +57,7 @@ npm run dev
 2. In the Stripe Dashboard, go to Developers > API keys and copy your Secret Key
 3. Create a product and subscription price:
    - Go to Products > Create Product
-   - Set the product name (e.g., "GitHub ReadLater Premium")
+   - Set the product name (e.g., "Git ReadLater Premium")
    - Add a price (e.g., $3/month)
    - Copy the Price ID (starts with "price_")
 4. Set up webhook:

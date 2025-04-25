@@ -89,7 +89,7 @@ const Login = () => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className={`${darkMode ? 'bg-[#21262d]' : 'bg-white'} rounded-lg shadow-xl p-6 max-w-3xl w-full`}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className={`text-xl font-bold ${themeClasses.text}`}>GitHub ReadLater Demo</h3>
+          <h3 className={`text-xl font-bold ${themeClasses.text}`}>Git ReadLater Demo</h3>
           <button 
             onClick={() => setShowDemo(false)}
             className="text-gray-500 hover:text-gray-700"
@@ -142,7 +142,7 @@ const Login = () => {
                 Never Lose Track of Useful GitHub Repositories Again
               </h1>
               <p className={`text-xl ${themeClasses.textSecondary} mb-8`}>
-                GitHub ReadLater helps you save, organize, and rediscover repositories with custom tags and notes - your personal GitHub bookmarking system.
+                Git ReadLater helps you save, organize, and rediscover repositories with custom tags and notes - your personal GitHub bookmarking system.
               </p>
               <div className="flex flex-wrap gap-4">
                 <button 
@@ -257,7 +257,7 @@ const Login = () => {
                 Your GitHub Repositories, Organized
               </h2>
               <p className={`${themeClasses.textSecondary} mb-4`}>
-                Starring repositories isn't enough. With GitHub ReadLater you can:
+                Starring repositories isn't enough. With Git ReadLater you can:
               </p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center">
@@ -300,7 +300,7 @@ const Login = () => {
             </div>
             <div className="lg:w-1/2">
               <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} rounded-lg border overflow-hidden`}>
-                <img src="/api/placeholder/600/400" alt="GitHub ReadLater App Interface" className="w-full" />
+                <img src="/api/placeholder/600/400" alt="Git ReadLater App Interface" className="w-full" />
               </div>
             </div>
           </div>

@@ -48,7 +48,7 @@ const Header = ({ user }) => {
           {/* Logo & Title */}
           <Link to="/" className="flex items-center space-x-2">
             <FaBookmark className="text-2xl text-blue-500" />
-            <span className="text-xl font-bold">GitHub ReadLater</span>
+            <span className="text-xl font-bold">Git ReadLater</span>
           </Link>
           
           {/* Desktop Navigation */}

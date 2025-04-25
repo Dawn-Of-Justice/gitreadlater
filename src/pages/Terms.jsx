@@ -13,12 +13,12 @@ const Terms = () => {
         <div className={`${themeClasses.card} rounded-lg p-6 mb-8`}>
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>1. Introduction</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            Welcome to GitHub ReadLater. By accessing or using our service, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access our service.
+            Welcome to Git ReadLater. By accessing or using our service, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access our service.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>2. GitHub Account Integration</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            GitHub ReadLater integrates with your GitHub account. You are responsible for maintaining the security of your GitHub account and credentials. We are not responsible for any loss or damage arising from your failure to comply with this security obligation.
+            Git ReadLater integrates with your GitHub account. You are responsible for maintaining the security of your GitHub account and credentials. We are not responsible for any loss or damage arising from your failure to comply with this security obligation.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>3. User Content</h2>
@@ -28,17 +28,17 @@ const Terms = () => {
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>4. Subscription and Payment</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            Some features of GitHub ReadLater are offered on a subscription basis. You agree to pay the fees at the rates in effect when the charges are incurred. You must provide current, complete, and accurate billing information. We may suspend or terminate your account if your payment is overdue.
+            Some features of Git ReadLater are offered on a subscription basis. You agree to pay the fees at the rates in effect when the charges are incurred. You must provide current, complete, and accurate billing information. We may suspend or terminate your account if your payment is overdue.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>5. Intellectual Property</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            The service and its original content (excluding content saved by users) are and will remain the exclusive property of GitHub ReadLater and its licensors. The service is protected by copyright, trademark, and other laws. Our trademarks and visual identity may not be used without our prior written consent.
+            The service and its original content (excluding content saved by users) are and will remain the exclusive property of Git ReadLater and its licensors. The service is protected by copyright, trademark, and other laws. Our trademarks and visual identity may not be used without our prior written consent.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>6. Limitation of Liability</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            In no event shall GitHub ReadLater, its directors, employees, partners, agents, suppliers, or affiliates be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or other intangible losses, resulting from your access to or use of our service.
+            In no event shall Git ReadLater, its directors, employees, partners, agents, suppliers, or affiliates be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or other intangible losses, resulting from your access to or use of our service.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>7. Changes to Terms</h2>

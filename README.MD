@@ -1,6 +1,6 @@
-# GitHub ReadLater
+# Git ReadLater
 
-GitHub ReadLater is a web application that allows developers to save, organize, and manage GitHub repositories for later reference. It's like Pocket or Instapaper, but specifically designed for GitHub repositories.
+Git ReadLater is a web application that allows developers to save, organize, and manage GitHub repositories for later reference. It's like Pocket or Instapaper, but specifically designed for GitHub repositories.
 
 ## Features
 
@@ -133,7 +133,7 @@ For detailed server setup instructions, see the [server README](./server/README.
 
 1. Go to GitHub Settings > Developer settings > OAuth Apps > New OAuth App
 2. Fill in the details:
-   - Application name: GitHub ReadLater (or your preferred name)
+   - Application name: Git ReadLater (or your preferred name)
    - Homepage URL: http://localhost:5173 (for local development)
    - Authorization callback URL: https://[your-supabase-project].supabase.co/auth/v1/callback
 3. Register the application
@@ -144,7 +144,7 @@ For detailed server setup instructions, see the [server README](./server/README.
 1. Create a Stripe account at [stripe.com](https://stripe.com)
 2. In the Stripe Dashboard, create a product and price:
    - Go to Products > Create Product
-   - Set the product name (e.g., "GitHub ReadLater Premium")
+   - Set the product name (e.g., "Git ReadLater Premium")
    - Add a price (e.g., $3/month)
    - Copy the Price ID (starts with "price_") to your frontend `.env` file
 3. Get your API keys from Developers > API keys

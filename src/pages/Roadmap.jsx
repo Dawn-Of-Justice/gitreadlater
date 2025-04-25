@@ -143,7 +143,7 @@ const Roadmap = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 md:mb-12">
           <div className="mb-6 md:mb-0">
             <h1 className={`text-2xl sm:text-3xl font-bold ${themeClasses.text}`}>Product Roadmap</h1>
-            <p className={`mt-2 ${themeClasses.textSecondary}`}>Our plans for the future of GitHub ReadLater</p>
+            <p className={`mt-2 ${themeClasses.textSecondary}`}>Our plans for the future of Git ReadLater</p>
           </div>
           
           <div className="flex flex-wrap gap-3 sm:space-x-4">
@@ -215,7 +215,7 @@ const Roadmap = () => {
         <div className={`${themeClasses.sectionDark} mt-12 sm:mt-16 p-6 sm:p-8 rounded-lg text-center`}>
           <h2 className={`text-xl sm:text-2xl font-bold mb-3 sm:mb-4 ${themeClasses.text}`}>Have an idea for a feature?</h2>
           <p className={`${themeClasses.textSecondary} mb-6 max-w-2xl mx-auto`}>
-            We're constantly working to improve GitHub ReadLater. If you have suggestions or feature requests, we'd love to hear them!
+            We're constantly working to improve Git ReadLater. If you have suggestions or feature requests, we'd love to hear them!
           </p>
           <Link 
             to="/contact"

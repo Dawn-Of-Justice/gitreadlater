@@ -1,10 +1,10 @@
-# GitHub ReadLater Monetization Guide
+# Git ReadLater Monetization Guide
 
-This guide provides a detailed overview of the monetization strategy for the GitHub ReadLater application.
+This guide provides a detailed overview of the monetization strategy for the Git ReadLater application.
 
 ## Business Model
 
-GitHub ReadLater uses a freemium business model with tiered subscription plans:
+Git ReadLater uses a freemium business model with tiered subscription plans:
 
 1. **Free Tier:**
    - Up to 100 saved repositories
@@ -91,7 +91,7 @@ The system enforces feature availability based on subscription tier:
 In the Stripe Dashboard:
 
 1. Go to **Products** > **Add Product**
-2. Create a product for "GitHub ReadLater Premium"
+2. Create a product for "Git ReadLater Premium"
 3. Add a recurring price of $3/month
 4. Note the Price ID (starts with "price_") for your configuration
 

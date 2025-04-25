@@ -12,7 +12,7 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between items-center mb-8">
           <div className="flex items-center space-x-2 mb-4 md:mb-0">
             <FaBookmark className="text-xl text-blue-500" />
-            <span className="text-lg font-bold">GitHub ReadLater</span>
+            <span className="text-lg font-bold">Git ReadLater</span>
           </div>
           
           <div className="flex space-x-4">
@@ -38,7 +38,7 @@ const Footer = () => {
         </div>
         
         <div className={`pt-4 border-t ${themeClasses.divider} text-center ${themeClasses.textSecondary} transition-colors duration-300`}>
-          <p>© {new Date().getFullYear()} GitHub ReadLater. Not affiliated with GitHub.</p>
+          <p>© {new Date().getFullYear()} Git ReadLater. Not affiliated with GitHub.</p>
           <div className="flex justify-center space-x-6 mt-4">
             <Link to="/roadmap" className={`${themeClasses.link} transition-colors duration-300`}>Roadmap</Link>
             <Link to="/contact" className={`${themeClasses.link} transition-colors duration-300`}>Contact</Link>

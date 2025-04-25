@@ -9,11 +9,7 @@ import {
   getUserRepositoryCount, 
   REPOSITORY_LIMITS 
 } from '../services/subscriptionService';
-import { 
-  createCheckout, 
-  createCustomerPortalSession, 
-  cancelSubscription 
-} from '../services/paddleService';
+import { createCheckout, cancelSubscription, createPortalSession } from '../services/paddleClient.js';
 import { supabase } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
 
@@ -87,7 +83,7 @@ const Subscription = () => {
       setProcessingPayment(true);
       
       // Create a real Paddle customer portal session
-      const { url } = await createCustomerPortalSession();
+      const { url } = await createPortalSession();
       
       // Redirect to the Paddle customer portal
       if (url) {
@@ -110,16 +106,8 @@ const Subscription = () => {
     try {
       setProcessingPayment(true);
       
-      // In a real implementation, this would call paddle to cancel the subscription
-      
-      // For development, we'll simulate the process
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // Simulate successful cancellation
-        await cancelSubscription(session.user.id);
-        setUserTier(TIERS.FREE);
-      }
+      console.log('Subscription cancellation not yet implemented');
+      // You could show a message to the user here
       
       setProcessingPayment(false);
     } catch (err) {
