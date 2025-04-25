@@ -48,14 +48,23 @@ export const getSubscription = async (userId) => {
     const response = await fetch(`${API_URL}/subscription/${userId}`);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch subscription');
+      console.error('Subscription fetch failed:', response.status, response.statusText);
+      // Return a default subscription object instead of throwing
+      return {
+        tier: 'free',
+        valid_until: null
+      };
     }
     
     const data = await response.json();
     return data.subscription;
   } catch (error) {
     console.error('Error fetching subscription:', error);
-    throw error;
+    // Return default instead of throwing
+    return {
+      tier: 'free',
+      valid_until: null
+    };
   }
 };
 

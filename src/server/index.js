@@ -454,25 +454,47 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Endpoint to get user's subscription
+// Update the GET /subscription/:userId endpoint
 app.get('/subscription/:userId', async (req, res) => {
   try {
     console.log('--- Fetching subscription ---');
     const { userId } = req.params;
     console.log('Fetching subscription for user:', userId);
     
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', userId)
       .single();
     
-    if (error) {
+    // If no subscription exists, create one for new user
+    if (error && error.code === 'PGRST116') { // Supabase "not found" error code
+      console.log('No subscription found, creating default subscription for new user');
+      
+      const { data: newSub, error: insertError } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_id: userId,
+          tier: 'free',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('Error creating subscription:', insertError);
+        throw insertError;
+      }
+      
+      data = newSub;
+      console.log('Created new subscription for user:', userId);
+    } else if (error) {
       console.error('Error fetching subscription:', error);
       throw error;
     }
     
-    console.log('Fetched subscription data:', JSON.stringify(data, null, 2));
+    console.log('Fetched/created subscription data:', JSON.stringify(data, null, 2));
     console.log('--- Subscription fetch complete ---');
     
     res.json({ subscription: data });
