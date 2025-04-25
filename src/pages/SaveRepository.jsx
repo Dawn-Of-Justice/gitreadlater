@@ -1,17 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle } from 'react-icons/fa';
-import { searchRepositories, getUserStarredRepos } from '../services/githubService';
+import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaCrown, FaArrowRight } from 'react-icons/fa';
+import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryDetails } from '../services/githubService';
 import { saveRepository } from '../services/repositoryService';
 import { getUserRepositoryCount, getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
+import { useCache } from '../context/CacheContext';
 
 const SaveRepository = () => {
   const navigate = useNavigate();
+  const inputRef = useRef(null);
   
   // Form states
-  const [url, setUrl] = useState('');
-  const [repoPreview, setRepoPreview] = useState(null);
+  const [url, setUrl] = useState(() => {
+    return localStorage.getItem('saved_repo_url') || '';
+  });
+  const [repoPreview, setRepoPreview] = useState(() => {
+    try {
+      const savedPreview = localStorage.getItem('saved_repo_preview');
+      return savedPreview ? JSON.parse(savedPreview) : null;
+    } catch (err) {
+      console.error('Error parsing saved repository preview', err);
+      return null;
+    }
+  });
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
@@ -19,6 +31,7 @@ const SaveRepository = () => {
   const [error, setError] = useState(null);
   const [showStarredRepos, setShowStarredRepos] = useState(false);
   const [starredRepos, setStarredRepos] = useState([]);
+  const [filteredStarredRepos, setFilteredStarredRepos] = useState([]);
   const [loadingStarred, setLoadingStarred] = useState(false);
   
   // Subscription states
@@ -28,6 +41,9 @@ const SaveRepository = () => {
   
   // Get theme from context
   const { darkMode, themeClasses } = useTheme();
+  
+  // Get cache from context
+  const { invalidateRepositories } = useCache();
   
   // Check subscription status on load
   useEffect(() => {
@@ -50,7 +66,26 @@ const SaveRepository = () => {
     
     checkSubscription();
   }, []);
+
+  // Load starred repositories on component mount
+  useEffect(() => {
+    loadStarredRepos();
+  }, []);
   
+  // Save URL to localStorage whenever it changes
+  useEffect(() => {
+    if (url) {
+      localStorage.setItem('saved_repo_url', url);
+    }
+  }, [url]);
+
+  // Save repository preview to localStorage if it exists
+  useEffect(() => {
+    if (repoPreview) {
+      localStorage.setItem('saved_repo_preview', JSON.stringify(repoPreview));
+    }
+  }, [repoPreview]);
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,8 +105,12 @@ const SaveRepository = () => {
       setLoading(true);
       setError(null);
       
-      // Save repository
-      await saveRepository(url, notes, tags);
+      // Save repository and invalidate cache
+      await saveRepository(url, notes, tags, invalidateRepositories);
+      
+      // Clear stored URL and preview after successful save
+      localStorage.removeItem('saved_repo_url');
+      localStorage.removeItem('saved_repo_preview');
       
       // Navigate to dashboard on success
       navigate('/');
@@ -115,6 +154,32 @@ const SaveRepository = () => {
     
     return () => clearTimeout(timeoutId);
   }, [url]);
+
+  // Filter starred repos when user types
+  useEffect(() => {
+    if (!starredRepos.length) return;
+    
+    const query = url.toLowerCase();
+    if (!query) {
+      // Show all starred repos when input is empty
+      setFilteredStarredRepos(starredRepos);
+      if (document.activeElement === inputRef.current) {
+        setShowStarredRepos(true);
+      }
+      return;
+    }
+
+    const filtered = starredRepos.filter(repo => 
+      repo.name.toLowerCase().includes(query) || 
+      repo.full_name.toLowerCase().includes(query) ||
+      (repo.description && repo.description.toLowerCase().includes(query))
+    );
+
+    setFilteredStarredRepos(filtered);
+    if (filtered.length > 0) {
+      setShowStarredRepos(true);
+    }
+  }, [url, starredRepos]);
   
   // Load starred repositories
   const loadStarredRepos = async () => {
@@ -122,7 +187,7 @@ const SaveRepository = () => {
       setLoadingStarred(true);
       const starred = await getUserStarredRepos();
       setStarredRepos(starred);
-      setShowStarredRepos(true);
+      setFilteredStarredRepos(starred);
     } catch (err) {
       console.error('Error loading starred repositories:', err);
       setError('Failed to load starred repositories. Please try again.');
@@ -133,8 +198,22 @@ const SaveRepository = () => {
   
   // Handle selecting a starred repository
   const selectStarredRepo = (repo) => {
-    setUrl(repo.html_url);
+    const repoUrl = repo.html_url;
+    setUrl(repoUrl);
+    localStorage.setItem('saved_repo_url', repoUrl);
     setShowStarredRepos(false);
+  };
+
+  // Handle input focus
+  const handleInputFocus = () => {
+    if (starredRepos.length > 0) {
+      setFilteredStarredRepos(starredRepos);
+      setShowStarredRepos(true);
+    } else {
+      // If starred repos aren't loaded yet, load them
+      loadStarredRepos();
+      setShowStarredRepos(true);
+    }
   };
   
   // Add a tag
@@ -277,16 +356,33 @@ const SaveRepository = () => {
                   <input
                     type="text"
                     id="repoUrl"
+                    ref={inputRef}
                     placeholder="https://github.com/owner/repo"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
+                    onFocus={handleInputFocus}
                     className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
                   />
+                  {url && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUrl('');
+                        localStorage.removeItem('saved_repo_url');
+                      }}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    >
+                      <FaTimes />
+                    </button>
+                  )}
                 </div>
                 
                 <button
                   type="button"
-                  onClick={loadStarredRepos}
+                  onClick={() => {
+                    loadStarredRepos();
+                    setShowStarredRepos(!showStarredRepos);
+                  }}
                   disabled={loadingStarred}
                   className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center space-x-1 transition-colors duration-300`}
                 >
@@ -332,7 +428,10 @@ const SaveRepository = () => {
             {showStarredRepos && (
               <div className={`mb-6 max-h-64 overflow-y-auto border rounded-md ${themeClasses.starredList} transition-colors duration-300`}>
                 <div className={`p-3 ${themeClasses.starredHeader} flex justify-between items-center transition-colors duration-300`}>
-                  <h3 className="font-medium">Your Starred Repositories</h3>
+                  <h3 className="font-medium">
+                    {loadingStarred ? "Loading starred repositories..." : 
+                     (url ? `Repositories matching "${url}"` : "Your Starred Repositories")}
+                  </h3>
                   <button
                     type="button"
                     onClick={() => setShowStarredRepos(false)}
@@ -342,20 +441,30 @@ const SaveRepository = () => {
                   </button>
                 </div>
                 
-                {starredRepos.length === 0 ? (
-                  <p className={`p-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>No starred repositories found.</p>
+                {loadingStarred ? (
+                  <div className="flex justify-center items-center p-4">
+                    <FaSpinner className="animate-spin text-blue-500 mr-2" />
+                    <span>Loading...</span>
+                  </div>
+                ) : filteredStarredRepos.length === 0 ? (
+                  <p className={`p-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
+                    {url ? "No matching repositories found." : "No starred repositories found."}
+                  </p>
                 ) : (
                   <ul className="divide-y">
-                    {starredRepos.map((repo) => (
+                    {filteredStarredRepos.map((repo) => (
                       <li 
                         key={repo.id} 
-                        className={`p-3 ${themeClasses.starredItem} cursor-pointer transition-colors duration-300`} 
+                        className={`p-3 ${themeClasses.starredItem} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300`} 
                         onClick={() => selectStarredRepo(repo)}
                       >
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="font-medium">{repo.name}</p>
                             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} transition-colors duration-300`}>{repo.full_name}</p>
+                            {repo.description && (
+                              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1 line-clamp-1 transition-colors duration-300`}>{repo.description}</p>
+                            )}
                           </div>
                           
                           <div className="flex items-center space-x-1 text-sm">
