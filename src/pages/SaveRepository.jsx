@@ -477,66 +477,90 @@ const SaveRepository = () => {
                 GitHub Repository URL
               </label>
               
-              <div className="flex items-center space-x-2">
-                <div className="flex-grow relative">
-                  <FaGithub className="absolute left-3 top-3 text-gray-400" />
-                  <input
-                    type="text"
-                    id="repoUrl"
-                    ref={inputRef}
-                    placeholder="https://github.com/owner/repo"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    onFocus={handleInputFocus}
-                    className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
-                  />
-                  {url && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUrl('');
-                        localStorage.removeItem('saved_repo_url');
-                      }}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                    >
-                      <FaTimes />
-                    </button>
-                  )}
-                </div>
+              <div className="relative">
+                <FaGithub className="absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="text"
+                  id="repoUrl"
+                  ref={inputRef}
+                  placeholder="https://github.com/owner/repo"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onFocus={handleInputFocus}
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
+                />
+                {url && (
+                  <button
+                    type="button"
+                    onClick={() => setUrl('')}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
                 
-                <button
-                  type="button"
-                  onClick={() => {
-                    loadStarredRepos();
-                    setShowStarredRepos(!showStarredRepos);
-                  }}
-                  disabled={loadingStarred}
-                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center space-x-1 transition-colors duration-300`}
-                >
-                  {loadingStarred ? (
-                    <FaSpinner className="animate-spin mr-1" />
-                  ) : (
-                    <FaStar className="text-yellow-500 mr-1" />
-                  )}
-                  <span>Starred</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    loadUserRepositories();
-                    setShowUserRepos(!showUserRepos);
-                  }}
-                  disabled={loadingUserRepos}
-                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center space-x-1 transition-colors duration-300`}
-                >
-                  {loadingUserRepos ? (
-                    <FaSpinner className="animate-spin mr-1" />
-                  ) : (
-                    <FaGithub className="mr-1" />
-                  )}
-                  <span>My Repositories</span>
-                </button>
+                {showRepositories && (
+                  <div className={`absolute z-10 mt-1 w-full max-h-80 overflow-y-auto border rounded-md shadow-lg ${themeClasses.starredList} transition-colors duration-300`}>
+                    <div className={`p-3 ${themeClasses.starredHeader} flex justify-between items-center transition-colors duration-300`}>
+                      <h3 className="font-medium">
+                        {loading ? "Loading repositories..." : 
+                         (url ? `Repositories matching "${url}"` : "Your Repositories")}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowRepositories(false)}
+                        className={`${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-300`}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                    
+                    {loading ? (
+                      <div className="flex justify-center items-center p-4">
+                        <FaSpinner className="animate-spin text-blue-500 mr-2" />
+                        <span>Loading...</span>
+                      </div>
+                    ) : filteredRepositories.length === 0 ? (
+                      <p className={`p-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
+                        {url ? "No matching repositories found." : "No repositories found."}
+                      </p>
+                    ) : (
+                      <div className="divide-y">
+                        {filteredRepositories.map((repo) => (
+                          <div 
+                            key={repo.id} 
+                            className={`p-3 ${themeClasses.starredItem} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300`} 
+                            onClick={() => selectRepository(repo)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{repo.name}</p>
+                                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} transition-colors duration-300`}>{repo.full_name}</p>
+                                {repo.description && (
+                                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1 line-clamp-1 transition-colors duration-300`}>{repo.description}</p>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center space-x-3 text-sm">
+                                {repo.isStarred && (
+                                  <span className="flex items-center">
+                                    <FaStar className="text-yellow-500 mr-1" />
+                                  </span>
+                                )}
+                                {repo.private && (
+                                  <span className="flex items-center">
+                                    <FaLock className="mr-1" />
+                                  </span>
+                                )}
+                                <span>{repo.stargazers_count}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
