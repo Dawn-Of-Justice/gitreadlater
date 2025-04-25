@@ -253,6 +253,12 @@ const SaveRepository = () => {
     
     if (!trimmedTag) return;
     
+    // Limit to maximum 5 tags
+    if (tags.length >= 5) {
+      setError('Maximum 5 tags allowed per repository');
+      return;
+    }
+    
     // Limit tag length to 30 characters
     const limitedTag = trimmedTag.substring(0, 30);
     
@@ -264,6 +270,7 @@ const SaveRepository = () => {
     
     setTags([...tags, limitedTag]);
     setTagInput('');
+    setError(null); // Clear any previous error about tags limit
   };
   
   // Remove a tag
@@ -663,7 +670,7 @@ const SaveRepository = () => {
             {/* Tags */}
             <div className="mb-6">
               <label htmlFor="tags" className={`block ${darkMode ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2 transition-colors duration-300`}>
-                Tags
+                Tags <span className={`text-sm ${tags.length >= 5 ? 'text-red-500' : 'text-gray-500'}`}>({tags.length}/5)</span>
               </label>
               
               <div className="flex items-center space-x-2 mb-2">
@@ -677,7 +684,8 @@ const SaveRepository = () => {
                     onKeyDown={handleTagKeyDown}
                     onFocus={handleTagInputFocus}
                     maxLength={30}
-                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300 ${tagInput.length >= 30 ? 'border-yellow-500' : ''}`}
+                    disabled={tags.length >= 5}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300 ${tagInput.length >= 30 ? 'border-yellow-500' : ''} ${tags.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                   
                   {tagInput.length > 0 && (
@@ -712,7 +720,8 @@ const SaveRepository = () => {
                 <button
                   type="button"
                   onClick={addTag}
-                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300`}
+                  disabled={tags.length >= 5}
+                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300 ${tags.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   Add
                 </button>
@@ -766,17 +775,26 @@ const SaveRepository = () => {
             {/* Notes */}
             <div className="mb-6">
               <label htmlFor="notes" className={`block ${darkMode ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2 transition-colors duration-300`}>
-                Notes (Optional)
+                Notes (Optional) <span className={`text-sm text-gray-500`}>({notes.length}/1000)</span>
               </label>
               
-              <textarea
-                id="notes"
-                placeholder="Add your notes about this repository..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
-              />
+              <div className="relative">
+                <textarea
+                  id="notes"
+                  placeholder="Add your notes about this repository..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value.substring(0, 1000))}
+                  rows={4}
+                  maxLength={1000}
+                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300 ${notes.length >= 1000 ? 'border-yellow-500' : ''}`}
+                />
+                
+                {notes.length > 0 && (
+                  <div className={`absolute right-3 bottom-3 text-xs ${notes.length >= 1000 ? 'text-yellow-500' : 'text-gray-400'}`}>
+                    {notes.length}/1000
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Error message */}
