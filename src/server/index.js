@@ -458,9 +458,15 @@ app.post('/webhook', async (req, res) => {
 app.get('/subscription/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log('Fetching subscription for user:', userId);
+    console.log('====================');
+    console.log(`Fetching subscription for user: ${userId}`);
+    
+    // Log the Supabase client details (excluding sensitive info)
+    console.log('Using Supabase URL:', supabaseUrl);
+    console.log('Service key present?', !!supabaseServiceKey);
     
     // First check if user has a subscription
+    console.log('Querying user_subscriptions table...');
     let { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
@@ -471,34 +477,61 @@ app.get('/subscription/:userId', async (req, res) => {
       throw error;
     }
     
+    console.log(`Found ${data ? data.length : 0} subscription records`);
+    
     // If no subscription exists, create one
     if (!data || data.length === 0) {
-      console.log('No subscription found for user, creating default subscription');
+      console.log('No subscription found, creating default subscription');
       
-      const { data: newSub, error: createError } = await supabase
+      // Define new subscription object
+      const newSubscription = {
+        user_id: userId,
+        tier: 'free',
+        valid_until: null,
+        paddle_subscription_id: null,
+        paddle_customer_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('New subscription object:', newSubscription);
+      
+      // Try to insert
+      console.log('Inserting into user_subscriptions table...');
+      const insertResult = await supabase
         .from('user_subscriptions')
-        .insert([{
-          user_id: userId,
-          tier: 'free',
-          valid_until: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select();
+        .insert([newSubscription]);
         
-      if (createError) {
-        console.error('Error creating subscription:', createError);
-        throw createError;
+      console.log('Insert raw result:', insertResult);
+      
+      if (insertResult.error) {
+        console.error('Error creating subscription:', insertResult.error);
+        throw insertResult.error;
       }
       
-      data = newSub;
-      console.log('Created new subscription for user');
+      // Fetch the newly created subscription
+      console.log('Fetching newly created subscription...');
+      const { data: newData, error: fetchError } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (fetchError) {
+        console.error('Error fetching new subscription:', fetchError);
+        throw fetchError;
+      }
+      
+      data = newData;
+      console.log('Created and fetched new subscription:', data);
     }
     
-    // Return the first subscription (there should only be one)
+    // Return the first subscription
+    console.log('Returning subscription data:', data[0]);
+    console.log('====================');
     res.json({ subscription: data[0] });
   } catch (error) {
-    console.error('Error in subscription endpoint:', error);
+    console.error('ERROR IN SUBSCRIPTION ENDPOINT:', error);
+    console.log('====================');
     // Return a default subscription instead of an error
     res.json({ 
       subscription: {
