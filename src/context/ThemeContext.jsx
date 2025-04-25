@@ -139,6 +139,9 @@ export function ThemeProvider({ children }) {
     starredItem: darkMode 
       ? "hover:bg-[#30363d] border-[#30363d]" 
       : "hover:bg-[#f6f8fa] border-[#d0d7de]",
+    tagSuggestion: darkMode 
+      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+      : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
   };
 
   return (

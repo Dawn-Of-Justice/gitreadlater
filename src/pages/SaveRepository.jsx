@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaCrown, FaArrowRight } from 'react-icons/fa';
 import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryDetails } from '../services/githubService';
-import { saveRepository } from '../services/repositoryService';
+import { saveRepository, getUserTags } from '../services/repositoryService';
 import { getUserRepositoryCount, getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
@@ -45,6 +45,10 @@ const SaveRepository = () => {
   // Get cache from context
   const { invalidateRepositories } = useCache();
   
+  // State for previously used tags
+  const [previousTags, setPreviousTags] = useState([]);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  
   // Check subscription status on load
   useEffect(() => {
     const checkSubscription = async () => {
@@ -85,6 +89,11 @@ const SaveRepository = () => {
       localStorage.setItem('saved_repo_preview', JSON.stringify(repoPreview));
     }
   }, [repoPreview]);
+
+  // Load user's previously used tags on component mount
+  useEffect(() => {
+    fetchUserTags();
+  }, []);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -245,6 +254,35 @@ const SaveRepository = () => {
     }
   };
   
+  // Fetch user's previous tags
+  const fetchUserTags = async () => {
+    try {
+      const userTags = await getUserTags();
+      setPreviousTags(userTags);
+    } catch (err) {
+      console.error('Error fetching user tags:', err);
+    }
+  };
+
+  // Handle input focus for tag input field
+  const handleTagInputFocus = () => {
+    setShowTagSuggestions(true);
+  };
+
+  // Handle tag suggestion selection
+  const selectTag = (tag) => {
+    if (!tags.includes(tag)) {
+      setTags([...tags, tag]);
+    }
+    setTagInput('');
+    setShowTagSuggestions(false);
+  };
+
+  // Filter tag suggestions based on input
+  const filteredTagSuggestions = tagInput.trim() 
+    ? previousTags.filter(tag => tag.toLowerCase().includes(tagInput.toLowerCase()) && !tags.includes(tag))
+    : previousTags.filter(tag => !tags.includes(tag));
+
   const repoLimit = REPOSITORY_LIMITS[userTier];
   const isAtLimit = !canSave;
   
@@ -486,15 +524,40 @@ const SaveRepository = () => {
               </label>
               
               <div className="flex items-center space-x-2 mb-2">
-                <input
-                  type="text"
-                  id="tags"
-                  placeholder="Add tags..."
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  className={`flex-grow px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
-                />
+                <div className="flex-grow relative">
+                  <input
+                    type="text"
+                    id="tags"
+                    placeholder="Add tags..."
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    onFocus={handleTagInputFocus}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
+                  />
+                  
+                  {/* Tag Suggestions Dropdown */}
+                  {showTagSuggestions && filteredTagSuggestions.length > 0 && (
+                    <div className={`absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-colors duration-300`}>
+                      <div className={`p-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} transition-colors duration-300`}>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
+                          Previously used tags
+                        </p>
+                      </div>
+                      <ul>
+                        {filteredTagSuggestions.map((tag) => (
+                          <li 
+                            key={tag} 
+                            className={`px-4 py-2 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors duration-300`}
+                            onClick={() => selectTag(tag)}
+                          >
+                            {tag}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
                 
                 <button
                   type="button"
@@ -505,6 +568,7 @@ const SaveRepository = () => {
                 </button>
               </div>
               
+              {/* Selected Tags */}
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {tags.map((tag) => (
@@ -522,6 +586,29 @@ const SaveRepository = () => {
                       </button>
                     </span>
                   ))}
+                </div>
+              )}
+              
+              {/* Quick-select Popular Tags */}
+              {previousTags.length > 0 && !showTagSuggestions && (
+                <div className="mt-3">
+                  <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
+                    Quick-select from your tags:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {previousTags.slice(0, 8).map((tag) => (
+                      !tags.includes(tag) && (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => selectTag(tag)}
+                          className={`${themeClasses.tagSuggestion} px-2 py-1 text-sm rounded-md transition-colors duration-300`}
+                        >
+                          {tag}
+                        </button>
+                      )
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
