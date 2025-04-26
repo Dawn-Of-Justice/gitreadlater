@@ -144,10 +144,15 @@ const SaveRepository = () => {
   }, []);
 
   useEffect(() => {
+    console.log('Filter effect triggered');
     // Skip if there are no repositories to filter
-    if (!repositories || repositories.length === 0) return;
+    if (!repositories || repositories.length === 0) {
+      console.log('No repositories to filter');
+      return;
+    }
     
     const query = url.toLowerCase().trim();
+    console.log(`Filtering with query: "${query}"`);
     
     // Apply repo type filters first (owned/starred)
     let filtered = repositories.filter(repo => {
@@ -164,9 +169,11 @@ const SaveRepository = () => {
         (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
         (repo.description && repo.description.toLowerCase().includes(query))
       );
+      console.log(`Found ${filtered.length} repositories matching "${query}"`);
+    } else {
+      console.log(`Showing ${filtered.length} repositories based on filters`);
     }
 
-    console.log(`Filtered repos: ${filtered.length} matching filters and "${query}"`);
     setFilteredRepositories(filtered);
   }, [url, repositories, showOwnedRepos, showStarredRepos]);
 
@@ -275,7 +282,7 @@ const SaveRepository = () => {
         starredRepos = await getUserStarredRepos();
         console.log('Starred repos loaded:', starredRepos?.length || 0);
       } catch (starredError) {
-        console.error('Error loading starred repos:', starredError.message, starredError);
+        console.error('Error loading starred repos:', starredError.message);
       }
       
       // Mark these as starred
@@ -290,7 +297,7 @@ const SaveRepository = () => {
         userRepos = await getUserRepositories();
         console.log('User repos loaded:', userRepos?.length || 0);
       } catch (userReposError) {
-        console.error('Error loading user repos:', userReposError.message, userReposError);
+        console.error('Error loading user repos:', userReposError.message);
       }
       
       // Mark these as user's own
@@ -311,31 +318,9 @@ const SaveRepository = () => {
       
       console.log('Total combined repos:', allRepos.length);
       
-      // Only fallback to search if we truly have no repos
-      if (allRepos.length > 0) {
-        setRepositories(allRepos);
-        setFilteredRepositories(allRepos);
-      } else {
-        // This might be where the problem is - only show fallback repositories
-        // if the user explicitly indicated they want to search
-        if (url && url.trim()) {
-          try {
-            console.log(`Searching for repositories matching: ${url}`);
-            const searchResults = await searchRepositories(url);
-            console.log('Search results:', searchResults?.length || 0);
-            setRepositories(searchResults || []);
-            setFilteredRepositories(searchResults || []);
-          } catch (error) {
-            console.error('Failed to search repositories:', error);
-            setRepositories([]);
-            setFilteredRepositories([]);
-          }
-        } else {
-          // If no repositories and no search term, just show empty state
-          setRepositories([]);
-          setFilteredRepositories([]);
-        }
-      }
+      setRepositories(allRepos);
+      
+      // The filter effect will handle filtering based on current query
     } catch (error) {
       console.error('Failed to load repositories:', error);
       setRepositories([]);
@@ -485,14 +470,21 @@ const SaveRepository = () => {
   };
 
   const handleInputChange = (e) => {
-    setUrl(e.target.value);
+    const searchValue = e.target.value;
+    setUrl(searchValue);
     
     // Show repositories dropdown when typing
-    if (!showRepositories && e.target.value.trim()) {
+    if (!showRepositories) {
       setShowRepositories(true);
-      
-      // Load repositories if not already loaded
-      if (repositories.length === 0) {
+    }
+    
+    // Trigger search if we have characters in the input
+    if (searchValue.trim()) {
+      // If we already have repositories loaded, filter them
+      if (repositories.length > 0) {
+        // The useEffect for filtering will handle this
+      } else {
+        // Load repositories if they aren't already loaded
         loadAllRepositories();
       }
     }
@@ -698,15 +690,21 @@ const SaveRepository = () => {
                             onClick={async () => {
                               setIsLoadingRepos(true);
                               try {
+                                console.log('Searching GitHub for:', url);
                                 const searchResults = await searchRepositories(url);
+                                console.log('Search returned:', searchResults.length, 'results');
+                                
                                 const markedResults = searchResults.map(repo => ({
                                   ...repo,
                                   searchResult: true
                                 }));
+                                
+                                // Replace repositories with search results
                                 setRepositories(markedResults);
                                 setFilteredRepositories(markedResults);
                               } catch (error) {
                                 console.error('Search failed:', error);
+                                setError('Failed to search repositories. Please try again.');
                               } finally {
                                 setIsLoadingRepos(false);
                               }
