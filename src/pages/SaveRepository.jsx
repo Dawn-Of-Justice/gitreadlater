@@ -143,6 +143,7 @@ const SaveRepository = () => {
     fetchUserTags();
   }, []);
 
+  // Update the filtering effect with better debugging
   useEffect(() => {
     console.log('Filter effect triggered');
     // Skip if there are no repositories to filter
@@ -152,7 +153,8 @@ const SaveRepository = () => {
     }
     
     const query = url.toLowerCase().trim();
-    console.log(`Filtering with query: "${query}"`);
+    console.log(`Filtering ${repositories.length} repositories with query: "${query}"`);
+    console.log(`Filter settings: showOwned=${showOwnedRepos}, showStarred=${showStarredRepos}`);
     
     // Apply repo type filters first (owned/starred)
     let filtered = repositories.filter(repo => {
@@ -329,46 +331,72 @@ const SaveRepository = () => {
     }
   };
 
-  // Load user repositories
+  // Fix loadUserRepositories function
   const loadUserRepositories = async () => {
-    setLoadingUserRepos(true);
+    setIsLoadingRepos(true);
     try {
       const repos = await getUserRepositories();
       console.log('User repos loaded:', repos?.length || 0);
-      setUserRepositories(repos || []);
-      setShowUserRepos(true);
+      
+      // Mark these as user's own
+      const markedUserRepos = repos?.map(repo => ({
+        ...repo,
+        isOwned: true
+      })) || [];
+      
+      setRepositories(prevRepos => {
+        // Combine with existing repos, avoiding duplicates
+        const existingIds = prevRepos.map(r => r.id);
+        const newRepos = markedUserRepos.filter(r => !existingIds.includes(r.id));
+        return [...prevRepos, ...newRepos];
+      });
     } catch (error) {
       console.error('Error loading user repositories:', error);
       setError('Failed to load your repositories. Please try again.');
     } finally {
-      setLoadingUserRepos(false);
+      setIsLoadingRepos(false);
     }
   };
 
-  // Similarly update your loadStarredRepos function
+  // Fix loadStarredRepos function
   const loadStarredRepos = async () => {
-    setLoadingStarred(true);
+    setIsLoadingRepos(true);
     try {
       const starred = await getUserStarredRepos();
       console.log('Starred repos loaded:', starred?.length || 0);
-      setStarredRepos(starred || []);
-      setFilteredStarredRepos(starred || []);
-      setShowStarredRepos(true);
+      
+      // Mark these as starred
+      const markedStarred = starred?.map(repo => ({
+        ...repo,
+        isStarred: true
+      })) || [];
+      
+      setRepositories(prevRepos => {
+        // Combine with existing repos, avoiding duplicates
+        const existingIds = prevRepos.map(r => r.id);
+        const newRepos = markedStarred.filter(r => !existingIds.includes(r.id));
+        return [...prevRepos, ...newRepos];
+      });
     } catch (err) {
       console.error('Error loading starred repositories:', err);
       setError('Failed to load starred repositories. Please try again.');
     } finally {
-      setLoadingStarred(false);
+      setIsLoadingRepos(false);
     }
   };
 
-  // Handle input focus
+  // Enhance handleInputFocus to ensure repositories are visible
   const handleInputFocus = () => {
-    // Always load repositories when focusing if we don't have them yet
-    if (repositories.length === 0) {
-      loadAllRepositories();
-    }
+    // Always show repositories when focusing the input
     setShowRepositories(true);
+    
+    // Try to load repositories if we don't have them yet
+    if (repositories.length === 0 && !isLoadingRepos) {
+      console.log('No repositories loaded, loading now...');
+      loadAllRepositories();
+    } else {
+      console.log('Repositories already loaded:', repositories.length);
+    }
   };
   
   // Handle repository selection
@@ -682,22 +710,29 @@ const SaveRepository = () => {
                           <button
                             onClick={async () => {
                               setIsLoadingRepos(true);
+                              setError(null);
                               try {
                                 console.log('Searching GitHub for:', url);
                                 const searchResults = await searchRepositories(url);
-                                console.log('Search returned:', searchResults.length, 'results');
+                                console.log('Search returned:', searchResults?.length || 0, 'results');
+                                
+                                if (!searchResults || searchResults.length === 0) {
+                                  setError('No repositories found matching your search.');
+                                  return;
+                                }
                                 
                                 const markedResults = searchResults.map(repo => ({
                                   ...repo,
                                   searchResult: true
                                 }));
                                 
-                                // Replace repositories with search results
+                                // Set both repositories and filtered repositories
                                 setRepositories(markedResults);
                                 setFilteredRepositories(markedResults);
+                                
                               } catch (error) {
                                 console.error('Search failed:', error);
-                                setError('Failed to search repositories. Please try again.');
+                                setError('Failed to search GitHub repositories. Please try again.');
                               } finally {
                                 setIsLoadingRepos(false);
                               }
