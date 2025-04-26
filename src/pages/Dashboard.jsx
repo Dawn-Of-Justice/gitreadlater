@@ -2,11 +2,36 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services.subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext'; // Make sure this import is added
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
+
+// Add this function at the top of your file, after your imports
+const getTagColor = (tag) => {
+  // Generate a simple hash from the tag name
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Define a set of visually distinct, accessible colors
+  const colors = [
+    'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100',
+    'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100',
+    'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100',
+    'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100',
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-700 dark:text-indigo-100',
+    'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-100',
+    'bg-pink-100 text-pink-800 dark:bg-pink-700 dark:text-pink-100',
+    'bg-teal-100 text-teal-800 dark:bg-teal-700 dark:text-teal-100'
+  ];
+  
+  // Use the hash to pick a color
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -467,8 +492,8 @@ const Dashboard = () => {
                         }}
                         className={`px-2 py-1 text-xs rounded-full cursor-pointer transition-colors duration-300 ${
                           selectedTag === tag 
-                            ? themeClasses.tagSelected
-                            : themeClasses.tag
+                            ? `${getTagColor(tag)} ring-2 ring-blue-400 dark:ring-blue-500`
+                            : getTagColor(tag)
                         }`}
                       >
                         {tag}
