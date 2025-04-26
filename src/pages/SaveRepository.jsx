@@ -206,7 +206,7 @@ const SaveRepository = () => {
   const loadAllRepositories = async () => {
     setIsLoadingRepos(true);
     try {
-      // Load starred repositories
+      // Load starred repositories first
       const starredRepos = await getUserStarredRepos();
       console.log('Starred repos loaded:', starredRepos?.length || 0);
       
@@ -238,8 +238,11 @@ const SaveRepository = () => {
       
       console.log('Total combined repos:', allRepos.length);
       
+      setRepositories(allRepos);
+      setFilteredRepositories(allRepos);
+      
+      // If still no repos, try fallback
       if (allRepos.length === 0) {
-        // If no repositories found, try fetching some default repositories
         try {
           const defaultRepos = await searchRepositories('react');
           console.log('Default repos loaded:', defaultRepos?.length || 0);
@@ -248,22 +251,9 @@ const SaveRepository = () => {
         } catch (error) {
           console.error('Failed to load default repositories:', error);
         }
-      } else {
-        setRepositories(allRepos);
-        setFilteredRepositories(allRepos);
       }
     } catch (error) {
       console.error('Failed to load repositories:', error);
-      
-      // Try to recover by showing generic suggestions
-      try {
-        const defaultRepos = await searchRepositories('react');
-        console.log('Fallback repos loaded:', defaultRepos?.length || 0);
-        setRepositories(defaultRepos || []);
-        setFilteredRepositories(defaultRepos || []);
-      } catch (fallbackError) {
-        console.error('Failed to load fallback repositories:', fallbackError);
-      }
     } finally {
       setIsLoadingRepos(false);
     }
@@ -487,8 +477,8 @@ const SaveRepository = () => {
                 )}
                 
                 {showRepositories && (
-                  <div className={`absolute z-10 mt-1 w-full max-h-80 overflow-y-auto border rounded-md shadow-lg ${themeClasses.starredList} transition-colors duration-300`}>
-                    <div className={`p-3 ${themeClasses.starredHeader} flex justify-between items-center transition-colors duration-300`}>
+                  <div className={`absolute z-10 mt-1 w-full max-h-80 overflow-y-auto border rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-colors duration-300`}>
+                    <div className={`p-3 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200'} flex justify-between items-center transition-colors duration-300`}>
                       <h3 className="font-medium">
                         {isLoadingRepos ? "Loading repositories..." : 
                          (url ? `Repositories matching "${url}"` : "Your Repositories")}
@@ -496,7 +486,7 @@ const SaveRepository = () => {
                       <button
                         type="button"
                         onClick={() => setShowRepositories(false)}
-                        className={`${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-300`}
+                        className={`${darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-300`}
                       >
                         <FaTimes />
                       </button>
@@ -509,27 +499,27 @@ const SaveRepository = () => {
                       </div>
                     ) : filteredRepositories.length === 0 ? (
                       <div className="p-4">
-                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300 mb-2`}>
+                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} transition-colors duration-300 mb-2`}>
                           {url ? "No matching repositories found." : "No repositories found."}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           {url ? 
                             "Try a different search term or enter a GitHub URL directly." : 
                             "We couldn't find any GitHub repositories. You can still enter a repository URL manually."}
                         </p>
                       </div>
                     ) : (
-                      <div className="divide-y">
+                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
                         {filteredRepositories.map((repo) => (
                           <div 
                             key={repo.id} 
-                            className={`p-3 ${themeClasses.starredItem} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300`} 
+                            className={`p-3 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors duration-300`} 
                             onClick={() => selectRepository(repo)}
                           >
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-medium">{repo.name}</p>
-                                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} transition-colors duration-300`}>{repo.full_name}</p>
+                                <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{repo.name}</p>
+                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} transition-colors duration-300`}>{repo.full_name}</p>
                                 {repo.description && (
                                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1 line-clamp-1 transition-colors duration-300`}>{repo.description}</p>
                                 )}
@@ -543,15 +533,15 @@ const SaveRepository = () => {
                                 )}
                                 {repo.isOwned && !repo.isStarred && (
                                   <span className="flex items-center">
-                                    <FaGithub className="text-gray-500 mr-1" />
+                                    <FaGithub className={`${darkMode ? 'text-gray-300' : 'text-gray-500'} mr-1`} />
                                   </span>
                                 )}
                                 {repo.private && (
                                   <span className="flex items-center">
-                                    <FaLock className="mr-1" />
+                                    <FaLock className={`${darkMode ? 'text-gray-300' : 'text-gray-500'} mr-1`} />
                                   </span>
                                 )}
-                                <span>{repo.stargazers_count || 0}</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{repo.stargazers_count || 0}</span>
                               </div>
                             </div>
                           </div>
