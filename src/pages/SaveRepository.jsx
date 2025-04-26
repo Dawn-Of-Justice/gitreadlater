@@ -224,7 +224,7 @@ const SaveRepository = () => {
         starredRepos = await getUserStarredRepos();
         console.log('Starred repos loaded:', starredRepos?.length || 0);
       } catch (starredError) {
-        console.error('Error loading starred repos:', starredError);
+        console.error('Error loading starred repos:', starredError.message, starredError);
       }
       
       // Mark these as starred
@@ -239,7 +239,7 @@ const SaveRepository = () => {
         userRepos = await getUserRepositories();
         console.log('User repos loaded:', userRepos?.length || 0);
       } catch (userReposError) {
-        console.error('Error loading user repos:', userReposError);
+        console.error('Error loading user repos:', userReposError.message, userReposError);
       }
       
       // Mark these as user's own

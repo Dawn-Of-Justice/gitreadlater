@@ -67,8 +67,53 @@ export const getStarredRepositories = async (page = 1, perPage = 30) => {
   }
 };
 
+// Modified getUserStarredRepos function with better error handling
 export const getUserStarredRepos = async (page = 1, perPage = 30) => {
-  return getStarredRepositories(page, perPage);
+  try {
+    // First check if we have a valid session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.provider_token) {
+      console.warn('No GitHub token found, using unauthenticated request');
+      // You could return an empty array or try an unauthenticated request
+      return [];
+    }
+
+    // Get the authenticatd user's username
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${session.provider_token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!userResponse.ok) {
+      console.error('GitHub API error:', await userResponse.text());
+      return [];
+    }
+    
+    const userData = await userResponse.json();
+    
+    // Now get the starred repos with the token
+    const reposResponse = await fetch(
+      `https://api.github.com/users/${userData.login}/starred?page=${page}&per_page=${perPage}`, 
+      {
+        headers: {
+          'Authorization': `Bearer ${session.provider_token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      }
+    );
+
+    if (!reposResponse.ok) {
+      console.error('GitHub API error:', await reposResponse.text());
+      return [];
+    }
+
+    return await reposResponse.json();
+  } catch (error) {
+    console.error('Error in getUserStarredRepos:', error);
+    return [];
+  }
 };
 
 // Parse GitHub URL to extract owner and repo
