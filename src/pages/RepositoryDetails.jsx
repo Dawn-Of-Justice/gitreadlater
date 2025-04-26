@@ -145,16 +145,22 @@ const RepositoryDetails = () => {
   // Replace both handleDeleteRepository and handleDelete with this unified function:
 const handleDeleteRepository = async () => {
   try {
+    console.log('Starting repository deletion for ID:', id);
+    // Add this variable to track deletion state
+    let deleting = true;
     setDeleting(true);
     
-    // Delete the repository
-    await deleteRepository(id, invalidateRepositories);
+    // Call deleteRepository with the correct parameters
+    const result = await deleteRepository(id, invalidateRepositories);
     
-    // Show success message (optional)
-    // toast.success('Repository deleted successfully');
+    console.log('Delete repository result:', result);
     
-    // Navigate back to dashboard
-    navigate('/', { replace: true });
+    // Successfully deleted
+    navigate('/', { 
+      replace: true,
+      state: { forceRefresh: true, timestamp: Date.now() }
+    });
+    
   } catch (error) {
     console.error('Error deleting repository:', error);
     setError('Failed to delete repository. Please try again.');
@@ -253,6 +259,16 @@ const handleDeleteRepository = async () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showTagSuggestions]);
+
+  // Add this near the other useEffect hooks in RepositoryDetails.jsx to ensure cache is refreshed
+  useEffect(() => {
+    return () => {
+      // This will run when component unmounts
+      if (invalidateRepositories) {
+        invalidateRepositories();
+      }
+    };
+  }, [invalidateRepositories]);
   
   return (
     <div className={`${themeClasses.body} min-h-screen py-8`}>
@@ -535,9 +551,11 @@ const handleDeleteRepository = async () => {
                     
                     <button
                       onClick={handleDeleteRepository}
+                      disabled={deleting}
                       className={`${themeClasses.dangerButton} px-4 py-2 rounded-md transition-colors duration-300`}
                     >
-                      Delete
+                      {deleting ? <FaSpinner className="animate-spin mr-2" /> : <FaTrash className="mr-2" />}
+                      <span>{deleting ? 'Deleting...' : 'Delete'}</span>
                     </button>
                   </div>
                 </div>
