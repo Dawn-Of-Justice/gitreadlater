@@ -211,37 +211,42 @@ const SaveRepository = () => {
   const loadAllRepositories = async () => {
     setIsLoadingRepos(true);
     try {
+      // First, check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        console.error('No authenticated user found');
+        throw new Error('User not authenticated');
+      }
+
       // Load starred repositories first
       let starredRepos = [];
       try {
-        starredRepos = await getUserStarredRepos() || [];
-        console.log('Starred repos loaded:', starredRepos.length);
+        starredRepos = await getUserStarredRepos();
+        console.log('Starred repos loaded:', starredRepos?.length || 0);
       } catch (starredError) {
         console.error('Error loading starred repos:', starredError);
-        starredRepos = [];
       }
       
       // Mark these as starred
-      const markedStarred = starredRepos.map(repo => ({
+      const markedStarred = starredRepos?.map(repo => ({
         ...repo,
         isStarred: true
-      }));
+      })) || [];
       
       // Load user repositories
       let userRepos = [];
       try {
-        userRepos = await getUserRepositories() || [];
-        console.log('User repos loaded:', userRepos.length);
+        userRepos = await getUserRepositories();
+        console.log('User repos loaded:', userRepos?.length || 0);
       } catch (userReposError) {
         console.error('Error loading user repos:', userReposError);
-        userRepos = [];
       }
       
       // Mark these as user's own
-      const markedUserRepos = userRepos.map(repo => ({
+      const markedUserRepos = userRepos?.map(repo => ({
         ...repo,
         isOwned: true
-      }));
+      })) || [];
       
       // Combine both types, removing duplicates by ID
       const allRepos = [...markedStarred];
@@ -255,33 +260,35 @@ const SaveRepository = () => {
       
       console.log('Total combined repos:', allRepos.length);
       
-      // If we have repos, set them
+      // Only fallback to search if we truly have no repos
       if (allRepos.length > 0) {
         setRepositories(allRepos);
         setFilteredRepositories(allRepos);
-      } 
-      // If no repos found, try searching for some popular ones
-      else {
-        try {
-          console.log('No repositories found, loading default repos');
-          const defaultRepos = await searchRepositories('react');
-          console.log('Default repos loaded:', defaultRepos?.length || 0);
-          setRepositories(defaultRepos || []);
-          setFilteredRepositories(defaultRepos || []);
-        } catch (error) {
-          console.error('Failed to load default repositories:', error);
+      } else {
+        // This might be where the problem is - only show fallback repositories
+        // if the user explicitly indicated they want to search
+        if (url && url.trim()) {
+          try {
+            console.log(`Searching for repositories matching: ${url}`);
+            const searchResults = await searchRepositories(url);
+            console.log('Search results:', searchResults?.length || 0);
+            setRepositories(searchResults || []);
+            setFilteredRepositories(searchResults || []);
+          } catch (error) {
+            console.error('Failed to search repositories:', error);
+            setRepositories([]);
+            setFilteredRepositories([]);
+          }
+        } else {
+          // If no repositories and no search term, just show empty state
+          setRepositories([]);
+          setFilteredRepositories([]);
         }
       }
     } catch (error) {
       console.error('Failed to load repositories:', error);
-      // Try to recover with default search
-      try {
-        const defaultRepos = await searchRepositories('react');
-        setRepositories(defaultRepos || []);
-        setFilteredRepositories(defaultRepos || []);
-      } catch (fallbackError) {
-        console.error('Failed to load fallback repositories:', fallbackError);
-      }
+      setRepositories([]);
+      setFilteredRepositories([]);
     } finally {
       setIsLoadingRepos(false);
     }
@@ -538,7 +545,9 @@ const SaveRepository = () => {
                     <div className={`p-3 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200'} flex justify-between items-center transition-colors duration-300`}>
                       <h3 className="font-medium">
                         {isLoadingRepos ? "Loading repositories..." : 
-                         (url ? `Repositories matching "${url}"` : "Your Repositories")}
+                         (url && filteredRepositories.length > 0 && filteredRepositories[0].searchResult ? 
+                          `Search results for "${url}"` : 
+                          "Your Repositories")}
                       </h3>
                       <button
                         type="button"
@@ -559,11 +568,36 @@ const SaveRepository = () => {
                         <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} transition-colors duration-300 mb-2`}>
                           {url ? "No matching repositories found." : "No repositories found."}
                         </p>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-3`}>
                           {url ? 
                             "Try a different search term or enter a GitHub URL directly." : 
-                            "We couldn't find any GitHub repositories. You can still enter a repository URL manually."}
+                            "We couldn't find any of your GitHub repositories."}
                         </p>
+                        
+                        {url && (
+                          <button
+                            onClick={async () => {
+                              setIsLoadingRepos(true);
+                              try {
+                                const searchResults = await searchRepositories(url);
+                                const markedResults = searchResults.map(repo => ({
+                                  ...repo,
+                                  searchResult: true
+                                }));
+                                setRepositories(markedResults);
+                                setFilteredRepositories(markedResults);
+                              } catch (error) {
+                                console.error('Search failed:', error);
+                              } finally {
+                                setIsLoadingRepos(false);
+                              }
+                            }}
+                            className={`${themeClasses.secondaryButton} w-full py-2 px-4 flex items-center justify-center`}
+                          >
+                            <FaSearch className="mr-2" />
+                            <span>Search GitHub for "{url}"</span>
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -583,6 +617,11 @@ const SaveRepository = () => {
                               </div>
                               
                               <div className="flex items-center space-x-3 text-sm">
+                                {repo.searchResult && (
+                                  <span className="flex items-center">
+                                    <FaSearch className={`${darkMode ? 'text-gray-300' : 'text-gray-500'} mr-1`} />
+                                  </span>
+                                )}
                                 {repo.isStarred && (
                                   <span className="flex items-center">
                                     <FaStar className="text-yellow-500 mr-1" />
