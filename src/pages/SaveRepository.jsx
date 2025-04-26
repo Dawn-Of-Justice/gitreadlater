@@ -208,21 +208,23 @@ const SaveRepository = () => {
     try {
       // Load starred repositories
       const starredRepos = await getUserStarredRepos();
+      console.log('Starred repos loaded:', starredRepos?.length || 0);
       
       // Mark these as starred
-      const markedStarred = starredRepos.map(repo => ({
+      const markedStarred = starredRepos?.map(repo => ({
         ...repo,
         isStarred: true
-      }));
+      })) || [];
       
       // Load user repositories
       const userRepos = await getUserRepositories();
+      console.log('User repos loaded:', userRepos?.length || 0);
       
       // Mark these as user's own
-      const markedUserRepos = userRepos.map(repo => ({
+      const markedUserRepos = userRepos?.map(repo => ({
         ...repo,
         isOwned: true
-      }));
+      })) || [];
       
       // Combine both types, removing duplicates by ID
       const allRepos = [...markedStarred];
@@ -234,10 +236,34 @@ const SaveRepository = () => {
         }
       });
       
-      setRepositories(allRepos);
-      setFilteredRepositories(allRepos);
+      console.log('Total combined repos:', allRepos.length);
+      
+      if (allRepos.length === 0) {
+        // If no repositories found, try fetching some default repositories
+        try {
+          const defaultRepos = await searchRepositories('react');
+          console.log('Default repos loaded:', defaultRepos?.length || 0);
+          setRepositories(defaultRepos || []);
+          setFilteredRepositories(defaultRepos || []);
+        } catch (error) {
+          console.error('Failed to load default repositories:', error);
+        }
+      } else {
+        setRepositories(allRepos);
+        setFilteredRepositories(allRepos);
+      }
     } catch (error) {
       console.error('Failed to load repositories:', error);
+      
+      // Try to recover by showing generic suggestions
+      try {
+        const defaultRepos = await searchRepositories('react');
+        console.log('Fallback repos loaded:', defaultRepos?.length || 0);
+        setRepositories(defaultRepos || []);
+        setFilteredRepositories(defaultRepos || []);
+      } catch (fallbackError) {
+        console.error('Failed to load fallback repositories:', fallbackError);
+      }
     } finally {
       setIsLoadingRepos(false);
     }
@@ -482,9 +508,16 @@ const SaveRepository = () => {
                         <span>Loading...</span>
                       </div>
                     ) : filteredRepositories.length === 0 ? (
-                      <p className={`p-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
-                        {url ? "No matching repositories found." : "No repositories found."}
-                      </p>
+                      <div className="p-4">
+                        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300 mb-2`}>
+                          {url ? "No matching repositories found." : "No repositories found."}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {url ? 
+                            "Try a different search term or enter a GitHub URL directly." : 
+                            "We couldn't find any GitHub repositories. You can still enter a repository URL manually."}
+                        </p>
+                      </div>
                     ) : (
                       <div className="divide-y">
                         {filteredRepositories.map((repo) => (
@@ -518,7 +551,7 @@ const SaveRepository = () => {
                                     <FaLock className="mr-1" />
                                   </span>
                                 )}
-                                <span>{repo.stargazers_count}</span>
+                                <span>{repo.stargazers_count || 0}</span>
                               </div>
                             </div>
                           </div>
