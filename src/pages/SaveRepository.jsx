@@ -319,8 +319,7 @@ const SaveRepository = () => {
       console.log('Total combined repos:', allRepos.length);
       
       setRepositories(allRepos);
-      
-      // The filter effect will handle filtering based on current query
+      setFilteredRepositories(allRepos);
     } catch (error) {
       console.error('Failed to load repositories:', error);
       setRepositories([]);
@@ -474,17 +473,11 @@ const SaveRepository = () => {
     setUrl(searchValue);
     
     // Show repositories dropdown when typing
-    if (!showRepositories) {
+    if (!showRepositories && searchValue.trim()) {
       setShowRepositories(true);
-    }
-    
-    // Trigger search if we have characters in the input
-    if (searchValue.trim()) {
-      // If we already have repositories loaded, filter them
-      if (repositories.length > 0) {
-        // The useEffect for filtering will handle this
-      } else {
-        // Load repositories if they aren't already loaded
+      
+      // Load repositories if not already loaded
+      if (repositories.length === 0) {
         loadAllRepositories();
       }
     }
