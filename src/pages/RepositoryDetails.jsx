@@ -11,6 +11,30 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 
+const getTagColor = (tag) => {
+  // Generate a simple hash from the tag name
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Define a set of visually distinct, accessible colors (avoiding very light colors)
+  const colors = [
+    'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100',
+    'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100',
+    'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100',
+    'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100',
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-700 dark:text-indigo-100',
+    'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-100',
+    'bg-pink-100 text-pink-800 dark:bg-pink-700 dark:text-pink-100',
+    'bg-teal-100 text-teal-800 dark:bg-teal-700 dark:text-teal-100'
+  ];
+  
+  // Use the hash to pick a color
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
 const RepositoryDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,8 +54,6 @@ const RepositoryDetails = () => {
   const [confirming, setConfirming] = useState(false);
   const [previousTags, setPreviousTags] = useState([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-  
-  // Scroll state
   const [showScrollTop, setShowScrollTop] = useState(false);
   
   // Get theme from context
@@ -116,7 +138,6 @@ const RepositoryDetails = () => {
     fetchRepository();
   }, [id, navigate]);
   
-  // Add this useEffect or update if it already exists
   useEffect(() => {
     if (repository) {
       // Initialize notes from repository data
@@ -438,13 +459,13 @@ const handleDeleteRepository = async () => {
                           {tags.map((tag) => (
                             <span
                               key={tag}
-                              className={`${themeClasses.tag} px-3 py-1 rounded-full flex items-center transition-colors duration-300`}
+                              className={`px-3 py-1.5 rounded-full flex items-center transition-colors duration-300 ${getTagColor(tag)}`}
                             >
                               <span>{tag}</span>
                               <button
                                 type="button"
                                 onClick={() => removeTag(tag)}
-                                className={`${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} ml-2 transition-colors duration-300`}
+                                className="ml-2 text-opacity-70 hover:text-opacity-100 transition-opacity duration-300"
                               >
                                 <FaTimes size={12} />
                               </button>
@@ -467,7 +488,7 @@ const handleDeleteRepository = async () => {
                                 key={tag}
                                 type="button"
                                 onClick={() => selectTag(tag)}
-                                className={`${themeClasses.tagSuggestion} px-2 py-1 text-sm rounded-md transition-colors duration-300`}
+                                className={`px-2 py-1 text-sm rounded-md transition-colors duration-300 ${getTagColor(tag)}`}
                               >
                                 {tag}
                               </button>
@@ -484,7 +505,7 @@ const handleDeleteRepository = async () => {
                           {tags.map((tag) => (
                             <span
                               key={tag}
-                              className={`${themeClasses.tag} px-3 py-1 rounded-full transition-colors duration-300`}
+                              className={`px-3 py-1.5 rounded-full transition-colors duration-300 ${getTagColor(tag)}`}
                             >
                               {tag}
                             </span>

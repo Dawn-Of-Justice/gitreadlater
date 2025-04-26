@@ -840,13 +840,13 @@ const SaveRepository = () => {
                   {tags.map((tag) => (
                     <span
                       key={tag}
-                      className={`${themeClasses.tag} px-3 py-1 rounded-full flex items-center space-x-1 transition-colors duration-300`}
+                      className={`px-3 py-1.5 rounded-full flex items-center transition-colors duration-300 ${getTagColor(tag)}`}
                     >
                       <span>{tag}</span>
                       <button
                         type="button"
                         onClick={() => removeTag(tag)}
-                        className={`${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} ml-1 transition-colors duration-300`}
+                        className="ml-2 text-opacity-70 hover:text-opacity-100 transition-opacity duration-300"
                       >
                         <FaTimes size={12} />
                       </button>
@@ -868,7 +868,7 @@ const SaveRepository = () => {
                           key={tag}
                           type="button"
                           onClick={() => selectTag(tag)}
-                          className={`${themeClasses.tagSuggestion} px-2 py-1 text-sm rounded-md transition-colors duration-300`}
+                          className={`px-2 py-1 text-sm rounded-md transition-colors duration-300 ${getTagColor(tag)}`}
                         >
                           {tag}
                         </button>
