@@ -145,60 +145,22 @@ const RepositoryDetails = () => {
   // Replace both handleDeleteRepository and handleDelete with this unified function:
 const handleDeleteRepository = async () => {
   try {
-    // Check for active session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.error('No active session');
-      setError('Authentication required. Please log in again.');
-      return;
-    }
+    setDeleting(true);
     
-    // Only allow deletion if this repo belongs to the user
-    if (repository.user_id !== session.user.id) {
-      console.error('Unauthorized deletion attempt');
-      setError('You can only delete your own repositories.');
-      return;
-    }
+    // Delete the repository
+    await deleteRepository(id, invalidateRepositories);
     
-    // First, try to delete from the main repositories table
-    const { error: mainError } = await supabase
-      .from('repositories')
-      .delete()
-      .eq('id', id);
+    // Show success message (optional)
+    // toast.success('Repository deleted successfully');
     
-    // If that fails or if we also need to check saved_repositories
-    if (mainError) {
-      console.log('Trying saved_repositories table after error:', mainError);
-      
-      // Try deleting from saved_repositories table
-      const { error: savedError } = await supabase
-        .from('saved_repositories')
-        .delete()
-        .eq('id', id);
-      
-      if (savedError) {
-        throw savedError;
-      }
-    }
-    
-    // If we have invalidateRepositories, call it to refresh cache
-    if (typeof invalidateRepositories === 'function') {
-      invalidateRepositories();
-    }
-    
-    // Show a success message if toast is available
-    if (typeof toast !== 'undefined') {
-      toast.success('Repository deleted successfully');
-    } else {
-      console.log('Repository deleted successfully');
-    }
-    
-    // Navigate back to the dashboard
+    // Navigate back to dashboard
     navigate('/', { replace: true });
-  } catch (err) {
-    console.error('Error deleting repository:', err);
+  } catch (error) {
+    console.error('Error deleting repository:', error);
     setError('Failed to delete repository. Please try again.');
     setConfirming(false);
+  } finally {
+    setDeleting(false);
   }
 };
   
@@ -324,47 +286,21 @@ const handleDeleteRepository = async () => {
               <h1 className="text-3xl font-bold mb-2 md:mb-0">{repository.repo_name}</h1>
               
               <div className="flex items-center space-x-2">
-                {!isEditing ? (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
-                    >
-                      <FaEdit className="mr-2" />
-                      <span>Edit</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setConfirming(true)}
-                      className={`${themeClasses.dangerButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
-                    >
-                      <FaTrash className="mr-2" />
-                      <span>Delete</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleSaveChanges}
-                      disabled={saving}
-                      className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
-                    >
-                      {saving ? <FaSpinner className="animate-spin mr-2" /> : <FaCheck className="mr-2" />}
-                      <span>Save</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setNotes(repository.notes || '');
-                        setTags(repository.tags || []);
-                      }}
-                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300`}
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                >
+                  <FaEdit className="mr-2" />
+                  <span>Edit</span>
+                </button>
+                
+                <button
+                  onClick={() => setConfirming(true)}
+                  className={`${themeClasses.dangerButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                >
+                  <FaTrash className="mr-2" />
+                  <span>Delete</span>
+                </button>
               </div>
             </div>
             

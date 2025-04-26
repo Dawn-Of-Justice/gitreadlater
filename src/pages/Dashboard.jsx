@@ -259,24 +259,6 @@ const Dashboard = () => {
     setRefreshFlag(prev => prev + 1);
   };
 
-  // Add this function to handle deletion
-  const handleDeleteRepository = async (repoId) => {
-    if (!window.confirm('Are you sure you want to delete this repository?')) {
-      return;
-    }
-    
-    try {
-      await deleteRepository(repoId);
-      // Refresh the repository list
-      invalidateRepositories();
-      // Optional: show success message
-      alert('Repository deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete repository:', error);
-      // Optional: show error message
-      alert('Failed to delete repository');
-    }
-  };
 
   // =======================================================================
   // RENDERING LOGIC
@@ -503,18 +485,7 @@ const Dashboard = () => {
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center mt-4">
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteRepository(repo.id);
-                    }}
-                    className="text-red-500 hover:text-red-700 transition-colors duration-300"
-                  >
-                    <FaTrash /> Delete
-                  </button>
-                  
+                <div className="flex justify-between items-center mt-4">                  
                   <a 
                     href={repo.repo_url || repo.url} 
                     target="_blank" 

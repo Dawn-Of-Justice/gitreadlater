@@ -223,25 +223,15 @@ export const deleteRepository = async (id, invalidateCache = null) => {
     console.log('Attempting to delete repository with ID:', id);
     
     // First try to delete from saved_repositories (most likely case)
-    const { error: savedError } = await supabase
+    const { error } = await supabase
       .from('saved_repositories')
       .delete()
       .eq('id', id)
       .eq('user_id', user.id); // Ensure user owns this record
     
-    if (savedError) {
-      console.log('Error deleting from saved_repositories:', savedError);
-      
-      // If that fails, try the repositories table
-      const { error: repoError } = await supabase
-        .from('repositories')
-        .delete()
-        .eq('id', id);
-      
-      if (repoError) {
-        console.error('Error deleting from repositories:', repoError);
-        throw repoError;
-      }
+    if (error) {
+      console.error('Error deleting repository:', error);
+      throw error;
     }
     
     // Invalidate cache after deletion
@@ -249,13 +239,13 @@ export const deleteRepository = async (id, invalidateCache = null) => {
       invalidateCache();
     }
     
+    console.log('Repository deleted successfully');
     return { success: true };
   } catch (error) {
     console.error('Error deleting repository:', error);
     throw error;
   }
 };
-
 
 // Get unique tags used by the user
 export const getUserTags = async (cachedTags = [], setCachedTags = null) => {
