@@ -294,6 +294,39 @@ const SaveRepository = () => {
     }
   };
 
+  // Load user repositories
+  const loadUserRepositories = async () => {
+    setLoadingUserRepos(true);
+    try {
+      const repos = await getUserRepositories();
+      console.log('User repos loaded:', repos?.length || 0);
+      setUserRepositories(repos || []);
+      setShowUserRepos(true);
+    } catch (error) {
+      console.error('Error loading user repositories:', error);
+      setError('Failed to load your repositories. Please try again.');
+    } finally {
+      setLoadingUserRepos(false);
+    }
+  };
+
+  // Similarly update your loadStarredRepos function
+  const loadStarredRepos = async () => {
+    setLoadingStarred(true);
+    try {
+      const starred = await getUserStarredRepos();
+      console.log('Starred repos loaded:', starred?.length || 0);
+      setStarredRepos(starred || []);
+      setFilteredStarredRepos(starred || []);
+      setShowStarredRepos(true);
+    } catch (err) {
+      console.error('Error loading starred repositories:', err);
+      setError('Failed to load starred repositories. Please try again.');
+    } finally {
+      setLoadingStarred(false);
+    }
+  };
+
   // Handle input focus
   const handleInputFocus = () => {
     // Always load repositories when focusing if we don't have them yet

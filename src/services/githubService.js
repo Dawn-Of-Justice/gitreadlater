@@ -242,6 +242,31 @@ export const getUserRepositories = async (options = {}) => {
   const startIndex = (page - 1) * limit;
   
   try {
+    // First check if we have a valid session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.provider_token) {
+      console.warn('No GitHub token found, using unauthenticated request');
+      return [];
+    }
+
+    // Get user's repositories from GitHub API directly
+    const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=30', {
+      headers: {
+        'Authorization': `Bearer ${session.provider_token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('GitHub API error:', await response.text());
+      return [];
+    }
+    
+    const repos = await response.json();
+    return repos; // Return the array directly
+    
+    /* 
+    // This old approach tried to get repos from your Supabase DB, not from GitHub:
     // Check if table exists first
     const tableExists = await checkRepositoriesTableExists();
     if (!tableExists) {
@@ -258,8 +283,9 @@ export const getUserRepositories = async (options = {}) => {
     if (error) throw error;
     
     return { data: data || [], count: count || 0, tableExists: true };
+    */
   } catch (error) {
     console.error('Error fetching repositories:', error);
-    throw error;
+    return []; // Return empty array on error, not an object
   }
 };
