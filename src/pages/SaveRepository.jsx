@@ -652,21 +652,6 @@ const SaveRepository = () => {
                           <FaStar className={`mr-1 text-yellow-500 ${showStarredRepos ? '' : 'opacity-50'}`} />
                           Starred
                         </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowOwnedRepos(true);
-                            setShowStarredRepos(true);
-                          }}
-                          className={`px-2 py-1 rounded ${(showOwnedRepos && showStarredRepos)
-                            ? (darkMode ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-800') 
-                            : (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
-                          }`}
-                        >
-                          All
-                        </button>
                       </div>
                     </div>
                     

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark } from 'react-icons/fa';
-import { getSavedRepositories, getUserTags, checkRepositoriesTableExists } from '../services/repositoryService';
+import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
+import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext'; // Make sure this import is added
@@ -34,7 +34,8 @@ const Dashboard = () => {
     repositories: cachedRepositories, 
     setRepositories: setCachedRepositories,
     tags: cachedTags,
-    setTags: setCachedTags
+    setTags: setCachedTags,
+    invalidateRepositories
   } = useCache();
 
   // Set up user tier from subscription
@@ -256,6 +257,25 @@ const Dashboard = () => {
   const refreshRepositories = () => {
     fetchAttemptedRef.current = false;
     setRefreshFlag(prev => prev + 1);
+  };
+
+  // Add this function to handle deletion
+  const handleDeleteRepository = async (repoId) => {
+    if (!window.confirm('Are you sure you want to delete this repository?')) {
+      return;
+    }
+    
+    try {
+      await deleteRepository(repoId);
+      // Refresh the repository list
+      invalidateRepositories();
+      // Optional: show success message
+      alert('Repository deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete repository:', error);
+      // Optional: show error message
+      alert('Failed to delete repository');
+    }
   };
 
   // =======================================================================
@@ -484,9 +504,16 @@ const Dashboard = () => {
                 )}
                 
                 <div className="flex justify-between items-center mt-4">
-                  <div className="invisible">
-                    {/* Placeholder for flex layout balance */}
-                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteRepository(repo.id);
+                    }}
+                    className="text-red-500 hover:text-red-700 transition-colors duration-300"
+                  >
+                    <FaTrash /> Delete
+                  </button>
                   
                   <a 
                     href={repo.repo_url || repo.url} 

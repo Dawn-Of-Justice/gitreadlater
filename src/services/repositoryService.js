@@ -241,6 +241,23 @@ export const deleteRepository = async (id, invalidateCache = null) => {
   }
 };
 
+// Add this function to your repository service
+export const deleteRepository = async (repoId) => {
+  try {
+    const { error } = await supabase
+      .from('repositories')
+      .delete()
+      .eq('id', repoId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting repository:', error);
+    throw new Error('Failed to delete repository');
+  }
+};
+
 // Get unique tags used by the user
 export const getUserTags = async (cachedTags = [], setCachedTags = null) => {
   try {
