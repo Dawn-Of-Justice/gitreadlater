@@ -116,20 +116,25 @@ const SaveRepository = () => {
 
   // Filter repositories when URL changes
   useEffect(() => {
-    if (!repositories.length) return;
+    // Skip if there are no repositories to filter
+    if (!repositories || repositories.length === 0) return;
     
     const query = url.toLowerCase().trim();
+    
+    // If no query, show all repositories
     if (!query) {
       setFilteredRepositories(repositories);
       return;
     }
 
+    // Filter repositories that match the query
     const filtered = repositories.filter(repo => 
-      repo.name.toLowerCase().includes(query) || 
-      repo.full_name.toLowerCase().includes(query) ||
+      (repo.name && repo.name.toLowerCase().includes(query)) || 
+      (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
       (repo.description && repo.description.toLowerCase().includes(query))
     );
 
+    console.log(`Filtered repos: ${filtered.length} matching "${query}"`);
     setFilteredRepositories(filtered);
   }, [url, repositories]);
 
@@ -207,24 +212,36 @@ const SaveRepository = () => {
     setIsLoadingRepos(true);
     try {
       // Load starred repositories first
-      const starredRepos = await getUserStarredRepos();
-      console.log('Starred repos loaded:', starredRepos?.length || 0);
+      let starredRepos = [];
+      try {
+        starredRepos = await getUserStarredRepos() || [];
+        console.log('Starred repos loaded:', starredRepos.length);
+      } catch (starredError) {
+        console.error('Error loading starred repos:', starredError);
+        starredRepos = [];
+      }
       
       // Mark these as starred
-      const markedStarred = starredRepos?.map(repo => ({
+      const markedStarred = starredRepos.map(repo => ({
         ...repo,
         isStarred: true
-      })) || [];
+      }));
       
       // Load user repositories
-      const userRepos = await getUserRepositories();
-      console.log('User repos loaded:', userRepos?.length || 0);
+      let userRepos = [];
+      try {
+        userRepos = await getUserRepositories() || [];
+        console.log('User repos loaded:', userRepos.length);
+      } catch (userReposError) {
+        console.error('Error loading user repos:', userReposError);
+        userRepos = [];
+      }
       
       // Mark these as user's own
-      const markedUserRepos = userRepos?.map(repo => ({
+      const markedUserRepos = userRepos.map(repo => ({
         ...repo,
         isOwned: true
-      })) || [];
+      }));
       
       // Combine both types, removing duplicates by ID
       const allRepos = [...markedStarred];
@@ -238,12 +255,15 @@ const SaveRepository = () => {
       
       console.log('Total combined repos:', allRepos.length);
       
-      setRepositories(allRepos);
-      setFilteredRepositories(allRepos);
-      
-      // If still no repos, try fallback
-      if (allRepos.length === 0) {
+      // If we have repos, set them
+      if (allRepos.length > 0) {
+        setRepositories(allRepos);
+        setFilteredRepositories(allRepos);
+      } 
+      // If no repos found, try searching for some popular ones
+      else {
         try {
+          console.log('No repositories found, loading default repos');
           const defaultRepos = await searchRepositories('react');
           console.log('Default repos loaded:', defaultRepos?.length || 0);
           setRepositories(defaultRepos || []);
@@ -254,6 +274,14 @@ const SaveRepository = () => {
       }
     } catch (error) {
       console.error('Failed to load repositories:', error);
+      // Try to recover with default search
+      try {
+        const defaultRepos = await searchRepositories('react');
+        setRepositories(defaultRepos || []);
+        setFilteredRepositories(defaultRepos || []);
+      } catch (fallbackError) {
+        console.error('Failed to load fallback repositories:', fallbackError);
+      }
     } finally {
       setIsLoadingRepos(false);
     }
@@ -261,6 +289,7 @@ const SaveRepository = () => {
 
   // Handle input focus
   const handleInputFocus = () => {
+    // Always load repositories when focusing if we don't have them yet
     if (repositories.length === 0) {
       loadAllRepositories();
     }
@@ -351,6 +380,33 @@ const SaveRepository = () => {
 
   const repoLimit = REPOSITORY_LIMITS[userTier];
   const isAtLimit = !canSave;
+
+  // Add this to handle keyboard events for the dropdown
+  const handleKeyDown = (e) => {
+    if (!showRepositories) return;
+    
+    if (e.key === 'Escape') {
+      setShowRepositories(false);
+    } else if (e.key === 'ArrowDown') {
+      // Implement arrow down navigation if needed
+      e.preventDefault();
+      // Future enhancement: select first repo in list
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setUrl(e.target.value);
+    
+    // Show repositories dropdown when typing
+    if (!showRepositories && e.target.value.trim()) {
+      setShowRepositories(true);
+      
+      // Load repositories if not already loaded
+      if (repositories.length === 0) {
+        loadAllRepositories();
+      }
+    }
+  };
 
   // If user is at limit, show upgrade notice
   if (isAtLimit) {
@@ -462,8 +518,9 @@ const SaveRepository = () => {
                   ref={inputRef}
                   placeholder="https://github.com/owner/repo"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={handleInputChange}
                   onFocus={handleInputFocus}
+                  onKeyDown={handleKeyDown}
                   className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300`}
                 />
                 {url && (
