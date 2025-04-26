@@ -6,7 +6,7 @@ import { saveRepository, getUserTags } from '../services/repositoryService';
 import { getUserRepositoryCount, getUserTier, initializeUserSubscription, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
-import { supabase } from '../lib/supabaseClient'; 
+import { supabase } from '../lib/supabaseClient';
 
 const SaveRepository = () => {
   const navigate = useNavigate();
@@ -30,10 +30,12 @@ const SaveRepository = () => {
   const [tagInput, setTagInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showStarredRepos, setShowStarredRepos] = useState(false);
-  const [starredRepos, setStarredRepos] = useState([]);
-  const [filteredStarredRepos, setFilteredStarredRepos] = useState([]);
-  const [loadingStarred, setLoadingStarred] = useState(false);
+  
+  // Combined repository states
+  const [repositories, setRepositories] = useState([]);
+  const [filteredRepositories, setFilteredRepositories] = useState([]);
+  const [showRepositories, setShowRepositories] = useState(false);
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   
   // Subscription states
   const [userTier, setUserTier] = useState(TIERS.FREE);
@@ -49,11 +51,6 @@ const SaveRepository = () => {
   // State for previously used tags
   const [previousTags, setPreviousTags] = useState([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-  
-  // New states for user repositories
-  const [userRepositories, setUserRepositories] = useState([]);
-  const [showUserRepos, setShowUserRepos] = useState(false);
-  const [loadingUserRepos, setLoadingUserRepos] = useState(false);
   
   // Check subscription status on load
   useEffect(() => {
@@ -93,9 +90,9 @@ const SaveRepository = () => {
     checkSubscription();
   }, []);
 
-  // Load starred repositories on component mount
+  // Load user's repositories and starred repos on component mount
   useEffect(() => {
-    loadStarredRepos();
+    loadAllRepositories();
   }, []);
   
   // Save URL to localStorage whenever it changes
@@ -116,6 +113,25 @@ const SaveRepository = () => {
   useEffect(() => {
     fetchUserTags();
   }, []);
+
+  // Filter repositories when URL changes
+  useEffect(() => {
+    if (!repositories.length) return;
+    
+    const query = url.toLowerCase().trim();
+    if (!query) {
+      setFilteredRepositories(repositories);
+      return;
+    }
+
+    const filtered = repositories.filter(repo => 
+      repo.name.toLowerCase().includes(query) || 
+      repo.full_name.toLowerCase().includes(query) ||
+      (repo.description && repo.description.toLowerCase().includes(query))
+    );
+
+    setFilteredRepositories(filtered);
+  }, [url, repositories]);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -186,65 +202,67 @@ const SaveRepository = () => {
     return () => clearTimeout(timeoutId);
   }, [url]);
 
-  // Filter starred repos when user types
-  useEffect(() => {
-    if (!starredRepos.length) return;
-    
-    const query = url.toLowerCase();
-    if (!query) {
-      // Show all starred repos when input is empty
-      setFilteredStarredRepos(starredRepos);
-      if (document.activeElement === inputRef.current) {
-        setShowStarredRepos(true);
-      }
-      return;
-    }
-
-    const filtered = starredRepos.filter(repo => 
-      repo.name.toLowerCase().includes(query) || 
-      repo.full_name.toLowerCase().includes(query) ||
-      (repo.description && repo.description.toLowerCase().includes(query))
-    );
-
-    setFilteredStarredRepos(filtered);
-    if (filtered.length > 0) {
-      setShowStarredRepos(true);
-    }
-  }, [url, starredRepos]);
-  
-  // Load starred repositories
-  const loadStarredRepos = async () => {
+  // Load all repositories (both starred and user's own)
+  const loadAllRepositories = async () => {
+    setIsLoadingRepos(true);
     try {
-      setLoadingStarred(true);
-      const starred = await getUserStarredRepos();
-      setStarredRepos(starred);
-      setFilteredStarredRepos(starred);
-    } catch (err) {
-      console.error('Error loading starred repositories:', err);
-      setError('Failed to load starred repositories. Please try again.');
+      // Load starred repositories
+      const starredRepos = await getUserStarredRepos();
+      
+      // Mark these as starred
+      const markedStarred = starredRepos.map(repo => ({
+        ...repo,
+        isStarred: true
+      }));
+      
+      // Load user repositories
+      const userRepos = await getUserRepositories();
+      
+      // Mark these as user's own
+      const markedUserRepos = userRepos.map(repo => ({
+        ...repo,
+        isOwned: true
+      }));
+      
+      // Combine both types, removing duplicates by ID
+      const allRepos = [...markedStarred];
+      
+      // Add user repos that aren't already in the list
+      markedUserRepos.forEach(userRepo => {
+        if (!allRepos.find(repo => repo.id === userRepo.id)) {
+          allRepos.push(userRepo);
+        }
+      });
+      
+      setRepositories(allRepos);
+      setFilteredRepositories(allRepos);
+    } catch (error) {
+      console.error('Failed to load repositories:', error);
     } finally {
-      setLoadingStarred(false);
+      setIsLoadingRepos(false);
     }
-  };
-  
-  // Handle selecting a starred repository
-  const selectStarredRepo = (repo) => {
-    const repoUrl = repo.html_url;
-    setUrl(repoUrl);
-    localStorage.setItem('saved_repo_url', repoUrl);
-    setShowStarredRepos(false);
   };
 
   // Handle input focus
   const handleInputFocus = () => {
-    if (starredRepos.length > 0) {
-      setFilteredStarredRepos(starredRepos);
-      setShowStarredRepos(true);
-    } else {
-      // If starred repos aren't loaded yet, load them
-      loadStarredRepos();
-      setShowStarredRepos(true);
+    if (repositories.length === 0) {
+      loadAllRepositories();
     }
+    setShowRepositories(true);
+  };
+  
+  // Handle repository selection
+  const selectRepository = (repo) => {
+    setUrl(repo.html_url);
+    setRepoPreview({
+      name: repo.name,
+      owner: repo.owner.login,
+      full_name: repo.full_name,
+      description: repo.description,
+      language: repo.language,
+      stargazers_count: repo.stargazers_count
+    });
+    setShowRepositories(false);
   };
   
   // Add a tag
@@ -317,63 +335,6 @@ const SaveRepository = () => {
 
   const repoLimit = REPOSITORY_LIMITS[userTier];
   const isAtLimit = !canSave;
-  
-  // Load user repositories
-  const loadUserRepositories = async () => {
-    try {
-      setLoadingUserRepos(true);
-      const repos = await getUserRepositories();
-      setUserRepositories(repos);
-    } catch (error) {
-      console.error('Error loading user repositories:', error);
-      setError('Failed to load your repositories. Please try again.');
-    } finally {
-      setLoadingUserRepos(false);
-    }
-  };
-
-  // Handle selecting a user repository
-  const selectUserRepo = (repo) => {
-    setUrl(repo.html_url);
-    setRepoPreview({
-      name: repo.name,
-      owner: repo.owner.login,
-      description: repo.description,
-      language: repo.language,
-      stars: repo.stargazers_count
-    });
-    setShowUserRepos(false);
-  };
-
-  const handleSaveRepository = async () => {
-    setIsSaving(true);
-    
-    try {
-      // Save the repository
-      const result = await saveRepository(url, notes, selectedTags);
-      
-      if (!result.error) {
-        // Show success message if you have toast
-        if (typeof toast !== 'undefined') {
-          toast.success('Repository saved successfully!');
-        }
-        
-        // Force reload the dashboard by clearing flag and navigating
-        console.log('Repository saved, redirecting to dashboard');
-        navigate('/', { 
-          replace: true,
-          state: { forceRefresh: true, timestamp: Date.now() } 
-        });
-      } else {
-        setError(result.error || 'Failed to save repository');
-      }
-    } catch (error) {
-      console.error('Error saving repository:', error);
-      setError(error.message || 'An error occurred while saving the repository');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   // If user is at limit, show upgrade notice
   if (isAtLimit) {
@@ -503,7 +464,7 @@ const SaveRepository = () => {
                   <div className={`absolute z-10 mt-1 w-full max-h-80 overflow-y-auto border rounded-md shadow-lg ${themeClasses.starredList} transition-colors duration-300`}>
                     <div className={`p-3 ${themeClasses.starredHeader} flex justify-between items-center transition-colors duration-300`}>
                       <h3 className="font-medium">
-                        {loading ? "Loading repositories..." : 
+                        {isLoadingRepos ? "Loading repositories..." : 
                          (url ? `Repositories matching "${url}"` : "Your Repositories")}
                       </h3>
                       <button
@@ -515,7 +476,7 @@ const SaveRepository = () => {
                       </button>
                     </div>
                     
-                    {loading ? (
+                    {isLoadingRepos ? (
                       <div className="flex justify-center items-center p-4">
                         <FaSpinner className="animate-spin text-blue-500 mr-2" />
                         <span>Loading...</span>
@@ -545,6 +506,11 @@ const SaveRepository = () => {
                                 {repo.isStarred && (
                                   <span className="flex items-center">
                                     <FaStar className="text-yellow-500 mr-1" />
+                                  </span>
+                                )}
+                                {repo.isOwned && !repo.isStarred && (
+                                  <span className="flex items-center">
+                                    <FaGithub className="text-gray-500 mr-1" />
                                   </span>
                                 )}
                                 {repo.private && (
@@ -588,105 +554,6 @@ const SaveRepository = () => {
                     <FaCircle className="text-blue-500" style={{ fontSize: '10px' }} />
                     <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{repoPreview.language}</span>
                   </div>
-                )}
-              </div>
-            )}
-            
-            {/* Starred Repositories List */}
-            {showStarredRepos && (
-              <div className={`mb-6 max-h-64 overflow-y-auto border rounded-md ${themeClasses.starredList} transition-colors duration-300`}>
-                <div className={`p-3 ${themeClasses.starredHeader} flex justify-between items-center transition-colors duration-300`}>
-                  <h3 className="font-medium">
-                    {loadingStarred ? "Loading starred repositories..." : 
-                     (url ? `Repositories matching "${url}"` : "Your Starred Repositories")}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowStarredRepos(false)}
-                    className={`${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-300`}
-                  >
-                    <FaTimes />
-                  </button>
-                </div>
-                
-                {loadingStarred ? (
-                  <div className="flex justify-center items-center p-4">
-                    <FaSpinner className="animate-spin text-blue-500 mr-2" />
-                    <span>Loading...</span>
-                  </div>
-                ) : filteredStarredRepos.length === 0 ? (
-                  <p className={`p-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
-                    {url ? "No matching repositories found." : "No starred repositories found."}
-                  </p>
-                ) : (
-                  <ul className="divide-y">
-                    {filteredStarredRepos.map((repo) => (
-                      <li 
-                        key={repo.id} 
-                        className={`p-3 ${themeClasses.starredItem} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300`} 
-                        onClick={() => selectStarredRepo(repo)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{repo.name}</p>
-                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} transition-colors duration-300`}>{repo.full_name}</p>
-                            {repo.description && (
-                              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1 line-clamp-1 transition-colors duration-300`}>{repo.description}</p>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center space-x-1 text-sm">
-                            <FaStar className="text-yellow-500" />
-                            <span>{repo.stargazers_count}</span>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-
-            {/* User Repositories List */}
-            {showUserRepos && (
-              <div className={`mt-4 p-4 rounded-md border ${themeClasses.card}`}>
-                <h3 className="font-medium mb-2">Your Repositories</h3>
-                {userRepositories.length > 0 ? (
-                  <div className="max-h-60 overflow-y-auto">
-                    {userRepositories.map(repo => (
-                      <div 
-                        key={repo.id} 
-                        onClick={() => selectUserRepo(repo)}
-                        className={`flex items-center p-2 cursor-pointer rounded-md ${themeClasses.starredItem}`}
-                      >
-                        <div className="flex-grow">
-                          <p className="font-medium">{repo.full_name}</p>
-                          <p className="text-sm text-gray-500 truncate">{repo.description || 'No description'}</p>
-                          <div className="flex items-center mt-1 space-x-3 text-xs">
-                            {repo.private && (
-                              <span className="flex items-center">
-                                <FaLock className="mr-1" />
-                                Private
-                              </span>
-                            )}
-                            {repo.language && (
-                              <span className="flex items-center">
-                                <FaCircle className="mr-1" style={{ color: 'blue', fontSize: '8px' }} />
-                                {repo.language}
-                              </span>
-                            )}
-                            <span className="flex items-center">
-                              <FaStar className="mr-1 text-yellow-500" />
-                              {repo.stargazers_count}
-                            </span>
-                          </div>
-                        </div>
-                        <FaArrowRight className="text-gray-400" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No repositories found.</p>
                 )}
               </div>
             )}
