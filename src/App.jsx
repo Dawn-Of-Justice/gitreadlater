@@ -32,7 +32,7 @@ function AppContent() {
   const [repositories, setRepositories] = useState([]);
   const [filteredRepositories, setFilteredRepositories] = useState([]);
   const [showRepositories, setShowRepositories] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false); // Renamed to avoid conflict
 
   useEffect(() => {
     // Check for an existing session
@@ -94,7 +94,7 @@ function AppContent() {
 
   // Load all repositories (both starred and user's own)
   const loadAllRepositories = async () => {
-    setLoading(true);
+    setIsLoadingRepos(true); // Changed from setLoading
     try {
       // Load starred repositories
       const starredRepos = await getStarredRepositories();
@@ -129,7 +129,7 @@ function AppContent() {
     } catch (error) {
       console.error('Failed to load repositories:', error);
     } finally {
-      setLoading(false);
+      setIsLoadingRepos(false); // Changed from setLoading
     }
   };
 
