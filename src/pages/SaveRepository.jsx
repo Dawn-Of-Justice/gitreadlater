@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabaseClient';
 const SaveRepository = () => {
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
   
   // Form states
   const [url, setUrl] = useState(() => {
@@ -51,6 +52,10 @@ const SaveRepository = () => {
   // State for previously used tags
   const [previousTags, setPreviousTags] = useState([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  
+  // Add these states for filtering repositories
+  const [showOwnedRepos, setShowOwnedRepos] = useState(true);
+  const [showStarredRepos, setShowStarredRepos] = useState(true);
   
   // Check subscription status on load
   useEffect(() => {
@@ -114,29 +119,52 @@ const SaveRepository = () => {
     fetchUserTags();
   }, []);
 
-  // Filter repositories when URL changes
+  // Modify the useEffect for filtering repositories
   useEffect(() => {
     // Skip if there are no repositories to filter
     if (!repositories || repositories.length === 0) return;
     
     const query = url.toLowerCase().trim();
     
-    // If no query, show all repositories
-    if (!query) {
-      setFilteredRepositories(repositories);
-      return;
+    // Apply repo type filters first (owned/starred)
+    let filtered = repositories.filter(repo => {
+      if (showOwnedRepos && showStarredRepos) return true;
+      if (showOwnedRepos && repo.isOwned) return true;
+      if (showStarredRepos && repo.isStarred) return true;
+      return false;
+    });
+    
+    // Then apply search query if present
+    if (query) {
+      filtered = filtered.filter(repo => 
+        (repo.name && repo.name.toLowerCase().includes(query)) || 
+        (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
+        (repo.description && repo.description.toLowerCase().includes(query))
+      );
     }
 
-    // Filter repositories that match the query
-    const filtered = repositories.filter(repo => 
-      (repo.name && repo.name.toLowerCase().includes(query)) || 
-      (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
-      (repo.description && repo.description.toLowerCase().includes(query))
-    );
-
-    console.log(`Filtered repos: ${filtered.length} matching "${query}"`);
+    console.log(`Filtered repos: ${filtered.length} matching filters and "${query}"`);
     setFilteredRepositories(filtered);
-  }, [url, repositories]);
+  }, [url, repositories, showOwnedRepos, showStarredRepos]);
+
+  // Add click outside handler using useRef and useEffect
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowRepositories(false);
+      }
+    }
+
+    // Add event listener when dropdown is shown
+    if (showRepositories) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showRepositories]);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -574,7 +602,7 @@ const SaveRepository = () => {
                 )}
                 
                 {showRepositories && (
-                  <div className={`absolute z-10 mt-1 w-full max-h-80 overflow-y-auto border rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-colors duration-300`}>
+                  <div ref={dropdownRef} className={`absolute z-10 mt-1 w-full max-h-80 overflow-y-auto border rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-colors duration-300`}>
                     <div className={`p-3 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200'} flex justify-between items-center transition-colors duration-300`}>
                       <h3 className="font-medium">
                         {isLoadingRepos ? "Loading repositories..." : 
@@ -589,6 +617,44 @@ const SaveRepository = () => {
                       >
                         <FaTimes />
                       </button>
+                    </div>
+                    
+                    {/* Add repository filters */}
+                    <div className={`flex px-3 py-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <div className="flex space-x-2 text-sm">
+                        <button
+                          onClick={() => setShowOwnedRepos(!showOwnedRepos)}
+                          className={`px-2 py-1 rounded ${showOwnedRepos 
+                            ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800') 
+                            : (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
+                          } flex items-center`}
+                        >
+                          <FaGithub className={`mr-1 ${showOwnedRepos ? '' : 'opacity-50'}`} />
+                          My Repos
+                        </button>
+                        <button
+                          onClick={() => setShowStarredRepos(!showStarredRepos)}
+                          className={`px-2 py-1 rounded ${showStarredRepos 
+                            ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800') 
+                            : (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
+                          } flex items-center`}
+                        >
+                          <FaStar className={`mr-1 text-yellow-500 ${showStarredRepos ? '' : 'opacity-50'}`} />
+                          Starred
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowOwnedRepos(true);
+                            setShowStarredRepos(true);
+                          }}
+                          className={`px-2 py-1 rounded ${(showOwnedRepos && showStarredRepos)
+                            ? (darkMode ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-800') 
+                            : (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
+                          }`}
+                        >
+                          All
+                        </button>
+                      </div>
                     </div>
                     
                     {isLoadingRepos ? (
