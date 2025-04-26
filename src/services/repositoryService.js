@@ -222,12 +222,12 @@ export const deleteRepository = async (id, invalidateCache = null) => {
     
     console.log('Attempting to delete repository with ID:', id);
     
-    // First try to delete from saved_repositories (most likely case)
+    // Delete from saved_repositories
     const { error } = await supabase
       .from('saved_repositories')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id); // Ensure user owns this record
+      .eq('user_id', user.id);
     
     if (error) {
       console.error('Error deleting repository:', error);

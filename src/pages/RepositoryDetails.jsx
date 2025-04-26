@@ -42,6 +42,9 @@ const RepositoryDetails = () => {
   const tagInputRef = useRef(null);
   const tagSuggestionsRef = useRef(null);
 
+  // Add this with your other state declarations, near the top of your component
+  const [deleting, setDeleting] = useState(false);
+
   // Check scroll position to show/hide the scroll to top button
   useEffect(() => {
     const handleScroll = () => {
@@ -142,12 +145,10 @@ const RepositoryDetails = () => {
     }
   };
   
-  // Replace both handleDeleteRepository and handleDelete with this unified function:
+  // Replace your handleDeleteRepository function with this corrected version
 const handleDeleteRepository = async () => {
   try {
     console.log('Starting repository deletion for ID:', id);
-    // Add this variable to track deletion state
-    let deleting = true;
     setDeleting(true);
     
     // Call deleteRepository with the correct parameters
@@ -165,7 +166,6 @@ const handleDeleteRepository = async () => {
     console.error('Error deleting repository:', error);
     setError('Failed to delete repository. Please try again.');
     setConfirming(false);
-  } finally {
     setDeleting(false);
   }
 };
