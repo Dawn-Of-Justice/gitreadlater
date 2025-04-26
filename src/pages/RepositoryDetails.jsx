@@ -38,11 +38,8 @@ const RepositoryDetails = () => {
   const { darkMode, themeClasses } = useTheme();
   const { invalidateRepositories } = useCache();
 
-  // Add this near the top of your component
   const tagInputRef = useRef(null);
   const tagSuggestionsRef = useRef(null);
-
-  // Add this with your other state declarations, near the top of your component
   const [deleting, setDeleting] = useState(false);
 
   // Check scroll position to show/hide the scroll to top button
@@ -119,6 +116,17 @@ const RepositoryDetails = () => {
     fetchRepository();
   }, [id, navigate]);
   
+  // Add this useEffect or update if it already exists
+  useEffect(() => {
+    if (repository) {
+      // Initialize notes from repository data
+      setNotes(repository.notes || '');
+      
+      // Initialize tags from repository data - ensure it's an array
+      setTags(repository.tags || []);
+    }
+  }, [repository]);
+
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
@@ -552,10 +560,19 @@ const handleDeleteRepository = async () => {
                     <button
                       onClick={handleDeleteRepository}
                       disabled={deleting}
-                      className={`${themeClasses.dangerButton} px-4 py-2 rounded-md transition-colors duration-300`}
+                      className={`${themeClasses.dangerButton} px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-300`}
                     >
-                      {deleting ? <FaSpinner className="animate-spin mr-2" /> : <FaTrash className="mr-2" />}
-                      <span>{deleting ? 'Deleting...' : 'Delete'}</span>
+                      {deleting ? (
+                        <>
+                          <FaSpinner className="animate-spin mr-2" />
+                          <span>Deleting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaTrash className="mr-2" />
+                          <span>Delete</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
