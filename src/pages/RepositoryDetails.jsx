@@ -581,21 +581,6 @@ const handleDeleteRepository = async () => {
               </div>
             </div>
             
-            {/* README */}
-            {readme && (
-              <div className={`${themeClasses.card} p-6 rounded-lg mt-6`}>
-                <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>README</h2>
-                <div className="prose dark:prose-invert max-w-none readme-content">
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                  >
-                    {readme.content}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            )}
-            
             {/* Delete Confirmation Modal */}
             {confirming && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
