@@ -341,21 +341,53 @@ const handleDeleteRepository = async () => {
               <h1 className="text-3xl font-bold mb-2 md:mb-0">{repository.repo_name}</h1>
               
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
-                >
-                  <FaEdit className="mr-2" />
-                  <span>Edit</span>
-                </button>
-                
-                <button
-                  onClick={() => setConfirming(true)}
-                  className={`${themeClasses.dangerButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
-                >
-                  <FaTrash className="mr-2" />
-                  <span>Delete</span>
-                </button>
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                    >
+                      <FaTimes className="mr-2" />
+                      <span>Cancel</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleSaveChanges}
+                      disabled={saving}
+                      className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-300`}
+                    >
+                      {saving ? (
+                        <>
+                          <FaSpinner className="animate-spin mr-2" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaCheck className="mr-2" />
+                          <span>Save Changes</span>
+                        </>
+                      )}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                    >
+                      <FaEdit className="mr-2" />
+                      <span>Edit</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setConfirming(true)}
+                      className={`${themeClasses.dangerButton} px-4 py-2 rounded-md flex items-center transition-colors duration-300`}
+                    >
+                      <FaTrash className="mr-2" />
+                      <span>Delete</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             
