@@ -1,3 +1,5 @@
+"use strict";
+
 const LOG_LEVELS = {
   DEBUG: 'debug',
   INFO: 'info',
@@ -60,4 +62,5 @@ function sanitizeData(data) {
   return sanitized;
 }
 
+// Use CommonJS export
 module.exports = logger;
