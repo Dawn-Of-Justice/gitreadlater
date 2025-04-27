@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 const rateLimit = require('express-rate-limit');
-const logger = require('../services/loggingService');
+const logger = require('../services/loggingService.cjs');
 require('dotenv').config();
 
 // Initialize Express app
