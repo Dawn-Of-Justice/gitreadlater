@@ -746,6 +746,10 @@ app.get('/health', async (req, res) => {
   }
 });
 
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // No content response
+});
+
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
 });
