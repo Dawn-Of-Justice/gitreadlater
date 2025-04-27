@@ -38,7 +38,7 @@ const Terms = () => {
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>6. Limitation of Liability</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            In no event shall Git ReadLater, its directors, employees, partners, agents, suppliers, or affiliates be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or other intangible losses, resulting from your access to or use of our service.
+            In no event shall Git ReadLater, its owner, suppliers, or affiliates be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or other intangible losses, resulting from your access to or use of our service.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>7. Changes to Terms</h2>

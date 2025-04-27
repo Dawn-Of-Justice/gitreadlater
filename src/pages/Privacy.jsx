@@ -24,7 +24,7 @@ const Privacy = () => {
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>2. GitHub API Access</h2>
           <p className={`mb-4 ${themeClasses.textSecondary}`}>
-            Git ReadLater uses GitHub's API to access your GitHub account data. We only request the minimum permissions required to provide our services. We do not access private repositories unless specifically granted permission.
+            Git ReadLater uses GitHub's API to access your GitHub account data. We only request the minimum permissions required to provide our services. We do not access private repositories.
           </p>
           
           <h2 className={`text-xl font-bold mb-4 ${themeClasses.text}`}>3. How We Use Your Information</h2>
