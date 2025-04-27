@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { FaGithub, FaBookmark, FaTag, FaPlayCircle, FaStar, FaCheckCircle, FaSearch } from 'react-icons/fa';
 import { signInWithGitHub, supabase } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
+import previewImage from '../assets/preview.png';
 
 const Login = () => {
   const [showCards, setShowCards] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
   const navigate = useNavigate();
   const { darkMode, themeClasses } = useTheme();
+  const [showImagePopup, setShowImagePopup] = useState(false);
   
   useEffect(() => {
     // Check if user is already logged in
@@ -163,7 +165,6 @@ const Login = () => {
             
             {/* Right Side - Repository Card Animation - Fix centering */}
             <div className="lg:w-1/2 flex justify-center w-full">
-              {/* Changed from max-w-md to max-w-lg for more width on larger screens */}
               <div className="w-full max-w-lg">
                 <div className="space-y-4">
                   {repositories.map((repo, index) => (
@@ -301,10 +302,55 @@ const Login = () => {
               </button>
             </div>
             <div className="lg:w-1/2">
-              <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} rounded-lg border overflow-hidden`}>
-                <img src="/api/placeholder/600/400" alt="Git ReadLater App Interface" className="w-full" />
+              <div 
+                className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} rounded-lg border overflow-hidden cursor-pointer h-full flex items-center justify-center relative group`}
+                onClick={() => setShowImagePopup(true)}
+              >
+                <img 
+                  src={previewImage} 
+                  alt="Git ReadLater App Interface" 
+                  className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-90" 
+                />
+                
+                {/* Maximize icon overlay - positioned in top right */}
+                <div className="absolute inset-0 flex items-start justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} bg-opacity-70 p-2 rounded-lg m-3 shadow-lg`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Image Popup Modal - Larger Size */}
+            {showImagePopup && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-3"
+                onClick={() => setShowImagePopup(false)}
+              >
+                <div 
+                  className="relative w-full max-w-[85vw] max-h-[85vh]" 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button 
+                    className="absolute -top-12 right-0 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-opacity"
+                    onClick={() => setShowImagePopup(false)}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div className="bg-black bg-opacity-20 p-3 rounded-lg">
+                    <img 
+                      src={previewImage} 
+                      alt="Git ReadLater App Interface" 
+                      className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-xl mx-auto" 
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
