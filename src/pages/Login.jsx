@@ -73,12 +73,12 @@ const Login = () => {
   // Get tag color class
   const getTagColorClass = (tag) => {
     const colorMap = {
-      frontend: "bg-green-600",
-      javascript: "bg-blue-500",
-      ml: "bg-red-600",
+      frontend: "bg-green-700",
+      javascript: "bg-blue-700",
+      ml: "bg-red-700",
       python: "bg-blue-700",
-      css: "bg-green-600",
-      design: "bg-orange-600"
+      css: "bg-green-700",
+      design: "bg-orange-700"
     };
     
     return colorMap[tag] || "bg-gray-800";
