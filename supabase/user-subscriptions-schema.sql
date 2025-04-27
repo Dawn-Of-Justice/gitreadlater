@@ -29,15 +29,6 @@ CREATE POLICY "Users can update their own subscription"
   FOR UPDATE 
   USING (auth.uid() = user_id);
 
--- Create function to update the updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Create trigger to automatically update updated_at
 CREATE TRIGGER update_user_subscriptions_updated_at
 BEFORE UPDATE ON user_subscriptions
@@ -59,16 +50,3 @@ CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION initialize_user_subscription();
-
--- Create paddle_events table to track webhook events
-CREATE TABLE paddle_events (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  paddle_event_id TEXT NOT NULL UNIQUE,
-  event_type TEXT NOT NULL,
-  data JSONB NOT NULL,
-  processed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create index for faster queries
-CREATE INDEX paddle_events_paddle_event_id_idx ON paddle_events(paddle_event_id);

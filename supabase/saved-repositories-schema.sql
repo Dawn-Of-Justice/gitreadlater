@@ -21,25 +21,21 @@ CREATE INDEX saved_repositories_user_id_idx ON saved_repositories(user_id);
 ALTER TABLE saved_repositories ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
--- Only allow users to select their own repositories
 CREATE POLICY "Users can view their own repositories" 
   ON saved_repositories 
   FOR SELECT 
   USING (auth.uid() = user_id);
 
--- Only allow users to insert their own repositories
 CREATE POLICY "Users can insert their own repositories" 
   ON saved_repositories 
   FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
--- Only allow users to update their own repositories
 CREATE POLICY "Users can update their own repositories" 
   ON saved_repositories 
   FOR UPDATE 
   USING (auth.uid() = user_id);
 
--- Only allow users to delete their own repositories
 CREATE POLICY "Users can delete their own repositories" 
   ON saved_repositories 
   FOR DELETE 

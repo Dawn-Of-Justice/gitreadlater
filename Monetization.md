@@ -53,22 +53,6 @@ Paddle handles all payment processing, subscription management, and invoicing:
      - `customer.subscription.updated`: Renewal or plan change
      - `customer.subscription.deleted`: Cancellation
 
-### Database Structure
-
-The `user_subscriptions` table tracks subscription status:
-
-```sql
-CREATE TABLE user_subscriptions (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tier TEXT NOT NULL DEFAULT 'free',
-  Paddle_customer_id TEXT,
-  Paddle_subscription_id TEXT,
-  valid_until TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
 
 ### Feature Implementation
 
@@ -83,64 +67,6 @@ The system enforces feature availability based on subscription tier:
    - Advanced search filters are only enabled for premium users
    - Rich tagging features are only available to premium users
    - Export functionality is limited to premium subscribers
-
-## Paddle Setup Instructions
-
-### 1. Create Products and Prices
-
-In the Paddle Dashboard:
-
-1. Go to **Products** > **Add Product**
-2. Create a product for "Git ReadLater Premium"
-3. Add a recurring price of $3/month
-4. Note the Price ID (starts with "price_") for your configuration
-
-### 2. API Keys
-
-Get your API keys from the Paddle Dashboard:
-
-1. Go to **Developers** > **API keys**
-2. Use the **Publishable key** for your frontend
-3. Use the **Secret key** for your backend server
-
-### 3. Webhook Configuration
-
-Set up webhooks to receive subscription events:
-
-1. Go to **Developers** > **Webhooks** > **Add endpoint**
-2. Set the endpoint URL to `https://your-server.com/webhook`
-3. Select events to listen for:
-   - `checkout.session.completed`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-4. Get the **Signing Secret** for your webhook configuration
-
-## Testing the Subscription System
-
-### Test Mode
-
-All Paddle development should be done in Test Mode:
-
-1. Make sure you're in Test Mode in the Paddle Dashboard
-2. Use Paddle's test credit cards for payments:
-   - Success: `4242 4242 4242 4242`
-   - Decline: `4000 0000 0000 0002`
-
-### Testing Workflow
-
-1. **New Subscription:**
-   - Click "Upgrade to Premium" in the app
-   - Complete checkout with test card `4242 4242 4242 4242`
-   - Confirm user's tier is updated to Premium
-
-2. **Subscription Management:**
-   - Access Customer Portal
-   - Update payment method
-   - View upcoming invoices
-
-3. **Cancellation:**
-   - Cancel subscription through Customer Portal
-   - Confirm user is downgraded to Free tier
 
 ## Analytics and Metrics
 
@@ -191,9 +117,3 @@ Potential expansion of the monetization strategy:
 - [ ] Set up analytics for conversion tracking
 - [ ] Monitor key subscription metrics
 - [ ] Iterate based on user feedback
-
-## References
-
-- [Paddle Documentation](https://Paddle.com/docs)
-- [Supabase Authentication](https://supabase.com/docs/guides/auth)
-- [Freemium Business Model](https://en.wikipedia.org/wiki/Freemium)
