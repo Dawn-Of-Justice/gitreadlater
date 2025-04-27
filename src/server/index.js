@@ -750,6 +750,18 @@ app.get('/favicon.ico', (req, res) => {
   res.status(204).end(); // No content response
 });
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    name: 'GitHub ReadLater API',
+    status: 'online',
+    version: '1.0.0',
+    endpoints: [
+      '/health - Check API health status',
+    ],
+    documentation: 'See README for API documentation'
+  });
+});
+
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
 });
