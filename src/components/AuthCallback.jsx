@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useTheme } from '../contexts/ThemeContext'; // Import theme context
 
 const AuthCallback = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { darkMode } = useTheme(); // Get theme state
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -66,11 +68,15 @@ const AuthCallback = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-900 p-4">
-        <div className="max-w-md w-full bg-gray-800 shadow-md rounded-lg p-6 border border-gray-700">
-          <h2 className="text-xl font-bold text-red-400 mb-4">Authentication Error</h2>
-          <p className="text-gray-300 mb-4">{error}</p>
-          <p className="text-sm text-gray-400 mb-6">Please try signing in again or contact support if the problem persists.</p>
+      <div className={`flex justify-center items-center min-h-screen p-4 ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+        <div className={`max-w-md w-full shadow-md rounded-lg p-6 ${
+          darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>Authentication Error</h2>
+          <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{error}</p>
+          <p className={`text-sm mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Please try signing in again or contact support if the problem persists.
+          </p>
           <button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
             onClick={() => navigate('/login')}
@@ -83,7 +89,7 @@ const AuthCallback = () => {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
+    <div className={`flex justify-center items-center min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
         <p className="mt-4 text-lg">Completing authentication...</p>
