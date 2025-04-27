@@ -253,7 +253,7 @@ const Dashboard = () => {
         
         setRepositories(data || []);
       } catch (err) {
-        console.error('Error filtering repositories:', err);
+        console.error('Error filtering repositories:', err.name);
         setError('Error applying filters. Please try again.');
       } finally {
         setLoading(false);

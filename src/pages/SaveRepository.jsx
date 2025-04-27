@@ -207,6 +207,19 @@ const SaveRepository = () => {
       return;
     }
     
+    // Add URL format validation
+    const githubUrlPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+\/?$/;
+    if (!githubUrlPattern.test(url.trim())) {
+      setError('Please enter a valid GitHub repository URL');
+      return;
+    }
+    
+    // Notes validation
+    if (notes && notes.length > 1000) {
+      setError('Notes must be less than 1000 characters');
+      return;
+    }
+    
     // Check if user can save more repositories
     if (!canSave) {
       setError(`You've reached the limit of ${REPOSITORY_LIMITS[TIERS.FREE]} repositories on your free plan. Please upgrade to save more.`);
