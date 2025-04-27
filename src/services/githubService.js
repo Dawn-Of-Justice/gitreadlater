@@ -67,7 +67,6 @@ export const getStarredRepositories = async (page = 1, perPage = 30) => {
   }
 };
 
-// Modified getUserStarredRepos function with better error handling
 export const getUserStarredRepos = async (page = 1, perPage = 30) => {
   try {
     // First check if we have a valid session
@@ -264,26 +263,6 @@ export const getUserRepositories = async (options = {}) => {
     
     const repos = await response.json();
     return repos; // Return the array directly
-    
-    /* 
-    // This old approach tried to get repos from your Supabase DB, not from GitHub:
-    // Check if table exists first
-    const tableExists = await checkRepositoriesTableExists();
-    if (!tableExists) {
-      return { data: [], count: 0, tableExists: false };
-    }
-    
-    // Fetch data if table exists
-    const { data, error, count } = await supabase
-      .from('repositories')
-      .select('*', { count: 'exact' })
-      .order(orderBy, { ascending })
-      .range(startIndex, startIndex + limit - 1);
-      
-    if (error) throw error;
-    
-    return { data: data || [], count: count || 0, tableExists: true };
-    */
   } catch (error) {
     console.error('Error fetching repositories:', error);
     return []; // Return empty array on error, not an object

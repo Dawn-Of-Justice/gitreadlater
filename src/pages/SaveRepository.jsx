@@ -9,7 +9,6 @@ import { useCache } from '../context/CacheContext';
 import { supabase } from '../lib/supabaseClient';
 
 const getTagColor = (tag) => {
-  // Generate a simple hash from the tag name
   let hash = 0;
   for (let i = 0; i < tag.length; i++) {
     hash = tag.charCodeAt(i) + ((hash << 5) - hash);

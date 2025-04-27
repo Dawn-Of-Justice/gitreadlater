@@ -62,5 +62,4 @@ function sanitizeData(data) {
   return sanitized;
 }
 
-// Use CommonJS export
 module.exports = logger;

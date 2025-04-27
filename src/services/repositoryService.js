@@ -2,13 +2,11 @@ import { supabase } from '../lib/supabaseClient';
 import { getRepositoryDetails, parseGitHubUrl } from './githubService';
 import { canSaveRepository } from './subscriptionService';
 
-// Add similar flags at the top of the file
 let loggedRepoCache = false;
 let loggedRepoFetch = false;
 let loggedTagCache = false;
 let loggedTagFetch = false;
 
-// In your repositoryService.js
 // Add a cache for the repositories table existence check
 let repositoriesTableExists = null; // null = unknown, true/false = checked
 

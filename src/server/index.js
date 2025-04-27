@@ -28,7 +28,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Add rate limiting middleware
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
@@ -37,7 +36,6 @@ const apiLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later'
 });
 
-// Apply rate limiting to all routes
 app.use('/api/', apiLimiter);
 
 // More strict rate limiting for authentication endpoints
@@ -49,11 +47,9 @@ const authLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later'
 });
 
-// Apply to authentication-related endpoints
 app.use('/generate-checkout', authLimiter);
 app.use('/customer-portal', authLimiter);
 
-// Helper to update user subscription
 async function updateUserSubscription(userId, tier, validUntil = null, paddleSubscriptionId = null, paddleCustomerId = null) {
   try {
     logger.info(`Updating subscription for user ${userId} to tier ${tier}`);
@@ -113,7 +109,6 @@ app.post('/generate-checkout', async (req, res) => {
     
     logger.info('User email retrieved:', authData.user.email);
     
-    // For development, add fallback for missing price ID
     const finalPriceId = priceId || process.env.PADDLE_PRICE_ID;
     
     if (!finalPriceId) {
@@ -195,10 +190,7 @@ function verifyPaddleBillingWebhook(reqBody, signature, timestamp) {
   try {
     logger.info('Verifying webhook signature with timestamp:', timestamp);
     
-    // Convert the request body to a JSON string
     const payload = JSON.stringify(reqBody);
-    
-    // Create the signed payload string: {timestamp}:{payload}
     const signedPayload = `${timestamp}:${payload}`;
     
     // Create verifier with the Paddle public key

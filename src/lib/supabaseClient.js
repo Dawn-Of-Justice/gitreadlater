@@ -57,7 +57,6 @@ export const signInWithGitHub = async () => {
     return data;
   } catch (error) {
     console.error('Error signing in with GitHub:', error);
-    // Show user-friendly error
     alert('Failed to sign in with GitHub. Please try again later.');
     throw error;
   }

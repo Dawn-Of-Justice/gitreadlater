@@ -10,7 +10,6 @@ const Header = ({ user }) => {
   const [userTier, setUserTier] = useState(TIERS.FREE);
   const navigate = useNavigate();
   
-  // Get theme from context - this gives us darkMode, toggleTheme, and themeClasses
   const { darkMode, toggleTheme, themeClasses } = useTheme();
   
   useEffect(() => {

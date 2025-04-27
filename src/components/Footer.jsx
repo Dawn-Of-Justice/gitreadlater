@@ -3,7 +3,6 @@ import { FaGithub, FaHeart, FaBookmark, FaTwitter, FaEnvelope } from 'react-icon
 import { useTheme } from '../context/ThemeContext';
 
 const Footer = () => {
-  // Get theme from context
   const { darkMode, themeClasses } = useTheme();
   
   return (

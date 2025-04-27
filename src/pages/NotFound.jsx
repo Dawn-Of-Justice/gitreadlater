@@ -3,7 +3,6 @@ import { FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
 
 const NotFound = () => {
-  // Get theme from context
   const { darkMode, themeClasses } = useTheme();
   
   return (

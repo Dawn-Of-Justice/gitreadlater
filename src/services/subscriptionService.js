@@ -26,27 +26,16 @@ export const PREMIUM_FEATURES = [
   'Integration to third-party services (Notion, Google Calandar, etc.)',
 ];
 
-// Add this near the top of your file
 let initializationAttempted = false;
-
-// Add a flag to track if we've logged cache usage recently
 let loggedCacheUsage = false;
 let loggedDatabaseFetch = false;
-
-// Add these variables at the top of your file
 let initializationInProgress = false;
 let initializationTimeout = null;
-
-// Add these variables at the top of your file
 let lastCheckTimestamp = 0;
 const THROTTLE_MS = 2000; // Only check once every 2 seconds
-
-// Add these variables at the top of your file
 let cachedTierValue = null;
 let cacheValidUntil = 0;
 const CACHE_DURATION = 60000; // Cache for 1 minute
-
-// At the top of your subscriptionService.js file
 const CALL_TRACKING = {
   enabled: true,
   callers: {},

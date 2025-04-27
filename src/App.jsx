@@ -128,7 +128,6 @@ function AppContent() {
   );
 }
 
-// Main App component now just provides context providers and the router
 function App() {
   return (
     <>

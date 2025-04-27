@@ -112,19 +112,15 @@ const Roadmap = () => {
     );
   };
   
-  // Helper function to create a responsive grid container that centers items
   const GridContainer = ({ children, count }) => {
     // Determine grid class based on item count
     const getGridClass = () => {
-      // If only 1 item, center it
       if (count === 1) {
         return "grid grid-cols-1 gap-4 sm:gap-6 max-w-md mx-auto";
       }
-      // If 2 items, use 2 columns max and center
       else if (count === 2) {
         return "grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto";
       }
-      // Otherwise use the standard 3-column grid
       else {
         return "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6";
       }

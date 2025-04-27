@@ -8,7 +8,7 @@ const AuthCallback = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { darkMode } = useTheme(); // Get theme state
+  const { darkMode } = useTheme();
 
   useEffect(() => {
     const handleCallback = async () => {

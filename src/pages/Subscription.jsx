@@ -24,7 +24,6 @@ const Subscription = () => {
   const [notified, setNotified] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
   
-  // Get theme from context
   const { darkMode, themeClasses } = useTheme();
   
   useEffect(() => {

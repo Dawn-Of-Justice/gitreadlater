@@ -174,7 +174,6 @@ const RepositoryDetails = () => {
     }
   };
   
-  // Replace your handleDeleteRepository function with this corrected version
 const handleDeleteRepository = async () => {
   try {
     console.log('Starting repository deletion for ID:', id);
@@ -229,7 +228,6 @@ const handleDeleteRepository = async () => {
     }
   };
 
-  // Add function to fetch user's previous tags
   const fetchUserTags = async () => {
     try {
       const userTags = await getUserTags();
@@ -249,12 +247,10 @@ const handleDeleteRepository = async () => {
     }
   }, [isEditing]);
 
-  // Add function to handle tag input focus
   const handleTagInputFocus = () => {
     setShowTagSuggestions(true);
   };
 
-  // Add function to select a tag from suggestions
   const selectTag = (tag) => {
     if (!tags.includes(tag)) {
       setTags([...tags, tag]);
@@ -266,12 +262,10 @@ const handleDeleteRepository = async () => {
     setPreviousTags(previousTags.filter(t => t !== tag));
   };
 
-  // Add a function to filter tag suggestions based on input
   const filteredTagSuggestions = tagInput.trim() 
     ? previousTags.filter(tag => tag.toLowerCase().includes(tagInput.toLowerCase()))
     : previousTags;
 
-  // Add this useEffect to handle clicks outside the dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showTagSuggestions && 
@@ -289,7 +283,6 @@ const handleDeleteRepository = async () => {
     };
   }, [showTagSuggestions]);
 
-  // Add this near the other useEffect hooks in RepositoryDetails.jsx to ensure cache is refreshed
   useEffect(() => {
     return () => {
       // This will run when component unmounts

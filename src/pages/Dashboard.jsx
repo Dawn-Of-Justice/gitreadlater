@@ -4,11 +4,10 @@ import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrow
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
-import { useSubscription } from '../context/ThemeContext'; // Make sure this import is added
+import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
 
-// Add this function at the top of your file, after your imports
 const getTagColor = (tag) => {
   // Generate a simple hash from the tag name
   let hash = 0;
@@ -46,7 +45,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
-  const [tableExists, setTableExists] = useState(null); // null = unknown, true/false after check
+  const [tableExists, setTableExists] = useState(null); // null means we haven't checked yet
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
   
@@ -283,11 +282,6 @@ const Dashboard = () => {
     fetchAttemptedRef.current = false;
     setRefreshFlag(prev => prev + 1);
   };
-
-
-  // =======================================================================
-  // RENDERING LOGIC
-  // =======================================================================
   
   // Initial loading state
   if (loading || subscriptionLoading) {
