@@ -66,13 +66,13 @@ const AuthCallback = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
-        <div className="max-w-md w-full bg-white shadow-md rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
-          <p className="text-gray-700 mb-4">{error}</p>
-          <p className="text-sm text-gray-500 mb-6">Please try signing in again or contact support if the problem persists.</p>
+      <div className="flex justify-center items-center min-h-screen bg-gray-900 p-4">
+        <div className="max-w-md w-full bg-gray-800 shadow-md rounded-lg p-6 border border-gray-700">
+          <h2 className="text-xl font-bold text-red-400 mb-4">Authentication Error</h2>
+          <p className="text-gray-300 mb-4">{error}</p>
+          <p className="text-sm text-gray-400 mb-6">Please try signing in again or contact support if the problem persists.</p>
           <button
-            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
             onClick={() => navigate('/login')}
           >
             Back to Login
