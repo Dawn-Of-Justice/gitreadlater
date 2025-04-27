@@ -103,9 +103,8 @@ const Login = () => {
           <div className="aspect-w-16 aspect-h-9">
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <FaPlayCircle className="text-blue-500 text-5xl mx-auto mb-4" />
                 <p className={themeClasses.textSecondary}>
-                  Demo video would play here in a real implementation
+                  You caught me 😅, I'm recording the video only, Please check later.
                 </p>
               </div>
             </div>
