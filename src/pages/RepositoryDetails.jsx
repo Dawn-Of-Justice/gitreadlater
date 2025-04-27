@@ -148,6 +148,23 @@ const RepositoryDetails = () => {
     }
   }, [repository]);
 
+  useEffect(() => {
+    const fetchReadme = async () => {
+      if (repository) {
+        try {
+          const readmeData = await getReadmeContent(repository.repo_owner, repository.repo_name);
+          setReadme(readmeData);
+        } catch (err) {
+          console.error('Error fetching README:', err);
+          // Don't set an error state here - just leave readme as null
+          // which will show the "README not available" message
+        }
+      }
+    };
+    
+    fetchReadme();
+  }, [repository]);
+
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
