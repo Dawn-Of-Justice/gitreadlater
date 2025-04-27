@@ -562,7 +562,19 @@ const handleDeleteRepository = async () => {
                     <div className="prose dark:prose-invert max-w-none readme-content">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          img: ({node, ...props}) => {
+                            // Handle relative URLs for images
+                            let src = props.src;
+                            if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+                              // Convert relative image paths to absolute GitHub paths
+                              const baseUrl = `https://raw.githubusercontent.com/${repository.repo_owner}/${repository.repo_name}/main`;
+                              src = `${baseUrl}/${src.replace(/^\//, '')}`;
+                            }
+                            return <img src={src} alt={props.alt || ''} style={{maxWidth: '100%'}} />
+                          }
+                        }}
                       >
                         {readme.content}
                       </ReactMarkdown>
