@@ -212,13 +212,13 @@ const Login = () => {
       </section>
 
       {/* How It Works */}
-      <section className={`${themeClasses.sectionDark} py-16`}>
+      <section className={`py-16 border-t border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="container mx-auto px-6">
           <h2 className={`text-3xl font-bold text-center mb-12 ${themeClasses.text}`}>
             How It Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className={`${themeClasses.card} rounded-lg p-6 transition-transform duration-300 transform hover:-translate-y-2`}>
+            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
               <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mb-4`}>
                 <FaBookmark className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />
               </div>
@@ -228,7 +228,7 @@ const Login = () => {
               </p>
             </div>
             
-            <div className={`${themeClasses.card} rounded-lg p-6 transition-transform duration-300 transform hover:-translate-y-2`}>
+            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
               <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mb-4`}>
                 <FaTag className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />
               </div>
@@ -238,7 +238,7 @@ const Login = () => {
               </p>
             </div>
             
-            <div className={`${themeClasses.card} rounded-lg p-6 transition-transform duration-300 transform hover:-translate-y-2`}>
+            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
               <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mb-4`}>
                 <FaSearch className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />
               </div>

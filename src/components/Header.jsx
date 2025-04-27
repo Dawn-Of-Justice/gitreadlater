@@ -122,7 +122,11 @@ const Header = ({ user }) => {
                   
                   <button 
                     onClick={toggleTheme}
-                    className="p-2 rounded-full hover:bg-gray-700 focus:outline-none transition-colors duration-300"
+                    className={`p-2 rounded-full focus:outline-none transition-colors duration-300 mr-2 ${
+                      darkMode 
+                        ? 'hover:bg-gray-600/40' 
+                        : 'hover:bg-gray-200'
+                    }`}
                   >
                     {darkMode ? (
                       <FaSun className="text-yellow-300" />
@@ -136,7 +140,11 @@ const Header = ({ user }) => {
               <>
                 <button 
                   onClick={toggleTheme}
-                  className="p-2 rounded-full hover:bg-gray-700 focus:outline-none transition-colors duration-300"
+                  className={`p-2 rounded-full focus:outline-none transition-colors duration-300 mr-2 ${
+                    darkMode 
+                      ? 'hover:bg-gray-600/40' 
+                      : 'hover:bg-gray-200'
+                  }`}
                 >
                   {darkMode ? (
                     <FaSun className="text-yellow-300" />
@@ -164,7 +172,11 @@ const Header = ({ user }) => {
           <div className="md:hidden flex items-center space-x-2">
             <button 
               onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-gray-700 focus:outline-none transition-colors duration-300 mr-2"
+              className={`p-2 rounded-full focus:outline-none transition-colors duration-300 mr-2 ${
+                darkMode 
+                  ? 'hover:bg-gray-600/40' 
+                  : 'hover:bg-gray-200'
+              }`}
             >
               {darkMode ? (
                 <FaSun className="text-yellow-300" />
