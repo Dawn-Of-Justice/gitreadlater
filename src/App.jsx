@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Components
 import Header from './components/Header';
@@ -130,15 +131,18 @@ function AppContent() {
 // Main App component now just provides context providers and the router
 function App() {
   return (
-    <ThemeProvider>
-      <SubscriptionProvider>
-        <Router>
-          <CacheProvider>
-            <AppContent />
-          </CacheProvider>
-        </Router>
-      </SubscriptionProvider>
-    </ThemeProvider>
+    <>
+      <ThemeProvider>
+        <SubscriptionProvider>
+          <Router>
+            <CacheProvider>
+              <AppContent />
+            </CacheProvider>
+          </Router>
+        </SubscriptionProvider>
+      </ThemeProvider>
+      <SpeedInsights />
+    </>
   );
 }
 

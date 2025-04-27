@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { useTheme } from '../contexts/ThemeContext'; // Import theme context
+import { useTheme } from '../context/ThemeContext';
 
 const AuthCallback = () => {
   const [error, setError] = useState(null);
