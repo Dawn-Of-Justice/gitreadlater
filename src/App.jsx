@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
@@ -8,19 +8,19 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 // Components
 import Header from './components/Header';
 import Footer from './components/Footer';
-import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
 import AuthCallback from './components/AuthCallback';
-import SaveRepository from './pages/SaveRepository';
-import RepositoryDetails from './pages/RepositoryDetails';
-import Subscription from './pages/Subscription';
-import NotFound from './pages/NotFound';
 
-// New static pages
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
-import Contact from './pages/Contact';
-import Roadmap from './pages/Roadmap';
+// Lazy load route components
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Login = lazy(() => import('./pages/Login'));
+const SaveRepository = lazy(() => import('./pages/SaveRepository'));
+const RepositoryDetails = lazy(() => import('./pages/RepositoryDetails'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Roadmap = lazy(() => import('./pages/Roadmap'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Create an AppContent component that will use the hooks
 function AppContent() {
@@ -85,42 +85,46 @@ function AppContent() {
       <Header user={user} onLogout={handleLogout} />
       
       <main className="flex-grow">
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/roadmap" element={<Roadmap />} />
-          
-          {/* Protected routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/save" element={
-            <ProtectedRoute>
-              <SaveRepository />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/repository/:id" element={
-            <ProtectedRoute>
-              <RepositoryDetails />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/subscription" element={
-            <ProtectedRoute>
-              <Subscription />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/save" element={
+              <ProtectedRoute>
+                <SaveRepository />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/repository/:id" element={
+              <ProtectedRoute>
+                <RepositoryDetails />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/subscription" element={
+              <ProtectedRoute>
+                <Subscription />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       
       <Footer />
