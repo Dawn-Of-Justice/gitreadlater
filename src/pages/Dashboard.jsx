@@ -221,7 +221,7 @@ const Dashboard = () => {
     checkUserAndFetch();
   }, [navigate, location.state?.forceRefresh, refreshFlag]);
 
-  // Update the search effect to check both tables
+  // Effect for handling search and tag filters - only runs when filters change
   useEffect(() => {
     // Skip if we haven't done the initial load yet or user has no repositories
     if (!fetchAttemptedRef.current || isFirstTimeUser) return;
@@ -230,7 +230,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
-        // First try repositories table
+        // Apply filters
         let query = supabase
           .from('repositories')
           .select('*')
@@ -238,7 +238,7 @@ const Dashboard = () => {
           
         // Add search filter if needed
         if (searchQuery) {
-          query = query.or(`repo_name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
+          query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
         }
         
         // Add tag filter if needed
@@ -246,40 +246,13 @@ const Dashboard = () => {
           query = query.contains('tags', [selectedTag]);
         }
         
-        const { data: mainData, error: mainError } = await query;
+        const { data, error: filterError } = await query;
         
-        // If no results or error, try saved_repositories table
-        let data = mainData;
-        if (!mainData || mainData.length === 0 || mainError) {
-          console.log('Search: No results in main table, checking saved_repositories');
-          
-          // Query the saved_repositories table
-          let savedQuery = supabase
-            .from('saved_repositories')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
-          // Add search filter if needed
-          if (searchQuery) {
-            savedQuery = savedQuery.or(`repo_name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
-          }
-          
-          // Add tag filter if needed
-          if (selectedTag) {
-            savedQuery = savedQuery.contains('tags', [selectedTag]);
-          }
-          
-          const { data: savedData, error: savedError } = await savedQuery;
-          
-          if (savedError) throw savedError;
-          data = savedData;
-        }
+        if (filterError) throw filterError;
         
-        console.log(`Search results: Found ${data?.length || 0} repositories`);
         setRepositories(data || []);
-        
       } catch (err) {
-        console.error('Error filtering repositories:', err);
+        console.error('Error filtering repositories:', err.name);
         setError('Error applying filters. Please try again.');
       } finally {
         setLoading(false);
