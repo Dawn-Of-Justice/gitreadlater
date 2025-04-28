@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services.subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
@@ -221,46 +221,86 @@ const Dashboard = () => {
     checkUserAndFetch();
   }, [navigate, location.state?.forceRefresh, refreshFlag]);
 
-  // Effect for handling search and tag filters - only runs when filters change
-  useEffect(() => {
-    // Skip if we haven't done the initial load yet or user has no repositories
-    if (!fetchAttemptedRef.current || isFirstTimeUser) return;
-    
-    const fetchFilteredRepositories = async () => {
-      try {
-        setLoading(true);
+// Update the search effect to properly format the query
+useEffect(() => {
+  // Skip if we haven't done the initial load yet or user has no repositories
+  if (!fetchAttemptedRef.current || isFirstTimeUser) return;
+  
+  const fetchFilteredRepositories = async () => {
+    try {
+      setLoading(true);
+      
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // First try repositories table
+      let query = supabase
+        .from('repositories')
+        .select('*')
+        .eq('user_id', session.user.id) // Add user_id filter
+        .order('created_at', { ascending: false });
         
-        // Apply filters
-        let query = supabase
-          .from('repositories')
+      // Add search filter if needed - FIXED SYNTAX
+      if (searchQuery) {
+        query = query.or([
+          `repo_name.ilike.%${searchQuery}%`,
+          `description.ilike.%${searchQuery}%`,
+          `notes.ilike.%${searchQuery}%`
+        ]);
+      }
+      
+      // Add tag filter if needed
+      if (selectedTag) {
+        query = query.contains('tags', [selectedTag]);
+      }
+      
+      const { data: mainData, error: mainError } = await query;
+      
+      // If no results or error, try saved_repositories table
+      let data = mainData;
+      if (!mainData || mainData.length === 0 || mainError) {
+        console.log('Search: No results in main table, checking saved_repositories');
+        
+        // Query the saved_repositories table
+        let savedQuery = supabase
+          .from('saved_repositories')
           .select('*')
+          .eq('user_id', session.user.id) // Add user_id filter
           .order('created_at', { ascending: false });
           
-        // Add search filter if needed
+        // Add search filter if needed - FIXED SYNTAX
         if (searchQuery) {
-          query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+          savedQuery = savedQuery.or([
+            `repo_name.ilike.%${searchQuery}%`,
+            `description.ilike.%${searchQuery}%`,
+            `notes.ilike.%${searchQuery}%`
+          ]);
         }
         
         // Add tag filter if needed
         if (selectedTag) {
-          query = query.contains('tags', [selectedTag]);
+          savedQuery = savedQuery.contains('tags', [selectedTag]);
         }
         
-        const { data, error: filterError } = await query;
+        const { data: savedData, error: savedError } = await savedQuery;
         
-        if (filterError) throw filterError;
-        
-        setRepositories(data || []);
-      } catch (err) {
-        console.error('Error filtering repositories:', err.name);
-        setError('Error applying filters. Please try again.');
-      } finally {
-        setLoading(false);
+        if (savedError) throw savedError;
+        data = savedData;
       }
-    };
-    
-    fetchFilteredRepositories();
-  }, [searchQuery, selectedTag, isFirstTimeUser]);
+      
+      console.log(`Search results: Found ${data?.length || 0} repositories`);
+      setRepositories(data || []);
+      
+    } catch (err) {
+      console.error('Error filtering repositories:', err);
+      setError('Failed to search GitHub repositories. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchFilteredRepositories();
+}, [searchQuery, selectedTag, isFirstTimeUser]);
 
   const handleSearch = (e) => {
     e.preventDefault();
