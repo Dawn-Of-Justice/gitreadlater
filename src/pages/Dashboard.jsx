@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services.subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
@@ -196,23 +196,22 @@ const Dashboard = () => {
               allRepos = mainRepos;
             }
             
-            const finalRepos = mainRepos && mainRepos.length > 0 ? [...mainRepos] : savedRepos && savedRepos.length > 0 ? [...savedRepos] : [];
-            console.log('Setting repositories:', finalRepos.length);
+            console.log('Setting repositories from allRepos:', allRepos?.length || 0);
 
-            // First set state immediately
-            setRepositories(finalRepos);
+            // First set state immediately  
+            setRepositories(allRepos || []);
 
             // Then use multiple fallback approaches to ensure Firefox handles the state update
             setTimeout(() => {
-              if (finalRepos && finalRepos.length > 0) {
+              if (allRepos && allRepos.length > 0) {
                 console.log('Applying forced repository update for Firefox compatibility');
-                setRepositories(finalRepos);
+                setRepositories([...allRepos]); // Create a new array to ensure state update
                 
                 // Use local storage as backup persistence
                 try {
                   localStorage.setItem('temp_repos', JSON.stringify({
                     timestamp: Date.now(),
-                    repos: finalRepos
+                    repos: allRepos
                   }));
                 } catch (e) {
                   console.error('Could not store temp repos:', e);
