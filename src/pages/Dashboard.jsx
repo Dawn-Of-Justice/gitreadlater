@@ -87,22 +87,10 @@ const Dashboard = () => {
         // Check if user is logged in
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || !session.user) {
-          console.error('No valid session found, redirecting to login');
           setLoading(false);
           navigate('/login');
           return;
         }
-        
-        console.log('Auth check - access token available:', !!session.access_token);
-        // Ensure Supabase client has the auth token
-        supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token
-        }).then(() => {
-          console.log('Session manually refreshed for Firefox compatibility');
-        }).catch(err => {
-          console.error('Session refresh error:', err);
-        });
         
         // Mark that we've checked the user status
         userCheckedRef.current = true;
@@ -196,28 +184,7 @@ const Dashboard = () => {
               allRepos = mainRepos;
             }
             
-            console.log('Setting repositories from allRepos:', allRepos?.length || 0);
-
-            // First set state immediately  
             setRepositories(allRepos || []);
-
-            // Then use multiple fallback approaches to ensure Firefox handles the state update
-            setTimeout(() => {
-              if (allRepos && allRepos.length > 0) {
-                console.log('Applying forced repository update for Firefox compatibility');
-                setRepositories([...allRepos]); // Create a new array to ensure state update
-                
-                // Use local storage as backup persistence
-                try {
-                  localStorage.setItem('temp_repos', JSON.stringify({
-                    timestamp: Date.now(),
-                    repos: allRepos
-                  }));
-                } catch (e) {
-                  console.error('Could not store temp repos:', e);
-                }
-              }
-            }, 300);
             
             // Fetch tags if we have repositories
             const userTags = await getUserTags();
@@ -253,41 +220,6 @@ const Dashboard = () => {
 
     checkUserAndFetch();
   }, [navigate, location.state?.forceRefresh, refreshFlag]);
-
-  useEffect(() => {
-    // Check if we're in a callback URL situation
-    if (window.location.hash.includes('access_token')) {
-      console.log('Detected auth callback, handling session');
-      supabase.auth.getSession().then(({data}) => {
-        if (data?.session) {
-          console.log('Session retrieved in callback handler');
-          // Force refresh after auth
-          setTimeout(() => refreshRepositories(), 500);
-        }
-      });
-    }
-  }, []);
-
-  // Firefox recovery mechanism
-  useEffect(() => {
-    if (repositories.length === 0 && !loading) {
-      console.log('Checking for cached repositories as fallback');
-      try {
-        const cachedData = localStorage.getItem('temp_repos');
-        if (cachedData) {
-          const { timestamp, repos } = JSON.parse(cachedData);
-          // Only use cache if it's less than 5 minutes old
-          if (Date.now() - timestamp < 5 * 60 * 1000 && repos && repos.length > 0) {
-            console.log('Recovering repositories from cache:', repos.length);
-            setRepositories(repos);
-            return;
-          }
-        }
-      } catch (e) {
-        console.error('Error recovering repos:', e);
-      }
-    }
-  }, [repositories.length, loading]);
 
   // Effect for handling search and tag filters - only runs when filters change
   useEffect(() => {
