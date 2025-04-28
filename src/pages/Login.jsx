@@ -211,42 +211,120 @@ const Login = () => {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* How It Works - Enhanced */}
       <section className={`py-16 border-t border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="container mx-auto px-6">
-          <h2 className={`text-3xl font-bold text-center mb-12 ${themeClasses.text}`}>
-            How It Works
+          <h2 className={`text-3xl font-bold text-center mb-6 ${themeClasses.text}`}>
+            How Git ReadLater Works
           </h2>
+          <p className={`text-center max-w-2xl mx-auto mb-12 ${themeClasses.textSecondary}`}>
+            Your simple 3-step process to never lose track of useful GitHub repositories again
+          </p>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
-              <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mb-4`}>
-                <FaBookmark className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />
+            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
+              <div className="flex items-center mb-4">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mr-4`}>
+                  <FaBookmark className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'} text-xl`} />
+                </div>
+                <span className={`${themeClasses.text} text-xl font-bold`}>Step 1: Save Repositories</span>
               </div>
-              <h3 className={`text-xl font-bold mb-2 ${themeClasses.text}`}>1. Save Repositories</h3>
-              <p className={themeClasses.textSecondary}>
-                Save repositories directly from GitHub or import your starred repos. Add notes to remember why you saved them.
-              </p>
+              
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-3 mb-4`}>
+                <div className="flex items-center text-sm">
+                  <span className="font-medium mr-2">Example:</span>
+                  <span className={`${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>Found a useful React component library</span>
+                </div>
+              </div>
+              
+              <ul className={`mb-4 space-y-2 ${themeClasses.textSecondary}`}>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Enter a GitHub repository URL or import from your starred repositories</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Add personal notes explaining why it's useful to you</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Repository details are automatically imported</span>
+                </li>
+              </ul>
             </div>
             
-            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
-              <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mb-4`}>
-                <FaTag className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />
+            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
+              <div className="flex items-center mb-4">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mr-4`}>
+                  <FaTag className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'} text-xl`} />
+                </div>
+                <span className={`${themeClasses.text} text-xl font-bold`}>Step 2: Organize with Tags</span>
               </div>
-              <h3 className={`text-xl font-bold mb-2 ${themeClasses.text}`}>2. Organize with Tags</h3>
-              <p className={themeClasses.textSecondary}>
-                Create custom tags to categorize repositories by technology, purpose, or project. Filter your collection easily.
-              </p>
+              
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-3 mb-4`}>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  <span className="font-medium mr-1">Example tags:</span>
+                  <span className="bg-blue-700 text-white px-2 py-1 rounded-full text-xs">react</span>
+                  <span className="bg-green-700 text-white px-2 py-1 rounded-full text-xs">ui-library</span>
+                  <span className="bg-purple-700 text-white px-2 py-1 rounded-full text-xs">frontend</span>
+                </div>
+              </div>
+              
+              <ul className={`mb-4 space-y-2 ${themeClasses.textSecondary}`}>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Create custom tags that are meaningful to you</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Group repositories by technology, purpose, or project</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Reuse tags across repositories for consistency</span>
+                </li>
+              </ul>
             </div>
             
-            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
-              <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mb-4`}>
-                <FaSearch className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />
+            <div className={`${themeClasses.card} rounded-lg p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${darkMode ? 'hover:shadow-blue-600/50' : 'hover:shadow-blue-500/40'}`}>
+              <div className="flex items-center mb-4">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full ${darkMode ? 'bg-[#0d419d]' : 'bg-[#ddf4ff]'} mr-4`}>
+                  <FaSearch className={`${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'} text-xl`} />
+                </div>
+                <span className={`${themeClasses.text} text-xl font-bold`}>Step 3: Find & Rediscover</span>
               </div>
-              <h3 className={`text-xl font-bold mb-2 ${themeClasses.text}`}>3. Find & Rediscover</h3>
-              <p className={themeClasses.textSecondary}>
-                Quickly search and filter your saved repositories when you need them. No more digging through stars.
-              </p>
+              
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-3 mb-4`}>
+                <div className="flex items-center text-sm">
+                  <span className="font-medium mr-2">Example:</span>
+                  <span className={`${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>Filter by "react" + "ui-library" tags</span>
+                </div>
+              </div>
+              
+              <ul className={`mb-4 space-y-2 ${themeClasses.textSecondary}`}>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Filter repositories by tags, languages, or keywords</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Search across descriptions and your personal notes</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">•</span>
+                  <span>Quickly find exactly what you need when you need it</span>
+                </li>
+              </ul>
             </div>
+          </div>
+          
+          <div className="text-center mt-10">
+            <button
+              onClick={handleLogin} 
+              className={`${themeClasses.button} px-6 py-3 rounded-md font-medium`}
+            >
+              Get Started in 30 Seconds
+            </button>
           </div>
         </div>
       </section>
