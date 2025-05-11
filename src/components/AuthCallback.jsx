@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaSpinner } from 'react-icons/fa';
 import { supabase } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
 
@@ -30,11 +29,9 @@ const AuthCallback = () => {
         
         // If this was just a refresh for permissions, go back to dashboard
         // Otherwise go to dashboard as a new login
-        if (isRefresh) {
-          navigate('/');
-        } else {
+        setTimeout(() => {
           navigate('/', { replace: true });
-        }
+        }, 1000);
       } catch (err) {
         console.error('Error in auth callback:', err);
         setError('Authentication process failed');
@@ -45,26 +42,26 @@ const AuthCallback = () => {
   }, [navigate, isRefresh]);
   
   return (
-    <div className={`${themeClasses.body} min-h-screen flex items-center justify-center`}>
-      <div className={`${themeClasses.card} p-8 rounded-lg shadow-lg max-w-md w-full`}>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className={`${themeClasses?.card || 'bg-white dark:bg-gray-800'} p-8 rounded-lg shadow-lg max-w-md w-full`}>
         {error ? (
           <div>
             <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
-            <p className={themeClasses.text}>{error}</p>
+            <p>{error}</p>
             <button 
               onClick={() => navigate('/login')}
-              className={`${themeClasses.button} mt-6 px-4 py-2 rounded-md`}
+              className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-md"
             >
               Back to Login
             </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center">
-            <FaSpinner className="text-blue-500 text-4xl animate-spin mb-4" />
-            <h2 className={`text-xl font-bold ${themeClasses.text} mb-2`}>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <h2 className="text-xl font-bold mb-2">
               {isRefresh ? 'Updating permissions...' : 'Completing authentication...'}
             </h2>
-            <p className={themeClasses.textSecondary}>
+            <p className="text-gray-500 dark:text-gray-400">
               Please wait while we set up your account
             </p>
           </div>

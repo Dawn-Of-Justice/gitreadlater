@@ -32,33 +32,23 @@ export const getCurrentUser = async () => {
 
 // Update your GitHub sign-in function with better error handling
 export const signInWithGitHub = async () => {
+  setIsLoading(true);
+  
   try {
-    // Clear any existing session first to avoid conflicts
-    await supabase.auth.signOut();
-    
-    const redirectUrl = import.meta.env.VITE_REDIRECT_URL || `${window.location.origin}/auth/callback`;
-    
-    // Log the redirect URL to make sure it's correct
-    console.log('Redirect URL:', redirectUrl);
-    
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    // Default to public repos only (read:user, public_repo)
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: redirectUrl,
-        scopes: 'read:user user:email public_repo',
+        redirectTo: `${window.location.origin}/auth/callback`
       }
     });
-
-    if (error) {
-      console.error('OAuth error:', error);
-      throw error;
-    }
     
-    return data;
+    if (error) throw error;
   } catch (error) {
     console.error('Error signing in with GitHub:', error);
-    alert('Failed to sign in with GitHub. Please try again later.');
-    throw error;
+    setError('Failed to sign in with GitHub. Please try again.');
+  } finally {
+    setIsLoading(false);
   }
 };
 

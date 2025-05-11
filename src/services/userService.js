@@ -9,7 +9,8 @@ export const getUserPrivateRepoSetting = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user) {
-      throw new Error('User not authenticated');
+      console.log('No authenticated session found');
+      return false;
     }
     
     // Check if user profile exists
@@ -20,11 +21,16 @@ export const getUserPrivateRepoSetting = async () => {
       .single();
     
     if (error) {
-      if (error.code === 'PGRST116') {  // Record not found
-        // Create profile with default setting (false)
-        await supabase
+      // If record not found, create a default profile
+      if (error.code === 'PGRST116') {
+        const { error: insertError } = await supabase
           .from('user_profiles')
-          .insert([{ id: session.user.id, allow_private_repos: false }]);
+          .insert([{ 
+            id: session.user.id, 
+            allow_private_repos: false 
+          }]);
+          
+        if (insertError) throw insertError;
         return false;
       }
       throw error;
@@ -33,7 +39,7 @@ export const getUserPrivateRepoSetting = async () => {
     return data?.allow_private_repos || false;
   } catch (error) {
     console.error('Error getting private repo setting:', error);
-    return false; // Default to false for safety
+    return false;
   }
 };
 
@@ -59,7 +65,6 @@ export const updateUserPrivateRepoSetting = async (allowPrivate) => {
       });
     
     if (error) throw error;
-    
     return true;
   } catch (error) {
     console.error('Error updating private repo setting:', error);
