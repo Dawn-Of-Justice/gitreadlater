@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
+const ADMIN_UID = "6b3aaad3-bda8-4030-89c4-f4ed89478644";
+
 const AdminRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -11,19 +13,8 @@ const AdminRoute = ({ children }) => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session?.user) {
-          setLoading(false);
-          return;
-        }
-        
-        // Check if user exists in admin_users table
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (data) {
+        // Check by UID instead of email
+        if (session?.user && session.user.id === ADMIN_UID) {
           setIsAdmin(true);
         }
       } catch (error) {

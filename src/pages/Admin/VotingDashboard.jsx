@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { FaChartBar, FaThumbsUp } from 'react-icons/fa';
 
 const VotingDashboard = () => {
-  const { themeClasses } = useTheme();
+  const { themeClasses, darkMode } = useTheme();
   const [votingStats, setVotingStats] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +30,7 @@ const VotingDashboard = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className={`container mx-auto px-4 py-8 ${themeClasses.background}`}>
       <h1 className={`text-2xl font-bold mb-6 ${themeClasses.text}`}>
         <FaChartBar className="inline mr-2" />
         Feature Voting Dashboard

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { FaRocket, FaCheck, FaTools, FaLightbulb, FaStar, FaComments, FaThumbsUp } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabaseClient';
-import toast from 'react-hot-toast'; // Make sure to install this package
 
 const Roadmap = () => {
   const { themeClasses, darkMode } = useTheme();
@@ -71,11 +70,10 @@ const Roadmap = () => {
   // Fetch total votes per feature
   const fetchVoteCounts = async () => {
     try {
+      // Correct way with a single select statement
       const { data, error } = await supabase
         .from('feature_votes')
-        .select('feature_id, count')
-        .select('feature_id')
-        .select('count(*)', { count: 'exact' })
+        .select('feature_id, count(*)')
         .group('feature_id');
       
       if (error) throw error;
@@ -83,7 +81,8 @@ const Roadmap = () => {
       // Transform into an object for easy lookup
       const counts = {};
       data?.forEach(item => {
-        counts[item.feature_id] = item.count;
+        // Make sure to access the count properly based on returned structure
+        counts[item.feature_id] = parseInt(item.count);
       });
       
       setVoteCounts(counts);
@@ -121,7 +120,7 @@ const Roadmap = () => {
   const handleVote = async (featureId) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      toast.error('Please sign in to vote for features');
+      alert('Please sign in to vote for features');
       return;
     }
     
@@ -140,7 +139,7 @@ const Roadmap = () => {
         setUserVotes(prev => ({...prev, [featureId]: false}));
         setVoteCounts(prev => ({...prev, [featureId]: (prev[featureId] || 1) - 1}));
         
-        toast.success('Vote removed');
+        alert('Vote removed');
       } else {
         // Otherwise add a vote
         await supabase
@@ -154,11 +153,11 @@ const Roadmap = () => {
         setUserVotes(prev => ({...prev, [featureId]: true}));
         setVoteCounts(prev => ({...prev, [featureId]: (prev[featureId] || 0) + 1}));
         
-        toast.success('Vote counted! Thanks for your feedback');
+        alert('Vote counted! Thanks for your feedback');
       }
     } catch (error) {
       console.error('Error voting:', error);
-      toast.error('Unable to save your vote. Please try again.');
+      alert('Unable to save your vote. Please try again.');
     } finally {
       setLoading(false);
     }
