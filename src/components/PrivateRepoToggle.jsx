@@ -66,7 +66,7 @@ const PrivateRepoToggle = () => {
     return (
       <div className={`p-4 rounded-lg ${themeClasses.card}`}>
         <div className="flex justify-center">
-          <FaSpinner className="animate-spin text-blue-500" />
+          <div className={`animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 ${themeClasses.spinnerBorder || 'border-blue-500'}`}></div>
         </div>
       </div>
     );
@@ -74,7 +74,7 @@ const PrivateRepoToggle = () => {
 
   return (
     <div className={`p-4 rounded-lg ${themeClasses.card}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h3 className={`text-lg font-semibold ${themeClasses.text}`}>
             Private Repository Access
@@ -85,7 +85,7 @@ const PrivateRepoToggle = () => {
               : "Currently you can only access your public GitHub repositories."}
           </p>
           {error && (
-            <p className="text-red-500 mt-1">{error}</p>
+            <p className={`text-red-500 mt-1`}>{error}</p>
           )}
         </div>
         
@@ -93,14 +93,16 @@ const PrivateRepoToggle = () => {
           onClick={handleToggle}
           disabled={updating}
           className={`${
-            allowPrivateRepos 
-              ? themeClasses.secondaryButton 
-              : themeClasses.button
+            updating 
+              ? `${themeClasses.secondaryButton} opacity-80`
+              : allowPrivateRepos 
+                ? themeClasses.secondaryButton 
+                : themeClasses.button
           } px-3 py-2 rounded-md flex items-center transition-colors duration-300`}
         >
           {updating ? (
             <>
-              <FaSpinner className="animate-spin mr-2" />
+              <div className={`animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 ${darkMode ? 'border-gray-300' : 'border-gray-600'} mr-2`}></div>
               <span>Updating...</span>
             </>
           ) : allowPrivateRepos ? (
