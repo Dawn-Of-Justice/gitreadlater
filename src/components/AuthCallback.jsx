@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { FaSpinner } from 'react-icons/fa';
 import { supabase } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
 
@@ -7,7 +8,7 @@ const AuthCallback = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { search } = useLocation();
-  const { themeClasses } = useTheme();
+  const { darkMode, themeClasses } = useTheme();
   const isRefresh = new URLSearchParams(search).get('refresh') === 'true';
   
   useEffect(() => {
@@ -28,7 +29,6 @@ const AuthCallback = () => {
         }
         
         // If this was just a refresh for permissions, go back to dashboard
-        // Otherwise go to dashboard as a new login
         setTimeout(() => {
           navigate('/', { replace: true });
         }, 1000);
@@ -42,26 +42,26 @@ const AuthCallback = () => {
   }, [navigate, isRefresh]);
   
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className={`${themeClasses?.card || 'bg-white dark:bg-gray-800'} p-8 rounded-lg shadow-lg max-w-md w-full`}>
+    <div className={`${themeClasses.body} min-h-screen flex items-center justify-center transition-colors duration-300`}>
+      <div className={`${themeClasses.card} rounded-lg shadow-lg max-w-md w-full p-8 transition-colors duration-300`}>
         {error ? (
           <div>
-            <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
-            <p>{error}</p>
+            <h2 className={`text-xl font-bold text-red-600 mb-4`}>Authentication Error</h2>
+            <p className={themeClasses.text}>{error}</p>
             <button 
               onClick={() => navigate('/login')}
-              className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-md"
+              className={`${themeClasses.button} mt-6 px-4 py-2 rounded-md`}
             >
               Back to Login
             </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <h2 className="text-xl font-bold mb-2">
+            <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder || 'border-blue-500'} mb-4`}></div>
+            <h2 className={`text-xl font-bold ${themeClasses.text} mb-2 transition-colors duration-300`}>
               {isRefresh ? 'Updating permissions...' : 'Completing authentication...'}
             </h2>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className={`${themeClasses.textSecondary} text-center transition-colors duration-300`}>
               Please wait while we set up your account
             </p>
           </div>
