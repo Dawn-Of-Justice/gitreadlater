@@ -168,29 +168,30 @@ const Roadmap = () => {
     let icon;
     let statusBadgeColor;
     
+    // Use the exact same icon colors as the original
     if (type === 'current') {
-      icon = <FaTools className={`text-lg ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />;
+      icon = <FaTools className={`text-lg ${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />;
       
       // Set status badge color based on completion percentage
       const completion = parseInt(item.status);
       if (completion >= 75) {
-        statusBadgeColor = darkMode ? 'bg-green-700 text-green-200' : 'bg-green-500 text-white';
+        statusBadgeColor = 'bg-green-500 text-white';
       } else if (completion >= 50) {
-        statusBadgeColor = darkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-500 text-white';
+        statusBadgeColor = 'bg-blue-500 text-white';
       } else if (completion >= 25) {
-        statusBadgeColor = darkMode ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-500 text-white';
+        statusBadgeColor = 'bg-yellow-500 text-white';
       } else {
-        statusBadgeColor = darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-500 text-white';
+        statusBadgeColor = 'bg-gray-500 text-white';
       }
     } else if (type === 'upcoming') {
-      icon = <FaRocket className={`text-lg ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />;
+      icon = <FaRocket className={`text-lg ${darkMode ? 'text-[#d2a8ff]' : 'text-[#8250df]'}`} />;
     } else {
-      icon = <FaLightbulb className={`text-lg ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />;
+      icon = <FaLightbulb className={`text-lg ${darkMode ? 'text-[#f0883e]' : 'text-[#bf8700]'}`} />;
     }
     
     return (
-      <div className={`${themeClasses.card} rounded-lg overflow-hidden transition-all duration-300 h-full flex flex-col`}>
-        <div className="p-5 flex-grow">
+      <div className={`${themeClasses.card} rounded-lg p-6 transition-transform duration-300 transform hover:-translate-y-1 h-full flex flex-col`}>
+        <div className="flex-grow">
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center">
               {icon}
@@ -207,28 +208,28 @@ const Roadmap = () => {
           
           <p className={`${themeClasses.textSecondary} mb-4 text-sm`}>{item.description}</p>
           
-          {/* Show ETA for current and upcoming items */}
+          {/* Show ETA for current and upcoming items - using original styling */}
           {(type === 'current' || type === 'upcoming') && (
-            <p className={`text-xs ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-              Expected: {item.eta}
+            <p className={`inline-block text-xs px-3 py-1 rounded-full font-medium ${darkMode ? 'bg-[#21262d] text-[#8b949e]' : 'bg-[#f6f8fa] text-[#57606a]'}`}>
+              ETA: {item.eta}
             </p>
           )}
         </div>
         
         {/* Voting button section */}
-        <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-3 mt-auto`}>
+        <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-3 mt-4`}>
           <button
             onClick={() => handleVote(item.id)}
             disabled={loading}
             className={`w-full flex items-center justify-center py-1.5 rounded-md transition-colors ${
               userVotes[item.id] 
-              ? `${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`
+              ? `${darkMode ? 'bg-[#238636] text-white' : 'bg-green-600 text-white'}`
               : `${themeClasses.secondaryButton}`
             }`}
           >
-            <FaThumbsUp className={`${userVotes[item.id] ? 'text-blue-400' : ''} mr-2`} />
+            <FaThumbsUp className="mr-2" />
             <span>{userVotes[item.id] ? 'Voted' : 'Vote'}</span>
-            <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-opacity-20 bg-blue-500">
+            <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-opacity-20 bg-gray-500">
               {voteCounts[item.id] || 0}
             </span>
           </button>
@@ -259,8 +260,8 @@ const Roadmap = () => {
   };
   
   return (
-    <div className={`min-h-screen pb-16 ${themeClasses.background}`}>
-      <div className="container mx-auto px-4 pt-8">
+    <div className={`${themeClasses.body} min-h-screen py-8 sm:py-12`}>
+      <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
         {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 md:mb-12">
           <div className="mb-6 md:mb-0">
@@ -282,7 +283,7 @@ const Roadmap = () => {
         {/* In Progress Section */}
         <section className="mb-12 sm:mb-16">
           <h2 className={`text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center ${themeClasses.text}`}>
-            <FaTools className={`mr-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} /> 
+            <FaTools className={`mr-2 ${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} /> 
             In Progress
           </h2>
           <GridContainer count={roadmapItems.current.length}>
@@ -298,7 +299,7 @@ const Roadmap = () => {
         {/* Upcoming Section */}
         <section className="mb-12 sm:mb-16">
           <h2 className={`text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center ${themeClasses.text}`}>
-            <FaRocket className="mr-2" /> 
+            <FaRocket className={`mr-2 ${darkMode ? 'text-[#d2a8ff]' : 'text-[#8250df]'}`} /> 
             Coming Soon
           </h2>
           <GridContainer count={roadmapItems.upcoming.length}>
@@ -314,7 +315,7 @@ const Roadmap = () => {
         {/* Future Ideas Section */}
         <section>
           <h2 className={`text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center ${themeClasses.text}`}>
-            <FaLightbulb className={`mr-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} /> 
+            <FaLightbulb className={`mr-2 ${darkMode ? 'text-[#f0883e]' : 'text-[#bf8700]'}`} /> 
             Later Down the Road
           </h2>
           <GridContainer count={roadmapItems.considering.length}>
