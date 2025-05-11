@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
+import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash, FaPlus } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
@@ -611,6 +611,22 @@ useEffect(() => {
               </div>
             </div>
           ))}
+          
+          {/* Add Repository Tile */}
+          {!isAtLimit && (
+            <div 
+              onClick={() => navigate('/save')}
+              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer border-2 border-dashed ${darkMode ? 'border-gray-700' : 'border-gray-300'} flex flex-col items-center justify-center p-10 hover:border-blue-500`}
+            >
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-4 mb-4`}>
+                <FaPlus className={`text-3xl ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+              </div>
+              <h3 className={`text-lg font-medium ${themeClasses.text}`}>Add Repository</h3>
+              <p className={`text-sm ${themeClasses.textSecondary} text-center mt-2`}>
+                Save a new GitHub repository to your collection
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
