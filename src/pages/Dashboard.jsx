@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
@@ -44,6 +44,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const searchTimeoutRef = useRef(null);
   const [selectedTag, setSelectedTag] = useState('');
   const [tableExists, setTableExists] = useState(null); // null means we haven't checked yet
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
@@ -221,7 +223,27 @@ const Dashboard = () => {
     checkUserAndFetch();
   }, [navigate, location.state?.forceRefresh, refreshFlag]);
 
-// Update the search effect to properly format the query
+// Add debounce effect for search
+useEffect(() => {
+  // Clear any existing timeout
+  if (searchTimeoutRef.current) {
+    clearTimeout(searchTimeoutRef.current);
+  }
+  
+  // Set a new timeout to update debounced value after 300ms
+  searchTimeoutRef.current = setTimeout(() => {
+    setDebouncedSearchQuery(searchQuery);
+  }, 300);
+  
+  // Cleanup timeout on unmount or when searchQuery changes again
+  return () => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
+}, [searchQuery]);
+
+// Modify your existing search effect to use debouncedSearchQuery instead
 useEffect(() => {
   // Skip if we haven't done the initial load yet or user has no repositories
   if (!fetchAttemptedRef.current || isFirstTimeUser) return;
@@ -240,12 +262,12 @@ useEffect(() => {
         .eq('user_id', session.user.id) // Add user_id filter
         .order('created_at', { ascending: false });
         
-      // Add search filter if needed - FIXED SYNTAX
-      if (searchQuery) {
+      // Use debouncedSearchQuery instead of searchQuery
+      if (debouncedSearchQuery) {
         query = query.or([
-          `repo_name.ilike.%${searchQuery}%`,
-          `description.ilike.%${searchQuery}%`,
-          `notes.ilike.%${searchQuery}%`
+          `repo_name.ilike.%${debouncedSearchQuery}%`,
+          `description.ilike.%${debouncedSearchQuery}%`,
+          `notes.ilike.%${debouncedSearchQuery}%`
         ]);
       }
       
@@ -269,11 +291,11 @@ useEffect(() => {
           .order('created_at', { ascending: false });
           
         // Add search filter if needed - FIXED SYNTAX
-        if (searchQuery) {
+        if (debouncedSearchQuery) {
           savedQuery = savedQuery.or([
-            `repo_name.ilike.%${searchQuery}%`,
-            `description.ilike.%${searchQuery}%`,
-            `notes.ilike.%${searchQuery}%`
+            `repo_name.ilike.%${debouncedSearchQuery}%`,
+            `description.ilike.%${debouncedSearchQuery}%`,
+            `notes.ilike.%${debouncedSearchQuery}%`
           ]);
         }
         
@@ -300,7 +322,7 @@ useEffect(() => {
   };
   
   fetchFilteredRepositories();
-}, [searchQuery, selectedTag, isFirstTimeUser]);
+}, [debouncedSearchQuery, selectedTag, isFirstTimeUser]);
 
   const handleSearch = (e) => {
     e.preventDefault();
