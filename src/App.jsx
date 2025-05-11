@@ -5,7 +5,7 @@ import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import ScrollToTop from './components/ScrollToTop';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Components
 import Header from './components/Header';
