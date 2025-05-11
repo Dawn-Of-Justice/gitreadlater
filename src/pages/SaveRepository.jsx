@@ -790,8 +790,9 @@ const SaveRepository = () => {
                                   </span>
                                 )}
                                 {repo.private && (
-                                  <span className="flex items-center">
-                                    <FaLock className={`${darkMode ? 'text-gray-300' : 'text-gray-500'} mr-1`} />
+                                  <span className="flex items-center ml-2">
+                                    <FaLock className={`${darkMode ? 'text-gray-300' : 'text-gray-500'} mr-1`} title="Private repository" />
+                                    <span className="text-xs">Private</span>
                                   </span>
                                 )}
                                 <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{repo.stargazers_count || 0}</span>

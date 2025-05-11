@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
+import PrivateRepoToggle from '../components/PrivateRepoToggle';
 
 const getTagColor = (tag) => {
   // Generate a simple hash from the tag name
@@ -434,6 +435,11 @@ useEffect(() => {
           >
             <span>Save New Repository</span>
           </Link>
+        </div>
+        
+        {/* Add the Private Repository Toggle */}
+        <div className="mb-6">
+          <PrivateRepoToggle />
         </div>
         
         {/* Subscription warnings */}
