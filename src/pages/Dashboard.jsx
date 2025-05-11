@@ -549,7 +549,7 @@ useEffect(() => {
                     href={repo.repo_url || repo.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className={`text-sm flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'} transition-colors duration-300`}
+                    className={`text-sm flex items-center space-x-1 ${darkMode ? 'text-blue-400 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800'} transition-colors duration-300`}
                     onClick={(e) => e.stopPropagation()} // Prevent the card click event from triggering
                   >
                     <span>GitHub</span>
