@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services.subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
@@ -50,6 +50,7 @@ const Dashboard = () => {
   const [tableExists, setTableExists] = useState(null); // null means we haven't checked yet
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
+  const searchInputRef = useRef(null); // Add this ref for the search input
   
   // Refs for tracking fetch status
   const fetchAttemptedRef = useRef(false);
@@ -252,6 +253,9 @@ useEffect(() => {
     try {
       setLoading(true);
       
+      // Save active element to check if search input had focus
+      const hadFocus = document.activeElement === searchInputRef.current;
+      
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -313,11 +317,25 @@ useEffect(() => {
       console.log(`Search results: Found ${data?.length || 0} repositories`);
       setRepositories(data || []);
       
+      // After search completes, restore focus if search input had focus
+      if (hadFocus && searchInputRef.current) {
+        setTimeout(() => {
+          searchInputRef.current.focus();
+        }, 0);
+      }
+      
     } catch (err) {
       console.error('Error filtering repositories:', err);
       setError('Failed to search GitHub repositories. Please try again.');
     } finally {
       setLoading(false);
+      
+      // Restore focus after state updates
+      if (searchInputRef.current) {
+        setTimeout(() => {
+          searchInputRef.current.focus();
+        }, 0);
+      }
     }
   };
   
@@ -463,6 +481,7 @@ useEffect(() => {
             <div className="flex-grow">
               <form onSubmit={handleSearch} className="relative">
                 <input
+                  ref={searchInputRef} // Add the ref here
                   type="text"
                   placeholder="Search repositories..."
                   value={searchQuery}
