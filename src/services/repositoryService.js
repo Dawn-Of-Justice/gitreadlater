@@ -292,3 +292,81 @@ export const getUserTags = async (cachedTags = [], setCachedTags = null) => {
     throw error;
   }
 };
+
+// Cache for recently refreshed repositories to prevent duplicate API calls
+const recentlyRefreshedRepos = new Map();
+
+/**
+ * Refreshes repository data from GitHub if it's stale
+ * @param {string} id - Repository ID
+ * @param {boolean} force - Force refresh regardless of cache
+ * @returns {Object} Updated repository data
+ */
+export const refreshRepositoryData = async (id, force = false) => {
+  try {
+    // Check if repository was recently refreshed (within last 5 minutes)
+    const cacheKey = `repo_${id}`;
+    const now = Date.now();
+    const cacheEntry = recentlyRefreshedRepos.get(cacheKey);
+    
+    if (!force && cacheEntry && (now - cacheEntry.timestamp < 5 * 60 * 1000)) {
+      console.log('Using cached repository data');
+      return cacheEntry.data;
+    }
+    
+    // Get current repository data
+    const { data: repo, error } = await supabase
+      .from('saved_repositories')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    if (!repo) throw new Error('Repository not found');
+    
+    // Check if data is stale (older than 24 hours)
+    const lastFetched = new Date(repo.last_fetched || repo.created_at);
+    const isStale = (now - lastFetched.getTime()) > 24 * 60 * 60 * 1000;
+    
+    // Only refresh if force=true or data is stale
+    if (force || isStale) {
+      console.log(`Refreshing repository data for ${repo.repo_owner}/${repo.repo_name}`);
+      
+      // Get fresh data from GitHub
+      const freshData = await getRepositoryDetails(repo.repo_owner, repo.repo_name);
+      
+      // Update repository in database
+      const { data: updatedRepo, error: updateError } = await supabase
+        .from('saved_repositories')
+        .update({
+          description: freshData.description,
+          stars: freshData.stargazers_count,
+          language: freshData.language,
+          last_fetched: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select();
+        
+      if (updateError) throw updateError;
+      
+      // Store in cache
+      recentlyRefreshedRepos.set(cacheKey, {
+        timestamp: now,
+        data: updatedRepo[0]
+      });
+      
+      // Clean up old cache entries (keep cache size reasonable)
+      if (recentlyRefreshedRepos.size > 100) {
+        const oldestKey = [...recentlyRefreshedRepos.keys()][0];
+        recentlyRefreshedRepos.delete(oldestKey);
+      }
+      
+      return updatedRepo[0];
+    }
+    
+    return repo;
+  } catch (error) {
+    console.error('Error refreshing repository data:', error);
+    throw error;
+  }
+};

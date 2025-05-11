@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinner, FaCheck, FaArrowLeft } from 'react-icons/fa';
+import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinner, FaCheck, FaArrowLeft, FaSync } from 'react-icons/fa';
 import { supabase } from '../lib/supabaseClient';
 import { getReadmeContent } from '../services/githubService';
-import { updateRepository, deleteRepository, getUserTags } from '../services/repositoryService';
+import { updateRepository, deleteRepository, getUserTags, refreshRepositoryData } from '../services/repositoryService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
 import ReactMarkdown from 'react-markdown';
@@ -63,6 +63,8 @@ const RepositoryDetails = () => {
   const tagSuggestionsRef = useRef(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Fetch repository data
   useEffect(() => {
@@ -140,6 +142,30 @@ const RepositoryDetails = () => {
     
     fetchReadme();
   }, [repository]);
+
+  useEffect(() => {
+    const updateRepositoryData = async () => {
+      if (repository) {
+        try {
+          // Attempt to refresh repository data (will only refresh if stale)
+          const updatedRepo = await refreshRepositoryData(id);
+          
+          // Update state with fresh data
+          if (updatedRepo) {
+            setRepository(updatedRepo);
+            setNotes(updatedRepo.notes || '');
+            setTags(updatedRepo.tags || []);
+            setLastUpdated(new Date(updatedRepo.last_fetched || updatedRepo.updated_at));
+          }
+        } catch (err) {
+          console.error('Error refreshing repository data:', err);
+          // Don't show error to user for background refresh
+        }
+      }
+    };
+    
+    updateRepositoryData();
+  }, [repository, id]);
 
   // Handle save changes
   const handleSaveChanges = async () => {
@@ -284,6 +310,25 @@ const handleDeleteRepository = async () => {
       }
     };
   }, [invalidateRepositories]);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    
+    try {
+      setIsRefreshing(true);
+      const updatedRepo = await refreshRepositoryData(id, true);
+      
+      if (updatedRepo) {
+        setRepository(updatedRepo);
+        setLastUpdated(new Date(updatedRepo.last_fetched || updatedRepo.updated_at));
+      }
+    } catch (err) {
+      console.error('Error refreshing repository data:', err);
+      setError('Failed to refresh repository data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   return (
     <div className={`${themeClasses.body} min-h-screen py-8`}>
@@ -590,6 +635,35 @@ const handleDeleteRepository = async () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Add data freshness indicator */}
+            <div className="mt-4 flex items-center justify-between">
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
+                {lastUpdated ? (
+                  <>Repository data updated {new Date(lastUpdated).toLocaleDateString()}</>
+                ) : (
+                  <>Repository data may not be current</>
+                )}
+              </p>
+              
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className={`${themeClasses.secondaryButton} px-3 py-1 text-sm rounded-md flex items-center transition-colors duration-300`}
+              >
+                {isRefreshing ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    <span>Refreshing...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaSync className="mr-2" />
+                    <span>Refresh data</span>
+                  </>
+                )}
+              </button>
             </div>
             
             {/* Delete Confirmation Modal */}
