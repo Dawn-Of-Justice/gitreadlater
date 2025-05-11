@@ -70,21 +70,20 @@ const Roadmap = () => {
   // Fetch total votes per feature
   const fetchVoteCounts = async () => {
     try {
-      // Correct way with a single select statement
+      // Get all votes and process them client-side instead of using group()
       const { data, error } = await supabase
         .from('feature_votes')
-        .select('feature_id, count(*)')
-        .group('feature_id');
+        .select('feature_id');
       
       if (error) throw error;
       
-      // Transform into an object for easy lookup
+      // Client-side aggregation
       const counts = {};
-      data?.forEach(item => {
-        // Make sure to access the count properly based on returned structure
-        counts[item.feature_id] = parseInt(item.count);
+      data.forEach(vote => {
+        counts[vote.feature_id] = (counts[vote.feature_id] || 0) + 1;
       });
       
+      console.log("Fetched vote counts:", counts);
       setVoteCounts(counts);
     } catch (error) {
       console.error('Error fetching vote counts:', error);
@@ -129,15 +128,22 @@ const Roadmap = () => {
     try {
       // If user already voted, remove the vote (toggle)
       if (userVotes[featureId]) {
-        await supabase
+        const { error: deleteError } = await supabase
           .from('feature_votes')
           .delete()
           .eq('user_id', session.user.id)
           .eq('feature_id', featureId);
           
+        if (deleteError) {
+          console.error('Error deleting vote:', deleteError);
+          alert('Unable to remove your vote. Please try again.');
+          setLoading(false);
+          return;
+        }
+          
         // Update state
         setUserVotes(prev => ({...prev, [featureId]: false}));
-        setVoteCounts(prev => ({...prev, [featureId]: (prev[featureId] || 1) - 1}));
+        setVoteCounts(prev => ({...prev, [featureId]: Math.max(0, (prev[featureId] || 1) - 1)}));
         
         alert('Vote removed');
       } else {
