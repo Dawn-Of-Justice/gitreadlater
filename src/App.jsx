@@ -22,6 +22,8 @@ const Privacy = lazy(() => import('./pages/Privacy'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Roadmap = lazy(() => import('./pages/Roadmap'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const VotingDashboard = lazy(() => import('./pages/Admin/VotingDashboard'));
+const AdminRoute = lazy(() => import('./components/AdminRoute'));
 
 // Create an AppContent component that will use the hooks
 function AppContent() {
@@ -122,6 +124,8 @@ function AppContent() {
                 <Subscription />
               </ProtectedRoute>
             } />
+            
+            <Route path="/admin/voting-dashboard" element={<AdminRoute />} />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

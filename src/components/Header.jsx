@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaGithub, FaBookmark, FaPlus, FaSignOutAlt, FaUser, FaCrown, FaMoon, FaSun } from 'react-icons/fa';
-import { signOut, signInWithGitHub } from '../lib/supabaseClient';
+import { signOut, signInWithGitHub, supabase } from '../lib/supabaseClient';
 import { getUserTier, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
+
+const ADMIN_USER_ID = "6b3aaad3-bda8-4030-89c4-f4ed89478644";
 
 const Header = ({ user }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userTier, setUserTier] = useState(TIERS.FREE);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
   
   const { darkMode, toggleTheme, themeClasses } = useTheme();
@@ -22,6 +26,36 @@ const Header = ({ user }) => {
     
     fetchUserTier();
   }, [user]);
+  
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setCurrentUser(session.user);
+        // Check if user is admin by direct ID comparison - avoid JSON processing
+        setIsAdmin(session.user.id === ADMIN_USER_ID);
+      }
+    };
+    
+    checkUser();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setCurrentUser(session.user);
+          setIsAdmin(session.user.id === ADMIN_USER_ID);
+        } else {
+          setCurrentUser(null);
+          setIsAdmin(false);
+        }
+      }
+    );
+    
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
   
   const handleSignOut = async () => {
     try {
@@ -52,7 +86,7 @@ const Header = ({ user }) => {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            {user ? (
+            {currentUser ? (
               <>
                 <Link 
                   to="/" 
@@ -86,15 +120,15 @@ const Header = ({ user }) => {
                 <div className="flex items-center space-x-4">
                   {/* A more robust version with fallback to GitHub icon */}
                   <a 
-                    href={`https://github.com/${user.user_metadata?.preferred_username || ''}`}
+                    href={`https://github.com/${currentUser.user_metadata?.preferred_username || ''}`}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center space-x-2 hover:text-blue-500 transition-colors duration-300"
                     title="View GitHub Profile"
                   >
-                    {user.user_metadata?.avatar_url ? (
+                    {currentUser.user_metadata?.avatar_url ? (
                       <img 
-                        src={user.user_metadata?.avatar_url} 
+                        src={currentUser.user_metadata?.avatar_url} 
                         alt="Profile" 
                         className="h-8 w-8 rounded-full border border-gray-300"
                         onError={(e) => {
@@ -108,7 +142,7 @@ const Header = ({ user }) => {
                         <FaGithub className="text-gray-600" />
                       </div>
                     )}
-                    <span className="underline-hover">{user.user_metadata?.preferred_username || user.email}</span>
+                    <span className="underline-hover">{currentUser.user_metadata?.preferred_username || currentUser.email}</span>
                   </a>
                   
                   <button 
@@ -134,6 +168,16 @@ const Header = ({ user }) => {
                     )}
                   </button>
                 </div>
+                
+                {/* Admin Dashboard link - only shown to admin */}
+                {isAdmin && (
+                  <Link 
+                    to="/admin/voting-dashboard" 
+                    className={`transition duration-200 ${themeClasses.navLink}`}
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
               </>
             ) : (
               <>
@@ -198,7 +242,7 @@ const Header = ({ user }) => {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className={`md:hidden mt-4 pb-4 ${themeClasses.mobileMenu} rounded-md p-4 transition-colors duration-300`}>
-            {user ? (
+            {currentUser ? (
               <div className="flex flex-col space-y-4">
                 <Link 
                   to="/" 
@@ -234,15 +278,15 @@ const Header = ({ user }) => {
                 
                 {/* A more robust version with fallback to GitHub icon */}
                 <a 
-                  href={`https://github.com/${user.user_metadata?.preferred_username || ''}`}
+                  href={`https://github.com/${currentUser.user_metadata?.preferred_username || ''}`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-gray-400 hover:text-blue-500 transition-colors duration-300"
                   title="View GitHub Profile"
                 >
-                  {user.user_metadata?.avatar_url ? (
+                  {currentUser.user_metadata?.avatar_url ? (
                     <img 
-                      src={user.user_metadata?.avatar_url} 
+                      src={currentUser.user_metadata?.avatar_url} 
                       alt="Profile" 
                       className="h-8 w-8 rounded-full border border-gray-300"
                       onError={(e) => {
@@ -256,7 +300,7 @@ const Header = ({ user }) => {
                       <FaGithub className="text-gray-600" />
                     </div>
                   )}
-                  <span className="underline-hover">{user.user_metadata?.preferred_username || user.email}</span>
+                  <span className="underline-hover">{currentUser.user_metadata?.preferred_username || currentUser.email}</span>
                 </a>
                 
                 <button 
@@ -269,6 +313,17 @@ const Header = ({ user }) => {
                   <FaSignOutAlt className="mr-1" />
                   <span>Sign Out</span>
                 </button>
+                
+                {/* Admin Dashboard link - only shown to admin */}
+                {isAdmin && (
+                  <Link 
+                    to="/admin/voting-dashboard"
+                    className={`block px-4 py-2 ${themeClasses.mobileNavLink}`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
               </div>
             ) : (
               <Link 
