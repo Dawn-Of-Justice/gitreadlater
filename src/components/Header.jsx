@@ -12,7 +12,6 @@ const Header = ({ onLogout }) => {
   const { user, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userTier, setUserTier] = useState(TIERS.FREE);
-  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
   
   const { darkMode, toggleTheme, themeClasses } = useTheme();
@@ -27,32 +26,6 @@ const Header = ({ onLogout }) => {
     
     fetchUserTier();
   }, [user]);
-  
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setCurrentUser(session.user);
-      }
-    };
-    
-    checkUser();
-    
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setCurrentUser(session.user);
-        } else {
-          setCurrentUser(null);
-        }
-      }
-    );
-    
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
   
   const handleSignOut = async () => {
     try {
@@ -83,7 +56,7 @@ const Header = ({ onLogout }) => {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            {currentUser ? (
+            {user ? (
               <>
                 <Link 
                   to="/" 
@@ -117,15 +90,15 @@ const Header = ({ onLogout }) => {
                 <div className="flex items-center space-x-4">
                   {/* A more robust version with fallback to GitHub icon */}
                   <a 
-                    href={`https://github.com/${currentUser.user_metadata?.preferred_username || ''}`}
+                    href={`https://github.com/${user.user_metadata?.preferred_username || ''}`}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center space-x-2 hover:text-blue-500 transition-colors duration-300"
                     title="View GitHub Profile"
                   >
-                    {currentUser.user_metadata?.avatar_url ? (
+                    {user.user_metadata?.avatar_url ? (
                       <img 
-                        src={currentUser.user_metadata?.avatar_url} 
+                        src={user.user_metadata?.avatar_url} 
                         alt="Profile" 
                         className="h-8 w-8 rounded-full border border-gray-300"
                         onError={(e) => {
@@ -139,7 +112,7 @@ const Header = ({ onLogout }) => {
                         <FaGithub className="text-gray-600" />
                       </div>
                     )}
-                    <span className="underline-hover">{currentUser.user_metadata?.preferred_username || currentUser.email}</span>
+                    <span className="underline-hover">{user.user_metadata?.preferred_username || user.email}</span>
                   </a>
                   
                   <button 
@@ -239,7 +212,7 @@ const Header = ({ onLogout }) => {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className={`md:hidden mt-4 pb-4 ${themeClasses.mobileMenu} rounded-md p-4 transition-colors duration-300`}>
-            {currentUser ? (
+            {user ? (
               <div className="flex flex-col space-y-4">
                 <Link 
                   to="/" 
@@ -275,15 +248,15 @@ const Header = ({ onLogout }) => {
                 
                 {/* A more robust version with fallback to GitHub icon */}
                 <a 
-                  href={`https://github.com/${currentUser.user_metadata?.preferred_username || ''}`}
+                  href={`https://github.com/${user.user_metadata?.preferred_username || ''}`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-gray-400 hover:text-blue-500 transition-colors duration-300"
                   title="View GitHub Profile"
                 >
-                  {currentUser.user_metadata?.avatar_url ? (
+                  {user.user_metadata?.avatar_url ? (
                     <img 
-                      src={currentUser.user_metadata?.avatar_url} 
+                      src={user.user_metadata?.avatar_url} 
                       alt="Profile" 
                       className="h-8 w-8 rounded-full border border-gray-300"
                       onError={(e) => {
@@ -297,7 +270,7 @@ const Header = ({ onLogout }) => {
                       <FaGithub className="text-gray-600" />
                     </div>
                   )}
-                  <span className="underline-hover">{currentUser.user_metadata?.preferred_username || currentUser.email}</span>
+                  <span className="underline-hover">{user.user_metadata?.preferred_username || user.email}</span>
                 </a>
                 
                 <button 

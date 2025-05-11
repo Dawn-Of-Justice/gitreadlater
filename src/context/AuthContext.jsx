@@ -1,16 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-const AuthContext = createContext();
+// Define admin user ID
+const ADMIN_USER_ID = "6b3aaad3-bda8-4030-89c4-f4ed89478644";
 
+// Create a context
+const AuthContext = createContext(null);
+
+// Export the useAuth hook
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Check for existing session
@@ -20,7 +29,8 @@ export function AuthProvider({ children }) {
         
         if (session?.user) {
           setUser(session.user);
-          await checkAdminStatus(session.user);
+          // Check if user is admin
+          setIsAdmin(session.user.id === ADMIN_USER_ID);
         } else {
           setUser(null);
           setIsAdmin(false);
@@ -31,61 +41,31 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     };
-
-    const checkAdminStatus = async (user) => {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      try {
-        // Check admin_users table first
-        const { data } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-          
-        if (data) {
-          setIsAdmin(true);
-          return;
-        }
-        
-        // Fallback to UID check
-        const adminUIDs = ["6b3aaad3-bda8-4030-89c4-f4ed89478644"];
-        setIsAdmin(adminUIDs.includes(user.id));
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-    };
     
     checkSession();
     
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setLoading(true);
         if (session?.user) {
           setUser(session.user);
-          await checkAdminStatus(session.user);
+          setIsAdmin(session.user.id === ADMIN_USER_ID);
         } else {
           setUser(null);
           setIsAdmin(false);
         }
-        setLoading(false);
       }
     );
     
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
   const value = {
     user,
-    isAdmin,
     loading,
+    isAdmin,
     isAuthenticated: !!user
   };
 
@@ -95,3 +75,5 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
+export default AuthProvider;

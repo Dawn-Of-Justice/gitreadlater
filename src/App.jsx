@@ -32,13 +32,6 @@ function AppContent() {
   const { clearCache } = useCache();
   const navigate = useNavigate();
 
-  // Use the auth context instead of direct Supabase calls
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    clearCache();
-    navigate('/login');
-  };
-
   // Protected route using the auth context
   const ProtectedRoute = ({ children }) => {
     if (loading) {
@@ -50,6 +43,13 @@ function AppContent() {
     }
     
     return children;
+  };
+
+  // Use the auth context instead of direct Supabase calls
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    clearCache();
+    navigate('/login');
   };
 
   return (
