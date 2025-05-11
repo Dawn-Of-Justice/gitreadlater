@@ -4,13 +4,14 @@ import { FaGithub, FaBookmark, FaPlus, FaSignOutAlt, FaUser, FaCrown, FaMoon, Fa
 import { signOut, signInWithGitHub, supabase } from '../lib/supabaseClient';
 import { getUserTier, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const ADMIN_USER_ID = "6b3aaad3-bda8-4030-89c4-f4ed89478644";
 
-const Header = ({ user }) => {
+const Header = ({ onLogout }) => {
+  const { user, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userTier, setUserTier] = useState(TIERS.FREE);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
   
@@ -32,8 +33,6 @@ const Header = ({ user }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setCurrentUser(session.user);
-        // Check if user is admin by direct ID comparison - avoid JSON processing
-        setIsAdmin(session.user.id === ADMIN_USER_ID);
       }
     };
     
@@ -44,10 +43,8 @@ const Header = ({ user }) => {
       async (event, session) => {
         if (session?.user) {
           setCurrentUser(session.user);
-          setIsAdmin(session.user.id === ADMIN_USER_ID);
         } else {
           setCurrentUser(null);
-          setIsAdmin(false);
         }
       }
     );
@@ -55,35 +52,6 @@ const Header = ({ user }) => {
     return () => {
       subscription?.unsubscribe();
     };
-  }, []);
-  
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        // Check if user is in the admin_users table
-        const { data } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-        
-        setIsAdmin(!!data);
-      } else {
-        setIsAdmin(false);
-      }
-    };
-    
-    checkAdminStatus();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async () => {
-        await checkAdminStatus();
-      }
-    );
-    
-    return () => subscription.unsubscribe();
   }, []);
   
   const handleSignOut = async () => {

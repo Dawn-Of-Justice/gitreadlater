@@ -5,6 +5,7 @@ import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import ScrollToTop from './components/ScrollToTop';
+import { AuthProvider } from './context/AuthContext';
 
 // Components
 import Header from './components/Header';
@@ -27,60 +28,28 @@ const AdminRoute = lazy(() => import('./components/AdminRoute'));
 
 // Create an AppContent component that will use the hooks
 function AppContent() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const { user, loading, isAuthenticated } = useAuth();
   const { clearCache } = useCache();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check for an existing session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUser(session.user);
-      }
-      
-      setLoading(false);
-      
-      // Set up auth listener
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (session?.user) {
-            setUser(session.user);
-          } else {
-            setUser(null);
-          }
-        }
-      );
-      
-      return () => {
-        if (authListener && authListener.subscription) {
-          authListener.subscription.unsubscribe();
-        }
-      };
-    };
-    
-    checkSession();
-  }, []);
+  // Use the auth context instead of direct Supabase calls
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    clearCache();
+    navigate('/login');
+  };
 
-  // Protected route component
+  // Protected route using the auth context
   const ProtectedRoute = ({ children }) => {
     if (loading) {
       return <div className="flex justify-center items-center h-screen">Loading...</div>;
     }
     
-    if (!user) {
+    if (!isAuthenticated) {
       return <Navigate to="/login" replace />;
     }
     
     return children;
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    clearCache(); // Clear cache on logout
-    navigate('/login');
   };
 
   return (
@@ -150,7 +119,9 @@ function App() {
         <SubscriptionProvider>
           <Router>
             <CacheProvider>
-              <AppContent />
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
               <ScrollToTop />
             </CacheProvider>
           </Router>
