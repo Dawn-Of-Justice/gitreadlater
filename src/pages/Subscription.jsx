@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Add useRef
 import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaTimes, FaSpinner, FaCrown, FaArrowRight } from 'react-icons/fa';
 import { 
@@ -23,6 +23,8 @@ const Subscription = () => {
   const [email, setEmail] = useState('');
   const [notified, setNotified] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
+  const [isInputHighlighted, setIsInputHighlighted] = useState(false);
+  const emailInputRef = useRef(null);
   
   const { darkMode, themeClasses } = useTheme();
   
@@ -263,7 +265,26 @@ const handleNotifyMe = async (e) => {
                   </p>
                   
                   <button
-                    onClick={() => document.getElementById('notify-me-form').scrollIntoView({ behavior: 'smooth' })}
+                    onClick={() => {
+                      // Scroll to the form
+                      document.getElementById('notify-me-form').scrollIntoView({ behavior: 'smooth' });
+                      
+                      // Add a small delay to ensure scrolling completes
+                      setTimeout(() => {
+                        // Focus on the input
+                        if (emailInputRef.current) {
+                          emailInputRef.current.focus();
+                        }
+                        
+                        // Add highlight effect
+                        setIsInputHighlighted(true);
+                        
+                        // Remove highlight effect after 2 seconds
+                        setTimeout(() => {
+                          setIsInputHighlighted(false);
+                        }, 2000);
+                      }, 300);
+                    }}
                     className={`${themeClasses.secondaryButton} px-6 py-3 rounded-md flex items-center transition-colors duration-300`}
                   >
                     Get notified when available <FaArrowRight className="ml-2" />
@@ -365,11 +386,13 @@ const handleNotifyMe = async (e) => {
                     ) : (
                       <form id="notify-me-form" onSubmit={handleNotifyMe} className="flex flex-col sm:flex-row gap-2">
                         <input
+                          ref={emailInputRef}
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="Your email address"
-                          className={`${themeClasses.input} flex-grow px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                          className={`${themeClasses.input} flex-grow px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 
+                            ${isInputHighlighted ? 'ring-2 ring-blue-500 animate-pulse' : ''}`}
                           required
                         />
                         <button
