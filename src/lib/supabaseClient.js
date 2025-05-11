@@ -57,4 +57,9 @@ export const signOut = async () => {
     console.error('Error signing out:', error);
     throw error;
   }
+  
+  // Add explicit localStorage cleanup for Firefox compatibility
+  localStorage.removeItem('supabase.auth.token');
+  
+  return { success: true };
 };

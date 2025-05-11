@@ -30,7 +30,19 @@ const Header = ({ onLogout }) => {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/login');
+      
+      // Check if browser is Firefox
+      const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+      
+      if (isFirefox) {
+        // Add a small delay for Firefox to ensure auth state is fully cleared
+        setTimeout(() => {
+          navigate('/login');
+        }, 100);
+      } else {
+        // Immediate navigation for other browsers
+        navigate('/login');
+      }
     } catch (error) {
       console.error('Error signing out:', error);
     }
