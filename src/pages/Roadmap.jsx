@@ -201,14 +201,14 @@ const Roadmap = () => {
       <div className={`${themeClasses.card} rounded-lg p-6 transition-transform duration-300 transform hover:-translate-y-1 h-full flex flex-col`}>
         <div className="flex-grow">
           <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink">
               {icon}
               <h3 className={`font-semibold ml-2 ${themeClasses.text}`}>{item.title}</h3>
             </div>
             
             {/* Status badge for current items */}
             {type === 'current' && (
-              <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusBadgeColor}`}>
+              <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap flex-shrink-0 ${statusBadgeColor}`}>
                 {item.status}
               </span>
             )}
