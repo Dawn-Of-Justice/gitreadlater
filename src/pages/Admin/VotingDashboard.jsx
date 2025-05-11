@@ -30,40 +30,51 @@ const VotingDashboard = () => {
   };
 
   return (
-    <div className={`container mx-auto px-4 py-8 ${themeClasses.background}`}>
-      <h1 className={`text-2xl font-bold mb-6 ${themeClasses.text}`}>
-        <FaChartBar className="inline mr-2" />
-        Feature Voting Dashboard
-      </h1>
-      
-      {loading ? (
-        <div className={`${themeClasses.card} p-8 text-center`}>
-          <p>Loading voting data...</p>
-        </div>
-      ) : (
-        <div className={`${themeClasses.card} p-6`}>
-          <table className="w-full">
-            <thead>
-              <tr className={`border-b ${themeClasses.divider}`}>
-                <th className="text-left py-3">Feature</th>
-                <th className="text-right py-3">Vote Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              {votingStats.map((item) => (
-                <tr key={item.feature_id} className={`border-b ${themeClasses.divider}`}>
-                  <td className="py-3">{item.feature_id.replace(/-/g, ' ')}</td>
-                  <td className="py-3 text-right">
-                    <span className={`inline-flex items-center ${themeClasses.text}`}>
-                      {item.count} <FaThumbsUp className="ml-2" />
-                    </span>
-                  </td>
+    <div className={`${themeClasses.body} min-h-screen py-8`}>
+      <div className="container mx-auto px-4">
+        <h1 className={`text-2xl font-bold mb-6 flex items-center ${themeClasses.text}`}>
+          <FaChartBar className={`mr-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+          Feature Voting Dashboard
+        </h1>
+        
+        {loading ? (
+          <div className={`${themeClasses.card} p-8 text-center shadow-md rounded-lg`}>
+            <p className={themeClasses.text}>Loading voting data...</p>
+          </div>
+        ) : votingStats.length === 0 ? (
+          <div className={`${themeClasses.card} p-8 text-center shadow-md rounded-lg`}>
+            <p className={themeClasses.text}>No votes have been cast yet.</p>
+            <p className={`mt-2 ${themeClasses.textSecondary}`}>
+              Votes will appear here once users start voting on roadmap features.
+            </p>
+          </div>
+        ) : (
+          <div className={`${themeClasses.card} p-6 shadow-md rounded-lg`}>
+            <table className="w-full">
+              <thead>
+                <tr className={`border-b ${themeClasses.divider}`}>
+                  <th className={`text-left py-3 ${themeClasses.text} font-bold`}>Feature</th>
+                  <th className={`text-right py-3 ${themeClasses.text} font-bold`}>Vote Count</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {votingStats.map((item) => (
+                  <tr key={item.feature_id} className={`border-b ${themeClasses.divider}`}>
+                    <td className={`py-3 ${themeClasses.text}`}>
+                      {item.feature_id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    </td>
+                    <td className={`py-3 text-right ${themeClasses.text}`}>
+                      <span className={`inline-flex items-center`}>
+                        {item.count} <FaThumbsUp className="ml-2 text-blue-500" />
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
