@@ -29,22 +29,21 @@ const Header = ({ onLogout }) => {
   
   const handleSignOut = async () => {
     try {
-      await signOut();
+      const result = await signOut();
       
-      // Check if browser is Firefox
-      const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
-      
-      if (isFirefox) {
-        // Add a small delay for Firefox to ensure auth state is fully cleared
-        setTimeout(() => {
-          navigate('/login');
-        }, 100);
-      } else {
-        // Immediate navigation for other browsers
+      // Navigate to login page after sign out
+      // Add a small delay for Firefox to ensure all cleanup is done
+      setTimeout(() => {
         navigate('/login');
-      }
+        // Force reload to ensure clean state if needed
+        if (navigator.userAgent.toLowerCase().includes('firefox')) {
+          window.location.reload();
+        }
+      }, 100);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error during sign out:', error);
+      // Navigate anyway to let user escape
+      navigate('/login');
     }
   };
 
