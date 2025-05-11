@@ -11,6 +11,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { darkMode, themeClasses } = useTheme();
   const [showImagePopup, setShowImagePopup] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   useEffect(() => {
     // Check if user is already logged in
@@ -35,11 +37,20 @@ const Login = () => {
   
   const handleLogin = async () => {
     try {
-      await signInWithGitHub();
+      setIsLoading(true);
+      setError(null);
+      
+      const result = await signInWithGitHub();
+      
+      if (!result.success) {
+        setError('Login failed. Please try again.');
+      }
       // The redirect will happen automatically via auth callback
-    } catch (error) {
-      console.error('Login error:', error);
-      alert('Error logging in with GitHub');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Error logging in with GitHub. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
   

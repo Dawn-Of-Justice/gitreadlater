@@ -30,13 +30,11 @@ export const getCurrentUser = async () => {
   return session.user;
 };
 
-// Update your GitHub sign-in function with better error handling
+// Fixed GitHub sign-in function without React state dependencies
 export const signInWithGitHub = async () => {
-  setIsLoading(true);
-  
   try {
     // Default to public repos only (read:user, public_repo)
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`
@@ -44,11 +42,10 @@ export const signInWithGitHub = async () => {
     });
     
     if (error) throw error;
+    return { success: true };
   } catch (error) {
     console.error('Error signing in with GitHub:', error);
-    setError('Failed to sign in with GitHub. Please try again.');
-  } finally {
-    setIsLoading(false);
+    return { success: false, error };
   }
 };
 
