@@ -145,7 +145,6 @@ const Roadmap = () => {
         setUserVotes(prev => ({...prev, [featureId]: false}));
         setVoteCounts(prev => ({...prev, [featureId]: Math.max(0, (prev[featureId] || 1) - 1)}));
         
-        alert('Vote removed');
       } else {
         // Otherwise add a vote
         await supabase
@@ -159,7 +158,6 @@ const Roadmap = () => {
         setUserVotes(prev => ({...prev, [featureId]: true}));
         setVoteCounts(prev => ({...prev, [featureId]: (prev[featureId] || 0) + 1}));
         
-        alert('Vote counted! Thanks for your feedback');
       }
     } catch (error) {
       console.error('Error voting:', error);
