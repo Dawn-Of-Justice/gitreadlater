@@ -236,11 +236,8 @@ export const checkRepositoriesTableExists = async () => {
   }
 };
 
-// Update your repository fetching function
+// Update getUserRepositories to include private repos when allowed
 export const getUserRepositories = async (options = {}) => {
-  const { page = 1, limit = 10, orderBy = 'created_at', ascending = false } = options;
-  const startIndex = (page - 1) * limit;
-  
   try {
     // First check if we have a valid session
     const { data: { session } } = await supabase.auth.getSession();
@@ -248,14 +245,20 @@ export const getUserRepositories = async (options = {}) => {
       console.warn('No GitHub token found, using unauthenticated request');
       return [];
     }
+    
+    // Check if token has private repo access by checking user preference
+    const hasPrivateAccess = await getUserPrivateRepoSetting();
 
-    // Get user's repositories from GitHub API directly
-    const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=30', {
-      headers: {
-        'Authorization': `Bearer ${session.provider_token}`,
-        'Accept': 'application/vnd.github.v3+json'
+    // Get user's repositories from GitHub API directly with visibility filter
+    const response = await fetch(
+      `https://api.github.com/user/repos?sort=updated&per_page=30&visibility=${hasPrivateAccess ? 'all' : 'public'}`, 
+      {
+        headers: {
+          'Authorization': `Bearer ${session.provider_token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
       }
-    });
+    );
 
     if (!response.ok) {
       console.error('GitHub API error:', await response.text());
@@ -263,66 +266,9 @@ export const getUserRepositories = async (options = {}) => {
     }
     
     const repos = await response.json();
-    return repos; // Return the array directly
+    return repos;
   } catch (error) {
     console.error('Error fetching repositories:', error);
-    return []; // Return empty array on error, not an object
-  }
-};
-
-// Add this function to check if private access is enabled
-import { getUserPrivateRepoSetting } from './userService';
-
-/**
- * Creates an authenticated Octokit instance with appropriate scopes
- * @returns {Promise<Octokit>} Authenticated Octokit instance
- */
-export const createOctokit = async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.provider_token) {
-      throw new Error('No GitHub token found');
-    }
-    
-    // Check if token has private repo access by checking user preference
-    const hasPrivateAccess = await getUserPrivateRepoSetting();
-    
-    // Create and return Octokit instance
-    return new Octokit({
-      auth: session.provider_token,
-      // Log whether we're using private access
-      log: {
-        debug: () => {},
-        info: () => {},
-        warn: console.warn,
-        error: console.error
-      }
-    });
-  } catch (error) {
-    console.error('Error creating Octokit instance:', error);
-    throw error;
-  }
-};
-
-// Update getUserRepositories to include private repos when allowed
-export const getUserRepositories = async (options = {}) => {
-  try {
-    const octokit = await createOctokit();
-    const hasPrivateAccess = await getUserPrivateRepoSetting();
-    
-    // Include option for private repos based on user setting
-    const { data } = await octokit.repos.listForAuthenticatedUser({
-      ...options,
-      visibility: hasPrivateAccess ? 'all' : 'public',
-      sort: options.sort || 'updated',
-      per_page: options.perPage || 30,
-      page: options.page || 1
-    });
-    
-    return data;
-  } catch (error) {
-    console.error('Error fetching user repositories:', error);
-    throw error;
+    return []; // Return empty array on error
   }
 };
