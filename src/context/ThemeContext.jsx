@@ -35,18 +35,19 @@ export const ThemeProvider = ({ children }) => {
       console.error('Failed to save theme preference:', e);
     }
     
-    // Force a small delay for Firefox
     setTimeout(() => {
       if (darkMode) {
         document.documentElement.classList.add('dark');
-        document.documentElement.style.setProperty('--bg-color', '#121212');
-        document.documentElement.style.setProperty('--text-color', '#e5e5e5');
+        document.documentElement.style.setProperty('--bg-color', '#0d1117');
+        document.documentElement.style.setProperty('--text-color', '#f0f6fc');
+        document.body.style.backgroundColor = '#0d1117';
       } else {
         document.documentElement.classList.remove('dark');
-        document.documentElement.style.setProperty('--bg-color', '#f5f7fa');
-        document.documentElement.style.setProperty('--text-color', '#333333');
+        document.documentElement.style.setProperty('--bg-color', '#ffffff'); // Change to pure white
+        document.documentElement.style.setProperty('--text-color', '#24292f');
+        document.body.style.backgroundColor = '#ffffff'; // Explicitly set body background
       }
-    }, 0);
+    }, 10); // Slightly longer timeout for Firefox
   }, [darkMode]);
   
   // Additional theme classes
