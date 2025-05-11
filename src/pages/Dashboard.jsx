@@ -348,6 +348,34 @@ useEffect(() => {
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
 
+useEffect(() => {
+  const fetchRepositories = async () => {
+    try {
+      setLoading(true);
+      // Your existing repository fetching code...
+    } catch (error) {
+      console.error('Error fetching repositories:', error);
+      setRepositories([]);
+      setIsFirstTimeUser(true);
+      setError('Failed to load repositories. Please try again.');
+    } finally {
+      // This ensures loading is always set to false, even in Firefox
+      setLoading(false);
+    }
+  };
+
+  fetchRepositories();
+}, [navigate, location.state?.forceRefresh, refreshFlag]);
+
+useEffect(() => {
+  // Add a safety timeout to reset loading state after 10 seconds
+  const safetyTimer = setTimeout(() => {
+    setLoading(false);
+  }, 8000);
+  
+  return () => clearTimeout(safetyTimer);
+}, []);
+
   const handleSearch = (e) => {
     e.preventDefault();
     // The state update triggers the filter useEffect
