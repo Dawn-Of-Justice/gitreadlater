@@ -14,14 +14,40 @@ const VotingDashboard = () => {
 
   const fetchVotingStats = async () => {
     try {
+      // Option 1: Use a raw SQL query that includes the aggregation
       const { data, error } = await supabase
-        .from('feature_votes')
-        .select('feature_id, count(*)')
-        .group('feature_id')
-        .order('count', { ascending: false });
+        .rpc('get_vote_counts');
 
-      if (error) throw error;
-      setVotingStats(data);
+      // If that doesn't work, try Option 2: Manual fetch and client-side processing
+      if (error) {
+        console.log("Falling back to direct query method");
+        const { data: rawVotes, error: fetchError } = await supabase
+          .from('feature_votes')
+          .select('feature_id');
+          
+        if (fetchError) throw fetchError;
+        
+        // Process the votes on the client side
+        const counts = {};
+        rawVotes.forEach(vote => {
+          counts[vote.feature_id] = (counts[vote.feature_id] || 0) + 1;
+        });
+        
+        // Convert to array format
+        const processedStats = Object.entries(counts).map(([feature_id, count]) => ({
+          feature_id,
+          count
+        }));
+        
+        // Sort by count descending
+        processedStats.sort((a, b) => b.count - a.count);
+        
+        setVotingStats(processedStats);
+        setLoading(false);
+        return;
+      }
+
+      setVotingStats(data || []);
     } catch (error) {
       console.error('Error fetching voting stats:', error);
     } finally {
