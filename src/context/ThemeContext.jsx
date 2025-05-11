@@ -6,11 +6,20 @@ const ThemeContext = createContext();
 const SubscriptionContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
+  // Improved initial dark mode detection - Firefox compatibility
   const [darkMode, setDarkMode] = useState(() => {
-    // Get the initial state from localStorage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return savedTheme === 'dark' || (!savedTheme && prefersDark);
+    try {
+      // First check localStorage
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme !== null) {
+        return savedTheme === 'dark';
+      }
+      // Then check system preference
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch (e) {
+      // Fallback to light mode
+      return false;
+    }
   });
   
   // Theme toggle function
@@ -20,19 +29,24 @@ export const ThemeProvider = ({ children }) => {
   
   // Effect for updating theme when darkMode changes
   useEffect(() => {
-    // Save setting to localStorage
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-    
-    // Update document classes and CSS variables
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.setProperty('--bg-color', '#121212');
-      document.documentElement.style.setProperty('--text-color', '#e5e5e5');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.setProperty('--bg-color', '#f5f7fa');
-      document.documentElement.style.setProperty('--text-color', '#333333');
+    try {
+      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+    } catch (e) {
+      console.error('Failed to save theme preference:', e);
     }
+    
+    // Force a small delay for Firefox
+    setTimeout(() => {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.style.setProperty('--bg-color', '#121212');
+        document.documentElement.style.setProperty('--text-color', '#e5e5e5');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.setProperty('--bg-color', '#f5f7fa');
+        document.documentElement.style.setProperty('--text-color', '#333333');
+      }
+    }, 0);
   }, [darkMode]);
   
   // Additional theme classes
