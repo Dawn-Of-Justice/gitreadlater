@@ -486,19 +486,11 @@ useEffect(() => {
             <div className="flex-grow">
               <form onSubmit={handleSearch} className="relative">
                 <input
-                  ref={searchInputRef} // Add the ref here
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Search repositories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onBlur={(e) => {
-                    // Prevent default blur behavior
-                    e.preventDefault();
-                    // Force focus back to input
-                    setTimeout(() => {
-                      if (searchInputRef.current) searchInputRef.current.focus();
-                    }, 0);
-                  }}
                   className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none ${themeClasses.focusRing} ${themeClasses.input} transition-colors duration-300`}
                 />
                 <FaSearch className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
