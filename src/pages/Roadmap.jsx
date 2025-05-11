@@ -169,23 +169,23 @@ const Roadmap = () => {
     let statusBadgeColor;
     
     if (type === 'current') {
-      icon = <FaTools className={`text-lg ${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />;
+      icon = <FaTools className={`text-lg ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />;
       
       // Set status badge color based on completion percentage
       const completion = parseInt(item.status);
       if (completion >= 75) {
-        statusBadgeColor = 'bg-green-500';
+        statusBadgeColor = darkMode ? 'bg-green-700 text-green-200' : 'bg-green-500 text-white';
       } else if (completion >= 50) {
-        statusBadgeColor = 'bg-blue-500';
+        statusBadgeColor = darkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-500 text-white';
       } else if (completion >= 25) {
-        statusBadgeColor = 'bg-yellow-500';
+        statusBadgeColor = darkMode ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-500 text-white';
       } else {
-        statusBadgeColor = 'bg-gray-500';
+        statusBadgeColor = darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-500 text-white';
       }
     } else if (type === 'upcoming') {
-      icon = <FaRocket className={`text-lg ${darkMode ? 'text-[#d2a8ff]' : 'text-[#8250df]'}`} />;
+      icon = <FaRocket className={`text-lg ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />;
     } else {
-      icon = <FaLightbulb className={`text-lg ${darkMode ? 'text-[#f0883e]' : 'text-[#bf8700]'}`} />;
+      icon = <FaLightbulb className={`text-lg ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />;
     }
     
     return (
@@ -259,7 +259,7 @@ const Roadmap = () => {
   };
   
   return (
-    <div className="min-h-screen pb-16">
+    <div className={`min-h-screen pb-16 ${themeClasses.background}`}>
       <div className="container mx-auto px-4 pt-8">
         {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 md:mb-12">
@@ -282,7 +282,7 @@ const Roadmap = () => {
         {/* In Progress Section */}
         <section className="mb-12 sm:mb-16">
           <h2 className={`text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center ${themeClasses.text}`}>
-            <FaTools className="mr-2" /> 
+            <FaTools className={`mr-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} /> 
             In Progress
           </h2>
           <GridContainer count={roadmapItems.current.length}>
@@ -314,7 +314,7 @@ const Roadmap = () => {
         {/* Future Ideas Section */}
         <section>
           <h2 className={`text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center ${themeClasses.text}`}>
-            <FaLightbulb className="mr-2" /> 
+            <FaLightbulb className={`mr-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} /> 
             Later Down the Road
           </h2>
           <GridContainer count={roadmapItems.considering.length}>
