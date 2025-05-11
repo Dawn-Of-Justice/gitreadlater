@@ -130,7 +130,7 @@ const Dashboard = () => {
             
             // If no results, try saved_repositories table
             if (!data || data.length === 0) {
-              console.log('No repos in main table, checking saved_repositories');
+              //console.log('No repos in main table, checking saved_repositories');
               const savedResponse = await supabase
                 .from('saved_repositories')
                 .select('*', { count: 'exact', head: false })

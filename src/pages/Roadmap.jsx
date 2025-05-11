@@ -83,7 +83,7 @@ const Roadmap = () => {
         counts[vote.feature_id] = (counts[vote.feature_id] || 0) + 1;
       });
       
-      console.log("Fetched vote counts:", counts);
+      // console.log("Fetched vote counts:", counts);
       setVoteCounts(counts);
     } catch (error) {
       console.error('Error fetching vote counts:', error);
@@ -178,16 +178,18 @@ const Roadmap = () => {
     if (type === 'current') {
       icon = <FaTools className={`text-lg ${darkMode ? 'text-[#58a6ff]' : 'text-[#0969da]'}`} />;
       
-      // Set status badge color based on completion percentage
-      const completion = parseInt(item.status);
+      // Improved percentage parsing and badge styling
+      const percentageMatch = item.status.match(/(\d+)%/);
+      const completion = percentageMatch ? parseInt(percentageMatch[1]) : 0;
+      
       if (completion >= 75) {
-        statusBadgeColor = 'bg-green-500 text-white';
+        statusBadgeColor = `${darkMode ? 'bg-green-600' : 'bg-green-500'} text-white font-bold`;
       } else if (completion >= 50) {
-        statusBadgeColor = 'bg-blue-500 text-white';
+        statusBadgeColor = `${darkMode ? 'bg-blue-600' : 'bg-blue-500'} text-white font-bold`;
       } else if (completion >= 25) {
-        statusBadgeColor = 'bg-yellow-500 text-white';
+        statusBadgeColor = `${darkMode ? 'bg-yellow-600' : 'bg-yellow-500'} text-white font-bold`;
       } else {
-        statusBadgeColor = 'bg-gray-500 text-white';
+        statusBadgeColor = `${darkMode ? 'bg-gray-600' : 'bg-gray-500'} text-white font-bold`;
       }
     } else if (type === 'upcoming') {
       icon = <FaRocket className={`text-lg ${darkMode ? 'text-[#d2a8ff]' : 'text-[#8250df]'}`} />;
@@ -206,7 +208,7 @@ const Roadmap = () => {
             
             {/* Status badge for current items */}
             {type === 'current' && (
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusBadgeColor}`}>
+              <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusBadgeColor}`}>
                 {item.status}
               </span>
             )}

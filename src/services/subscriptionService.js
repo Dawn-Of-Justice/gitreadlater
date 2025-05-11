@@ -86,13 +86,13 @@ export const getUserTier = async (cachedSubscription = null, setUserSubscription
     
     // CACHING STRATEGY 3: Throttle repeated calls
     if (now - lastCheckTimestamp < THROTTLE_MS) {
-      console.log('Throttling subscription check');
+      //console.log('Throttling subscription check');
       return cachedTierValue || 'free';
     }
     
     // Update access timestamp
     lastCheckTimestamp = now;
-    console.log('Fetching subscription from database');
+    // console.log('Fetching subscription from database');
     
     // Get session
     const { data: { session } } = await supabase.auth.getSession();

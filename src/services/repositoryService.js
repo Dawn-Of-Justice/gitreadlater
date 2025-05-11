@@ -265,7 +265,7 @@ export const getUserTags = async (cachedTags = [], setCachedTags = null) => {
     }
     
     if (!loggedTagFetch) {
-      console.log('Fetching tags from database');
+      //console.log('Fetching tags from database');
       loggedTagFetch = true;
       setTimeout(() => { loggedTagFetch = false; }, 1000);
     }
