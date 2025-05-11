@@ -168,22 +168,37 @@ export const getUserRepositoryCount = async () => {
     
     if (!session) return 0;
     
-    // Try a count query which will fail if table doesn't exist
-    const { count, error } = await supabase
-      .from('repositories')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id);
-      
-    if (error) {
-      if (error.code === '42P01') {
-        console.log('Repositories table does not exist');
-        return 0;
+    let totalCount = 0;
+    
+    // Try main repositories table first
+    try {
+      const { count: repoCount, error: repoError } = await supabase
+        .from('repositories')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id);
+        
+      if (!repoError) {
+        totalCount += (repoCount || 0);
       }
-      console.error('Error counting repositories:', error);
-      return 0;
+    } catch (error) {
+      console.error('Error counting main repositories:', error);
     }
     
-    return count || 0;
+    // Also try saved_repositories table
+    try {
+      const { count: savedCount, error: savedError } = await supabase
+        .from('saved_repositories')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id);
+        
+      if (!savedError) {
+        totalCount += (savedCount || 0);
+      }
+    } catch (error) {
+      console.error('Error counting saved repositories:', error);
+    }
+    
+    return totalCount;
   } catch (error) {
     console.error('Error in getUserRepositoryCount:', error);
     return 0;
