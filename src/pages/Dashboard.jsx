@@ -244,6 +244,13 @@ useEffect(() => {
   };
 }, [searchQuery]);
 
+// Add this focus management function
+const maintainFocus = useCallback(() => {
+  if (searchInputRef.current) {
+    searchInputRef.current.focus();
+  }
+}, []);
+
 // Modify your existing search effect to use debouncedSearchQuery instead
 useEffect(() => {
   // Skip if we haven't done the initial load yet or user has no repositories
@@ -251,9 +258,8 @@ useEffect(() => {
   
   const fetchFilteredRepositories = async () => {
     try {
-      setLoading(true);
-      
-      // Save active element to check if search input had focus
+      // Don't set loading to true - this will trigger fewer re-renders
+      // and help maintain focus
       const hadFocus = document.activeElement === searchInputRef.current;
       
       // Get current user session
@@ -317,13 +323,15 @@ useEffect(() => {
       console.log(`Search results: Found ${data?.length || 0} repositories`);
       setRepositories(data || []);
       
-      // After search completes, restore focus if search input had focus
-      if (hadFocus && searchInputRef.current) {
-        setTimeout(() => {
-          searchInputRef.current.focus();
-        }, 0);
+      // More aggressive focus restoration
+      if (hadFocus) {
+        // Use multiple setTimeout with increasing delays to ensure focus is maintained
+        setTimeout(() => maintainFocus(), 0);
+        setTimeout(() => maintainFocus(), 50);
+        setTimeout(() => maintainFocus(), 100);
       }
       
+      // Also restore focus in finally block
     } catch (err) {
       console.error('Error filtering repositories:', err);
       setError('Failed to search GitHub repositories. Please try again.');
@@ -331,16 +339,13 @@ useEffect(() => {
       setLoading(false);
       
       // Restore focus after state updates
-      if (searchInputRef.current) {
-        setTimeout(() => {
-          searchInputRef.current.focus();
-        }, 0);
-      }
+      setTimeout(() => maintainFocus(), 0);
+      setTimeout(() => maintainFocus(), 50);
     }
   };
   
   fetchFilteredRepositories();
-}, [debouncedSearchQuery, selectedTag, isFirstTimeUser]);
+}, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -486,6 +491,14 @@ useEffect(() => {
                   placeholder="Search repositories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={(e) => {
+                    // Prevent default blur behavior
+                    e.preventDefault();
+                    // Force focus back to input
+                    setTimeout(() => {
+                      if (searchInputRef.current) searchInputRef.current.focus();
+                    }, 0);
+                  }}
                   className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none ${themeClasses.focusRing} ${themeClasses.input} transition-colors duration-300`}
                 />
                 <FaSearch className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
