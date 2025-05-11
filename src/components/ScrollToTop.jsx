@@ -29,19 +29,16 @@ const ScrollToTop = () => {
   };
 
   return (
-    <>
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className={`fixed bottom-8 right-8 ${
-            darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-          } rounded-full p-3 shadow-md transition-all duration-300 z-50`}
-          aria-label="Scroll to top"
-        >
-          <FaArrowUp />
-        </button>
-      )}
-    </>
+    <button
+      onClick={scrollToTop}
+      className={`fixed bottom-8 right-8 ${
+        darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+      } rounded-full p-3 shadow-md z-50 transition-all duration-300 ease-in-out
+      ${showScrollTop ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}
+      aria-label="Scroll to top"
+    >
+      <FaArrowUp />
+    </button>
   );
 };
 
