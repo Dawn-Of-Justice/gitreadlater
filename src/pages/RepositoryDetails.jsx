@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinner, FaCheck, FaArrowLeft, FaArrowUp } from 'react-icons/fa';
+import { FaStar, FaExternalLinkAlt, FaEdit, FaTrash, FaCircle, FaTimes, FaSpinner, FaCheck, FaArrowLeft } from 'react-icons/fa';
 import { supabase } from '../lib/supabaseClient';
 import { getReadmeContent } from '../services/githubService';
 import { updateRepository, deleteRepository, getUserTags } from '../services/repositoryService';
@@ -54,7 +54,6 @@ const RepositoryDetails = () => {
   const [confirming, setConfirming] = useState(false);
   const [previousTags, setPreviousTags] = useState([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
   
   // Get theme from context
   const { darkMode, themeClasses } = useTheme();
@@ -64,29 +63,6 @@ const RepositoryDetails = () => {
   const tagSuggestionsRef = useRef(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Check scroll position to show/hide the scroll to top button
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 300) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-  
-  // Function to scroll back to top
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
   
   // Fetch repository data
   useEffect(() => {
@@ -658,17 +634,6 @@ const handleDeleteRepository = async () => {
           </div>
         ) : null}
       </div>
-      
-      {/* Scroll to top button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className={`fixed bottom-8 right-8 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded-full p-3 shadow-md transition-all duration-300 z-50`}
-          aria-label="Scroll to top"
-        >
-          <FaArrowUp />
-        </button>
-      )}
     </div>
   );
 };

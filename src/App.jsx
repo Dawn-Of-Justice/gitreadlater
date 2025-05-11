@@ -4,6 +4,7 @@ import { supabase } from './lib/supabaseClient';
 import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import ScrollToTop from './components/ScrollToTop';
 
 // Components
 import Header from './components/Header';
@@ -140,6 +141,7 @@ function App() {
           <Router>
             <CacheProvider>
               <AppContent />
+              <ScrollToTop />
             </CacheProvider>
           </Router>
         </SubscriptionProvider>
