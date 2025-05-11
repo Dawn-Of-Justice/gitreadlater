@@ -57,6 +57,35 @@ const Header = ({ user }) => {
     };
   }, []);
   
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Check if user is in the admin_users table
+        const { data } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('id', session.user.id)
+          .single();
+        
+        setIsAdmin(!!data);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async () => {
+        await checkAdminStatus();
+      }
+    );
+    
+    return () => subscription.unsubscribe();
+  }, []);
+  
   const handleSignOut = async () => {
     try {
       await signOut();

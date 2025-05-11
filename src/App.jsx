@@ -125,7 +125,13 @@ function AppContent() {
               </ProtectedRoute>
             } />
             
-            <Route path="/admin/voting-dashboard" element={<AdminRoute />} />
+            <Route path="/admin/voting-dashboard" element={
+              <Suspense fallback={<div>Loading...</div>}>
+                <AdminRoute>
+                  <VotingDashboard />
+                </AdminRoute>
+              </Suspense>
+            } />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
