@@ -80,8 +80,13 @@ const Dashboard = () => {
         fetchAttempted: fetchAttemptedRef.current
       });
       
-      const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-      console.log(`Using ${isFirefox ? 'Firefox' : 'standard'} fetch method`);
+      const isFirefox = () => {
+        const ua = navigator.userAgent.toLowerCase();
+        return ua.indexOf('firefox') > -1 || ua.indexOf('gecko') > -1 && ua.indexOf('firefox') > -1;
+      };
+
+      const browserType = isFirefox() ? 'Firefox' : 'standard';
+      console.log(`Using ${browserType} fetch method`);
       
       try {
         // Reset force refresh flag if it was set
@@ -135,6 +140,12 @@ const Dashboard = () => {
           if (Array.isArray(allRepos)) {
             console.log("Firefox: Setting repositories", allRepos.length);
             setRepositories(allRepos);
+            console.log(`Firefox: Repositories state set to length ${allRepos.length}`, allRepos);
+
+            // Immediately check the state with setTimeout
+            setTimeout(() => {
+              console.log("Firefox debug: Verifying repositories state after update");
+            }, 0);
             
             // Also fetch tags if we have repositories
             if (allRepos.length > 0) {
@@ -399,70 +410,6 @@ useEffect(() => {
   
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
-
-useEffect(() => {
-  const fetchRepositories = async () => {
-    try {
-      setLoading(true);
-      
-      // Get user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user) {
-        setLoading(false);
-        navigate('/login');
-        return;
-      }
-      
-      // Firefox-specific logging
-      console.log("Firefox compatibility: Starting repository fetch");
-      
-      // Try main repositories table first with explicit await
-      const mainResponse = await supabase
-        .from('repositories')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-      
-      let allRepos = mainResponse.data || [];
-      console.log("Firefox compatibility: Main repos fetch complete", allRepos.length);
-      
-      // If no results, try saved_repositories table
-      if (!allRepos || allRepos.length === 0) {
-        const savedResponse = await supabase
-          .from('saved_repositories')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false });
-        
-        allRepos = savedResponse.data || [];
-        console.log("Firefox compatibility: Saved repos fetch complete", allRepos.length);
-      }
-      
-      // Force a small delay for Firefox
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Set repositories with explicit check
-      if (Array.isArray(allRepos)) {
-        console.log("Firefox compatibility: Setting repositories", allRepos.length);
-        setRepositories(allRepos);
-      } else {
-        console.warn("Firefox compatibility: Invalid repository data", allRepos);
-        setRepositories([]);
-      }
-      
-      setIsFirstTimeUser(allRepos.length === 0);
-    } catch (error) {
-      console.error('Firefox compatibility: Error fetching repositories:', error);
-      setRepositories([]);
-      setError('Failed to load repositories. Please try again.');
-    } finally {
-      console.log("Firefox compatibility: Fetch complete, resetting loading state");
-      setLoading(false);
-    }
-  };
-
-  fetchRepositories();
-}, [navigate, location.state?.forceRefresh, refreshFlag]);
 
 useEffect(() => {
   // Add multiple safety timeouts with increasing delays
