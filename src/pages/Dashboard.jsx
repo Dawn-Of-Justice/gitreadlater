@@ -35,9 +35,27 @@ const getTagColor = (tag) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  // Add this Firefox direct fix right after defining the component
+  
+  // Add a direct subscriptionLoading override for Firefox
   const { darkMode, themeClasses } = useTheme();
-  const { userSubscription, repoCount, loading: subscriptionLoading } = useSubscription();
+  const { userSubscription, repoCount, loading: subscriptionLoading, setLoading: setSubscriptionLoading } = useSubscription();
+  
+  // Firefox direct fix - must be before other effects
+  useEffect(() => {
+    const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+    if (isFirefox) {
+      // Force clear subscription loading state for Firefox on component mount
+      console.log("Firefox direct fix: Forcing subscription loading reset");
+      setTimeout(() => {
+        if (setSubscriptionLoading) {
+          setSubscriptionLoading(false);
+        }
+      }, 2000);
+    }
+  }, [setSubscriptionLoading]);
+  
+  const location = useLocation();
   
   // State
   const [repositories, setRepositories] = useState([]);
@@ -536,8 +554,25 @@ useEffect(() => {
   }
 }, [repositories.length, loading, subscriptionLoading]);
 
+// Replace the loading check with this version that includes a timeout bypass
 // Initial loading state
-if (loading || subscriptionLoading) {
+const [loadingTimeoutExceeded, setLoadingTimeoutExceeded] = useState(false);
+
+// Add this effect right before the loading check
+useEffect(() => {
+  // Hard timeout for loading state - force proceed after 5 seconds
+  const timeoutId = setTimeout(() => {
+    if (loading || subscriptionLoading) {
+      console.log("Hard loading timeout exceeded - forcing render");
+      setLoadingTimeoutExceeded(true);
+    }
+  }, 5000);
+  
+  return () => clearTimeout(timeoutId);
+}, [loading, subscriptionLoading]);
+
+// Then modify your loading check
+if ((loading || subscriptionLoading) && !loadingTimeoutExceeded) {
   // Failsafe for spinner styling to handle undefined
   const spinnerBorderClass = themeClasses?.spinnerBorder || 'border-blue-500 dark:border-blue-400';
   
