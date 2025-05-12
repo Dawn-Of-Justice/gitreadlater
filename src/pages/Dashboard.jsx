@@ -476,12 +476,14 @@ useEffect(() => {
       //console.log("Safety timer: Force resetting all loading states (8s)");
       setLoading(false);
       document.dispatchEvent(new CustomEvent('force-reset-loading'));
-      // Force refresh on extreme delay
-      if (window.location.href.includes('force_refresh')) {
-        return;
+      
+      if (loading || subscriptionLoading) {
+        if (window.location.href.includes('force_refresh')) {
+          return;
+        }
+        window.location.href = window.location.href + 
+          (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
       }
-      window.location.href = window.location.href + 
-        (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
     }, 8000)
   ];
   
@@ -504,7 +506,7 @@ useEffect(() => {
     document.removeEventListener('force-reset-loading', forceResetHandler);
     delete window.forceResetSubscriptionLoading;
   };
-}, []);
+}, [loading, subscriptionLoading]);
 
 // Add this event listener at application level
 useEffect(() => {
