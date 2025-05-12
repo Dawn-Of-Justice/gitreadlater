@@ -80,6 +80,9 @@ const Dashboard = () => {
         fetchAttempted: fetchAttemptedRef.current
       });
       
+      const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+      console.log(`Using ${isFirefox ? 'Firefox' : 'standard'} fetch method`);
+      
       try {
         // Reset force refresh flag if it was set
         if (location.state?.forceRefresh) {
@@ -99,126 +102,175 @@ const Dashboard = () => {
         // Mark that we've checked the user status
         userCheckedRef.current = true;
         
-        // Check if repositories table exists - this determines if we're a new installation
-        const exists = await checkRepositoriesTableExists();
-        setTableExists(exists);
-        
-        console.log('Dashboard: User session', { 
-          userId: session.user.id,
-          tableExists
-        });
-        
-        if (!exists) {
-          console.log('Repositories table does not exist - new installation');
-          setIsFirstTimeUser(true);
-          setLoading(false);
-          return;
-        }
-        
-        // Check for user's repositories - this determines if it's a first-time user
-        try {
-          let data, count;
-          try {
-            // Try main repositories table first
-            const response = await supabase
-              .from('repositories')
-              .select('*', { count: 'exact', head: false })
+        // Firefox-specific path
+        if (isFirefox) {
+          console.log("Firefox: Starting repository fetch");
+          
+          // Try main repositories table first with explicit await
+          const mainResponse = await supabase
+            .from('repositories')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+          
+          let allRepos = mainResponse.data || [];
+          console.log("Firefox: Main repos fetch complete", allRepos?.length);
+          
+          // If no results, try saved_repositories table
+          if (!allRepos || allRepos.length === 0) {
+            const savedResponse = await supabase
+              .from('saved_repositories')
+              .select('*')
               .eq('user_id', session.user.id)
-              .limit(1);
-              
-            data = response.data;
-            count = response.count;
+              .order('created_at', { ascending: false });
             
-            // If no results, try saved_repositories table
-            if (!data || data.length === 0) {
-              //console.log('No repos in main table, checking saved_repositories');
-              const savedResponse = await supabase
-                .from('saved_repositories')
-                .select('*', { count: 'exact', head: false })
-                .eq('user_id', session.user.id)
-                .limit(1);
-                
-              data = savedResponse.data;
-              count = savedResponse.count;
-            }
-          } catch (error) {
-            console.error('Error checking repositories:', error);
-            throw error;
+            allRepos = savedResponse.data || [];
+            console.log("Firefox: Saved repos fetch complete", allRepos?.length);
           }
           
-          console.log('Dashboard: Repository check', {
-            repositoriesFound: data && data.length > 0,
-            count,
-            isFirstTimeUser
+          // Small delay to ensure state updates properly in Firefox
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Set repositories with explicit check
+          if (Array.isArray(allRepos)) {
+            console.log("Firefox: Setting repositories", allRepos.length);
+            setRepositories(allRepos);
+            
+            // Also fetch tags if we have repositories
+            if (allRepos.length > 0) {
+              const userTags = await getUserTags();
+              setTags(userTags);
+              console.log("Firefox: Tags loaded", userTags?.length);
+            }
+            
+            setIsFirstTimeUser(allRepos.length === 0);
+          } else {
+            console.warn("Firefox: Invalid repository data", allRepos);
+            setRepositories([]);
+            setIsFirstTimeUser(true);
+          }
+        } 
+        // Standard path for other browsers
+        else {
+          // Check if repositories table exists
+          const exists = await checkRepositoriesTableExists();
+          setTableExists(exists);
+          
+          console.log('Dashboard: User session', { 
+            userId: session.user.id,
+            tableExists: exists
           });
           
-          // If no repos, this is a first-time user or someone who deleted all repos
-          if (!data || data.length === 0) {
-            console.log('User has no repositories');
-            setRepositories([]);
+          if (!exists) {
+            console.log('Repositories table does not exist');
             setIsFirstTimeUser(true);
             setLoading(false);
             return;
           }
           
-          // If we get here, user has repositories, so fetch them all
-          let allRepos;
+          // Rest of your existing non-Firefox fetch logic...
           try {
-            // Try main repositories table first
-            const { data: mainRepos, error: mainError } = await supabase
-              .from('repositories')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .order('created_at', { ascending: false });
+            // Check for user's repositories - this determines if it's a first-time user
+            let data, count;
+            try {
+              // Try main repositories table first
+              const response = await supabase
+                .from('repositories')
+                .select('*', { count: 'exact', head: false })
+                .eq('user_id', session.user.id)
+                .limit(1);
+                
+              data = response.data;
+              count = response.count;
               
-            if (mainError) throw mainError;
+              // If no results, try saved_repositories table
+              if (!data || data.length === 0) {
+                //console.log('No repos in main table, checking saved_repositories');
+                const savedResponse = await supabase
+                  .from('saved_repositories')
+                  .select('*', { count: 'exact', head: false })
+                  .eq('user_id', session.user.id)
+                  .limit(1);
+                  
+                data = savedResponse.data;
+                count = savedResponse.count;
+              }
+            } catch (error) {
+              console.error('Error checking repositories:', error);
+              throw error;
+            }
             
-            // If no results or very few, also check saved_repositories table
-            if (!mainRepos || mainRepos.length === 0) {
-              //console.log('Checking saved_repositories table');
-              const { data: savedRepos, error: savedError } = await supabase
-                .from('saved_repositories')
+            console.log('Dashboard: Repository check', {
+              repositoriesFound: data && data.length > 0,
+              count,
+              isFirstTimeUser
+            });
+            
+            // If no repos, this is a first-time user or someone who deleted all repos
+            if (!data || data.length === 0) {
+              console.log('User has no repositories');
+              setRepositories([]);
+              setIsFirstTimeUser(true);
+              setLoading(false);
+              return;
+            }
+            
+            // If we get here, user has repositories, so fetch them all
+            let allRepos;
+            try {
+              // Try main repositories table first
+              const { data: mainRepos, error: mainError } = await supabase
+                .from('repositories')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .order('created_at', { ascending: false });
                 
-              if (savedError) throw savedError;
-              allRepos = savedRepos || [];
-            } else {
-              allRepos = mainRepos;
+              if (mainError) throw mainError;
+              
+              // If no results or very few, also check saved_repositories table
+              if (!mainRepos || mainRepos.length === 0) {
+                //console.log('Checking saved_repositories table');
+                const { data: savedRepos, error: savedError } = await supabase
+                  .from('saved_repositories')
+                  .select('*')
+                  .eq('user_id', session.user.id)
+                  .order('created_at', { ascending: false });
+                  
+                if (savedError) throw savedError;
+                allRepos = savedRepos || [];
+              } else {
+                allRepos = mainRepos;
+              }
+              
+              setRepositories(allRepos || []);
+              
+              // Fetch tags if we have repositories
+              const userTags = await getUserTags();
+              setTags(userTags);
+              
+              setIsFirstTimeUser(false);
+            } catch (repoError) {
+              console.error('Error fetching user repositories:', repoError);
+              // Rest of your error handling...
             }
-            
-            setRepositories(allRepos || []);
-            
-            // Fetch tags if we have repositories
-            const userTags = await getUserTags();
-            setTags(userTags);
-            
-            setIsFirstTimeUser(false);
           } catch (repoError) {
             console.error('Error fetching user repositories:', repoError);
-            // Rest of your error handling...
-          }
-        } catch (repoError) {
-          console.error('Error fetching user repositories:', repoError);
-          // If the error is about missing table, treat as first time user
-          if (repoError.code === '42P01') {
-            setIsFirstTimeUser(true);
-          } else {
-            setError('Error loading your repositories. Please refresh the page.');
+            // If the error is about missing table, treat as first time user
+            if (repoError.code === '42P01') {
+              setIsFirstTimeUser(true);
+            } else {
+              setError('Error loading your repositories. Please refresh the page.');
+            }
           }
         }
       } catch (err) {
-        console.error('Error in initial user check:', err);
-        setError('Failed to load your saved repositories. Please try refreshing the page.');
+        console.error(`${isFirefox ? 'Firefox' : 'Standard'} fetch error:`, err);
+        setError('Failed to load repositories. Please try again.');
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
         
-        console.log('Dashboard: Fetch complete', {
-          repositories: repositories.length,
-          tags: tags.length
-        });
+        console.log(`${isFirefox ? 'Firefox' : 'Standard'} fetch complete`);
       }
     };
 
@@ -413,20 +465,16 @@ useEffect(() => {
 }, [navigate, location.state?.forceRefresh, refreshFlag]);
 
 useEffect(() => {
-  // Add a safety timeout to reset loading state after 10 seconds
-  const safetyTimer = setTimeout(() => {
-    setLoading(false);
-  }, 8000);
-  
-  return () => clearTimeout(safetyTimer);
-}, []);
-
-useEffect(() => {
   // Add multiple safety timeouts with increasing delays
   const safetyTimers = [
-    setTimeout(() => setLoading(false), 3000),
-    setTimeout(() => setLoading(false), 5000),
-    setTimeout(() => setLoading(false), 8000)
+    setTimeout(() => {
+      console.log("Safety timer: Force resetting loading state (3s)");
+      setLoading(false);
+    }, 3000),
+    setTimeout(() => {
+      console.log("Safety timer: Force resetting loading state (8s)");
+      setLoading(false);
+    }, 8000)
   ];
   
   return () => safetyTimers.forEach(timer => clearTimeout(timer));
