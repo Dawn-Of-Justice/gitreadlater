@@ -4,7 +4,7 @@ import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrow
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
-import { useSubscription } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext'; // Use the separated context
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
 import PrivateRepoToggle from '../components/PrivateRepoToggle';
@@ -51,7 +51,7 @@ const Dashboard = () => {
   const [tableExists, setTableExists] = useState(null); // null means we haven't checked yet
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
-  const searchInputRef = useRef(null); // Add this ref for the search input
+  const searchInputRef = useRef(null); 
   
   // Refs for tracking fetch status
   const fetchAttemptedRef = useRef(false);
@@ -386,16 +386,13 @@ useEffect(() => {
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
 
-// ADD this single, comprehensive safety net with a ref to prevent loops
-const safetyTimeoutsSetRef = useRef(false);
+// Replace the existing safety timeout effect with this:
+const mountedRef = useRef(false);
 
-// Place this effect right after your state declarations
 useEffect(() => {
-  // Prevent multiple instances of safety timeouts
-  if (safetyTimeoutsSetRef.current) return;
-  
-  // Only run this once per component mount
-  safetyTimeoutsSetRef.current = true;
+  // Only run once ever per component instance
+  if (mountedRef.current) return;
+  mountedRef.current = true;
   
   console.log("Setting up loading safety timeouts");
   
@@ -435,7 +432,6 @@ useEffect(() => {
   return () => {
     // Clear ALL timeouts on cleanup
     timeouts.forEach(timeout => clearTimeout(timeout));
-    safetyTimeoutsSetRef.current = false; // Reset for component remount
   };
 }, []); // Empty dependency array - only run once
 

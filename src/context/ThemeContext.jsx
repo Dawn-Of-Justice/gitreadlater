@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
-import { getUserTier, getUserRepositoryCount } from '../services/subscriptionService';
 import { supabase } from '../lib/supabaseClient';
 
 const ThemeContext = createContext();
@@ -142,7 +141,11 @@ export const ThemeProvider = ({ children }) => {
   };
   
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleTheme, themeClasses }}>
+    <ThemeContext.Provider value={{
+      darkMode,
+      toggleDarkMode,
+      themeClasses,
+    }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -153,99 +156,12 @@ export function useTheme() {
 }
 
 export const SubscriptionProvider = ({ children }) => {
-  const [userSubscription, setUserSubscription] = useState(null);
-  const [repoCount, setRepoCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false); 
-  const fetchingRef = useRef(false); // Use a ref to track fetch in progress
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const fetchSubscriptionData = async () => {
-      // Prevent concurrent fetches
-      if (fetchingRef.current) {
-        return;
-      }
-      
-      // Skip if already initialized
-      if (initialized) {
-        return;
-      }
-      
-      try {
-        fetchingRef.current = true;
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          if (isMounted) {
-            setLoading(false);
-            setInitialized(true);
-          }
-          return;
-        }
-        
-        // Fetch subscription tier
-        const tier = await getUserTier(userSubscription, setUserSubscription);
-        
-        // Get repository count
-        try {
-          const count = await getUserRepositoryCount();
-          if (isMounted) {
-            setRepoCount(count);
-          }
-        } catch (repoError) {
-          console.error('Error fetching repository count:', repoError);
-        }
-      } catch (error) {
-        console.error('Error fetching subscription data:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setInitialized(true);
-          fetchingRef.current = false;
-        }
-      }
-    };
-
-    fetchSubscriptionData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [userSubscription, initialized]);
-
-  // Provide method to manually refetch data
-  const refetchData = async () => {
-    if (fetchingRef.current) return;
-    
-    try {
-      fetchingRef.current = true;
-      setLoading(true);
-      
-      // Clear cache first
-      clearSubscriptionCache();
-      
-      // Re-fetch data
-      const tier = await getUserTier(null, setUserSubscription);
-      const count = await getUserRepositoryCount();
-      setRepoCount(count);
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    } finally {
-      setLoading(false);
-      fetchingRef.current = false;
-    }
-  };
 
   return (
     <SubscriptionContext.Provider
       value={{
-        userSubscription,
-        repoCount,
-        loading,
-        refetchData
+        loading
       }}
     >
       {children}

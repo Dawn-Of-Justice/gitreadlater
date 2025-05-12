@@ -1,7 +1,8 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
-import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import ScrollToTop from './components/ScrollToTop';
