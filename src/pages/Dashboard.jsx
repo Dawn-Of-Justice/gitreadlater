@@ -187,16 +187,37 @@ const Dashboard = () => {
             setIsFirstTimeUser(allRepos.length === 0);
           }
         } else {
-          // Standard fetch path - similar logic but update cache
-          // ... (standard fetch code)
+          // Standard fetch path - properly initialize allRepos
+          const mainResponse = await supabase
+            .from('repositories')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
           
-          // After fetching repositories, update the cache
+          let allRepos = mainResponse.data || [];
+          
+          // Check if we need to fetch from saved_repositories
+          if (!allRepos || allRepos.length === 0) {
+            const savedResponse = await supabase
+              .from('saved_repositories')
+              .select('*')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false });
+            
+            allRepos = savedResponse.data || [];
+          }
+          
+          // Now use allRepos which is properly defined
           setRepositories(allRepos || []);
           setCachedRepositories(allRepos || []); // Update cache
           
-          const userTags = await getUserTags();
-          setTags(userTags);
-          setCachedTags(userTags); // Update tags cache
+          if (allRepos.length > 0) {
+            const userTags = await getUserTags();
+            setTags(userTags);
+            setCachedTags(userTags); // Update tags cache
+          }
+          
+          setIsFirstTimeUser(allRepos.length === 0);
         }
         
         setLoading(false);
