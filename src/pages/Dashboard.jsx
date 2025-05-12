@@ -444,69 +444,35 @@ useEffect(() => {
   // Add multiple safety timeouts with increasing delays
   const safetyTimers = [
     setTimeout(() => {
-      //console.log("Safety timer: Force resetting loading state (3s)");
+      // First safety net - just reset loading states but don't refresh
       setLoading(false);
+      if (setSubscriptionLoading) setSubscriptionLoading(false);
     }, 3000),
     setTimeout(() => {
-      //console.log("Safety timer: Force resetting loading state (8s)");
-      setLoading(false);
+      // Second safety net - check if we have repositories but loading is still true
+      if (repositories.length > 0) {
+        // We have data, just reset loading states
+        setLoading(false);
+        if (setSubscriptionLoading) setSubscriptionLoading(false);
+        setLoadingTimeoutExceeded(true);
+      } else if (loading || subscriptionLoading) {
+        // We don't have data AND we're still loading - now we should refresh
+        setLoading(false);
+        if (setSubscriptionLoading) setSubscriptionLoading(false);
+        setLoadingTimeoutExceeded(true);
+        
+        // Only refresh if we've truly detected a stalled loading with no data
+        if (!window.location.href.includes('force_refresh')) {
+          console.log("No data loaded after 8 seconds - forcing refresh");
+          window.location.href = window.location.href + 
+            (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
+        }
+      }
     }, 8000)
   ];
   
   return () => safetyTimers.forEach(timer => clearTimeout(timer));
-}, []);
-
-// Update your safety timers to include subscriptionLoading:
-
-useEffect(() => {
-  // Add console log to check initial states
-  //console.log("Initial loading states:", { loading, subscriptionLoading });
-  
-  // Add multiple safety timeouts with increasing delays
-  const safetyTimers = [
-    setTimeout(() => {
-      //console.log("Safety timer: Force resetting all loading states (3s)");
-      setLoading(false);
-      // Access subscription context to force reset loading
-      if (window.forceResetSubscriptionLoading) {
-        window.forceResetSubscriptionLoading();
-      }
-    }, 3000),
-    setTimeout(() => {
-      //console.log("Safety timer: Force resetting all loading states (8s)");
-      setLoading(false);
-      document.dispatchEvent(new CustomEvent('force-reset-loading'));
-      
-      if (loading || subscriptionLoading) {
-        if (window.location.href.includes('force_refresh')) {
-          return;
-        }
-        window.location.href = window.location.href + 
-          (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
-      }
-    }, 8000)
-  ];
-  
-  // Set up a global reset function for other contexts to use
-  window.forceResetSubscriptionLoading = () => {
-    //console.log("Force reset of subscription loading triggered");
-    // Add a more aggressive approach to clear subscription loading
-    document.dispatchEvent(new CustomEvent('subscription-loading-reset'));
-  };
-  
-  // Listen for the custom event
-  const forceResetHandler = () => {
-    //console.log("Custom event: Force resetting loading states");
-    setLoading(false);
-  };
-  document.addEventListener('force-reset-loading', forceResetHandler);
-  
-  return () => {
-    safetyTimers.forEach(timer => clearTimeout(timer));
-    document.removeEventListener('force-reset-loading', forceResetHandler);
-    delete window.forceResetSubscriptionLoading;
-  };
-}, [loading, subscriptionLoading]);
+}, [repositories.length, loading, subscriptionLoading, setSubscriptionLoading]);
 
 // Add this event listener at application level
 useEffect(() => {
@@ -524,25 +490,6 @@ useEffect(() => {
   };
 }, []);
 
-// Replace the scattered Firefox timeout effects with this single one
-useEffect(() => {
-  const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-  
-  if (isFirefox) {
-    const timeoutId = setTimeout(() => {
-      // If we still have loading states active after 3 seconds, force reset them
-      if (loading || subscriptionLoading) {
-        setLoading(false);
-        if (setSubscriptionLoading) {
-          setSubscriptionLoading(false);
-        }
-        setLoadingTimeoutExceeded(true);
-      }
-    }, 3000);
-    
-    return () => clearTimeout(timeoutId);
-  }
-}, [loading, subscriptionLoading, setSubscriptionLoading]);
 
 useEffect(() => {
   // Hard timeout for loading state - force proceed after 5 seconds
