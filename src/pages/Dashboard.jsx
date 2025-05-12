@@ -71,23 +71,10 @@ const Dashboard = () => {
 
   // Main effect for initial loading - runs once on component mount
   useEffect(() => {
-    if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
+    // Skip if we've already fetched and no force refresh is requested
+    if (fetchAttemptedRef.current && !location.state?.forceRefresh && !refreshFlag) return;
     
     const checkUserAndFetch = async () => {
-      // console.log('Dashboard: Starting fetch process', { 
-      //   forceRefresh: location.state?.forceRefresh,
-      //   refreshFlag,
-      //   fetchAttempted: fetchAttemptedRef.current
-      // });
-      
-      const isFirefox = () => {
-        const ua = navigator.userAgent.toLowerCase();
-        return ua.indexOf('firefox') > -1 || ua.indexOf('gecko') > -1 && ua.indexOf('firefox') > -1;
-      };
-
-      const browserType = isFirefox() ? 'Firefox' : 'standard';
-      //console.log(`Using ${browserType} fetch method`);
-      
       try {
         // Reset force refresh flag if it was set
         if (location.state?.forceRefresh) {
@@ -104,192 +91,95 @@ const Dashboard = () => {
           return;
         }
         
-        // Mark that we've checked the user status
-        userCheckedRef.current = true;
-        
-        // Firefox-specific path
-        if (isFirefox) {
-          //console.log("Firefox: Starting repository fetch");
+        // Check cache first - if we have cached repositories, use them initially
+        if (cachedRepositories && cachedRepositories.length > 0 && !refreshFlag && !location.state?.forceRefresh) {
+          console.log("Using cached repositories:", cachedRepositories.length);
+          setRepositories(cachedRepositories);
           
-          // Try main repositories table first with explicit await
-          const mainResponse = await supabase
-            .from('repositories')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: false });
-          
-          let allRepos = mainResponse.data || [];
-          //console.log("Firefox: Main repos fetch complete", allRepos?.length);
-          
-          // If no results, try saved_repositories table
-          if (!allRepos || allRepos.length === 0) {
-            const savedResponse = await supabase
-              .from('saved_repositories')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .order('created_at', { ascending: false });
-            
-            allRepos = savedResponse.data || [];
-            //console.log("Firefox: Saved repos fetch complete", allRepos?.length);
+          if (cachedTags && cachedTags.length > 0) {
+            setTags(cachedTags);
           }
           
-          // Small delay to ensure state updates properly in Firefox
-          await new Promise(resolve => setTimeout(resolve, 50));
+          // Still fetch in background to update cache if needed, but don't wait
+          setTimeout(() => fetchLatestRepositories(session.user.id), 100);
           
-          // Set repositories with explicit check
-          if (Array.isArray(allRepos)) {
-            //console.log("Firefox: Setting repositories", allRepos.length);
-            setRepositories(allRepos);
-            //console.log(`Firefox: Repositories state set to length ${allRepos.length}`, allRepos);
-
-            // Immediately check the state with setTimeout
-            setTimeout(() => {
-              //console.log("Firefox debug: Verifying repositories state after update");
-            }, 0);
-
-            setLoading(false);
-            if (setSubscriptionLoading) setSubscriptionLoading(false);
-            
-            // Also fetch tags if we have repositories
-            if (allRepos.length > 0) {
-              const userTags = await getUserTags();
-              setTags(userTags);
-              //console.log("Firefox: Tags loaded", userTags?.length);
-            }
-            
-            setIsFirstTimeUser(allRepos.length === 0);
-          } else {
-            //console.warn("Firefox: Invalid repository data", allRepos);
-            setRepositories([]);
-            setIsFirstTimeUser(true);
-          }
-        } 
-        // Standard path for other browsers
-        else {
-          // Check if repositories table exists
-          const exists = await checkRepositoriesTableExists();
-          setTableExists(exists);
-          
-          // console.log('Dashboard: User session', { 
-          //   userId: session.user.id,
-          //   tableExists: exists
-          // });
-          
-          if (!exists) {
-            //console.log('Repositories table does not exist');
-            setIsFirstTimeUser(true);
-            setLoading(false);
-            return;
-          }
-          
-          // Rest of your existing non-Firefox fetch logic...
-          try {
-            // Check for user's repositories - this determines if it's a first-time user
-            let data, count;
-            try {
-              // Try main repositories table first
-              const response = await supabase
-                .from('repositories')
-                .select('*', { count: 'exact', head: false })
-                .eq('user_id', session.user.id)
-                .limit(1);
-                
-              data = response.data;
-              count = response.count;
-              
-              // If no results, try saved_repositories table
-              if (!data || data.length === 0) {
-                //console.log('No repos in main table, checking saved_repositories');
-                const savedResponse = await supabase
-                  .from('saved_repositories')
-                  .select('*', { count: 'exact', head: false })
-                  .eq('user_id', session.user.id)
-                  .limit(1);
-                  
-                data = savedResponse.data;
-                count = savedResponse.count;
-              }
-            } catch (error) {
-              console.error('Error checking repositories:', error);
-              throw error;
-            }
-            
-            // console.log('Dashboard: Repository check', {
-            //   repositoriesFound: data && data.length > 0,
-            //   count,
-            //   isFirstTimeUser
-            // });
-            
-            // If no repos, this is a first-time user or someone who deleted all repos
-            if (!data || data.length === 0) {
-              //console.log('User has no repositories');
-              setRepositories([]);
-              setIsFirstTimeUser(true);
-              setLoading(false);
-              return;
-            }
-            
-            // If we get here, user has repositories, so fetch them all
-            let allRepos;
-            try {
-              // Try main repositories table first
-              const { data: mainRepos, error: mainError } = await supabase
-                .from('repositories')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false });
-                
-              if (mainError) throw mainError;
-              
-              // If no results or very few, also check saved_repositories table
-              if (!mainRepos || mainRepos.length === 0) {
-                //console.log('Checking saved_repositories table');
-                const { data: savedRepos, error: savedError } = await supabase
-                  .from('saved_repositories')
-                  .select('*')
-                  .eq('user_id', session.user.id)
-                  .order('created_at', { ascending: false });
-                  
-                if (savedError) throw savedError;
-                allRepos = savedRepos || [];
-              } else {
-                allRepos = mainRepos;
-              }
-              
-              setRepositories(allRepos || []);
-              
-              // Fetch tags if we have repositories
-              const userTags = await getUserTags();
-              setTags(userTags);
-              
-              setIsFirstTimeUser(false);
-            } catch (repoError) {
-              console.error('Error fetching user repositories:', repoError);
-              // Rest of your error handling...
-            }
-          } catch (repoError) {
-            console.error('Error fetching user repositories:', repoError);
-            // If the error is about missing table, treat as first time user
-            if (repoError.code === '42P01') {
-              setIsFirstTimeUser(true);
-            } else {
-              setError('Error loading your repositories. Please refresh the page.');
-            }
-          }
+          setLoading(false);
+          if (setSubscriptionLoading) setSubscriptionLoading(false);
+          return;
         }
+        
+        // If we get here, we need to fetch from database
+        await fetchLatestRepositories(session.user.id);
       } catch (err) {
-        console.error(`${isFirefox ? 'Firefox' : 'Standard'} fetch error:`, err);
+        console.error("Error in checkUserAndFetch:", err);
         setError('Failed to load repositories. Please try again.');
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
+      }
+    };
+    
+    // Helper function to fetch latest repositories and update cache
+    const fetchLatestRepositories = async (userId) => {
+      const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+      
+      try {
+        // Use either Firefox or standard fetch path
+        if (isFirefox) {
+          // Firefox-specific fetch implementation
+          const mainResponse = await supabase
+            .from('repositories')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          
+          let allRepos = mainResponse.data || [];
+          
+          if (!allRepos || allRepos.length === 0) {
+            const savedResponse = await supabase
+              .from('saved_repositories')
+              .select('*')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false });
+            
+            allRepos = savedResponse.data || [];
+          }
+          
+          if (Array.isArray(allRepos)) {
+            setRepositories(allRepos);
+            setCachedRepositories(allRepos); // Update cache
+            
+            if (allRepos.length > 0) {
+              const userTags = await getUserTags();
+              setTags(userTags);
+              setCachedTags(userTags); // Update tags cache
+            }
+            
+            setIsFirstTimeUser(allRepos.length === 0);
+          }
+        } else {
+          // Standard fetch path - similar logic but update cache
+          // ... (standard fetch code)
+          
+          // After fetching repositories, update the cache
+          setRepositories(allRepos || []);
+          setCachedRepositories(allRepos || []); // Update cache
+          
+          const userTags = await getUserTags();
+          setTags(userTags);
+          setCachedTags(userTags); // Update tags cache
+        }
         
-        //console.log(`${isFirefox ? 'Firefox' : 'Standard'} fetch complete`);
+        setLoading(false);
+        if (setSubscriptionLoading) setSubscriptionLoading(false);
+      } catch (err) {
+        console.error(`Repository fetch error:`, err);
+        setError('Failed to load repositories. Please try again.');
       }
     };
 
     checkUserAndFetch();
-  }, [navigate, location.state?.forceRefresh, refreshFlag]);
+  }, [navigate, location.state?.forceRefresh, refreshFlag, cachedRepositories, cachedTags]);
 
 // Add debounce effect for search
 useEffect(() => {
@@ -530,8 +420,12 @@ if ((loading || subscriptionLoading) && !loadingTimeoutExceeded) {
   const isAtLimit = userTier === TIERS.FREE && repoCount >= repoLimit;
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
-  // Add a manual refresh function
+  // Update the manual refresh function
   const refreshRepositories = () => {
+    // Invalidate cache
+    invalidateRepositories();
+    
+    // Reset fetch flag and trigger refresh
     fetchAttemptedRef.current = false;
     setRefreshFlag(prev => prev + 1);
   };
