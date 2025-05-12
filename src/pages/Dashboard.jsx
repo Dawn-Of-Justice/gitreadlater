@@ -35,42 +35,17 @@ const getTagColor = (tag) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  // Add this Firefox direct fix right after defining the component
-  
-  // Add a direct subscriptionLoading override for Firefox
   const { darkMode, themeClasses } = useTheme();
   const { userSubscription, repoCount, loading: subscriptionLoading, setLoading: setSubscriptionLoading } = useSubscription();
   
-  // Firefox direct fix - must be before other effects
-  useEffect(() => {
-    const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-    
-    // Only apply this for Firefox
-    if (!isFirefox) return;
-    
-    // Watch for repositories being loaded - this is a more reliable indicator
-    // that loading should be complete
-    if (repositories.length > 0 && (loading || subscriptionLoading)) {
-      // Data is loaded but loading states haven't been reset - fix immediately
-      setLoading(false);
-      
-      // Reset subscription loading directly if possible
-      if (setSubscriptionLoading) {
-        setSubscriptionLoading(false);
-      }
-      
-      // Also set the timeout exceeded flag to ensure rendering occurs
-      setLoadingTimeoutExceeded(true);
-    }
-  }, [repositories, loading, subscriptionLoading, setSubscriptionLoading]);
-  
-  // State
+  // State - MOVE loadingTimeoutExceeded here to fix Firefox reference error
   const [repositories, setRepositories] = useState([]);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [loadingTimeoutExceeded, setLoadingTimeoutExceeded] = useState(false);
   const searchTimeoutRef = useRef(null);
   const [selectedTag, setSelectedTag] = useState('');
   const [tableExists, setTableExists] = useState(null); // null means we haven't checked yet
@@ -547,29 +522,26 @@ useEffect(() => {
   };
 }, []);
 
+// Replace the scattered Firefox timeout effects with this single one
 useEffect(() => {
-  // Set a single reasonable timeout for Firefox loading
   const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
   
   if (isFirefox) {
     const timeoutId = setTimeout(() => {
-      // Reset all loading states if we still have them active after 3 seconds
-      setLoading(false);
-      if (setSubscriptionLoading) {
-        setSubscriptionLoading(false);
+      // If we still have loading states active after 3 seconds, force reset them
+      if (loading || subscriptionLoading) {
+        setLoading(false);
+        if (setSubscriptionLoading) {
+          setSubscriptionLoading(false);
+        }
+        setLoadingTimeoutExceeded(true);
       }
-      setLoadingTimeoutExceeded(true);
     }, 3000);
     
     return () => clearTimeout(timeoutId);
   }
-}, [setSubscriptionLoading]);
+}, [loading, subscriptionLoading, setSubscriptionLoading]);
 
-// Replace the loading check with this version that includes a timeout bypass
-// Initial loading state
-const [loadingTimeoutExceeded, setLoadingTimeoutExceeded] = useState(false);
-
-// Add this effect right before the loading check
 useEffect(() => {
   // Hard timeout for loading state - force proceed after 5 seconds
   const timeoutId = setTimeout(() => {
