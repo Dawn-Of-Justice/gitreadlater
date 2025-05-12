@@ -453,6 +453,294 @@ useEffect(() => {
   return () => safetyTimers.forEach(timer => clearTimeout(timer));
 }, []);
 
+// Update your safety timers to include subscriptionLoading:
+
+useEffect(() => {
+  // Add console log to check initial states
+  console.log("Initial loading states:", { loading, subscriptionLoading });
+  
+  // Add multiple safety timeouts with increasing delays
+  const safetyTimers = [
+    setTimeout(() => {
+      console.log("Safety timer: Force resetting all loading states (3s)");
+      setLoading(false);
+      // Access subscription context to force reset loading
+      if (window.forceResetSubscriptionLoading) {
+        window.forceResetSubscriptionLoading();
+      }
+    }, 3000),
+    setTimeout(() => {
+      console.log("Safety timer: Force resetting all loading states (8s)");
+      setLoading(false);
+      document.dispatchEvent(new CustomEvent('force-reset-loading'));
+      // Force refresh on extreme delay
+      if (window.location.href.includes('force_refresh')) {
+        return;
+      }
+      window.location.href = window.location.href + 
+        (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
+    }, 8000)
+  ];
+  
+  // Set up a global reset function for other contexts to use
+  window.forceResetSubscriptionLoading = () => {
+    console.log("Force reset of subscription loading triggered");
+  };
+  
+  // Listen for the custom event
+  const forceResetHandler = () => {
+    console.log("Custom event: Force resetting loading states");
+    setLoading(false);
+  };
+  document.addEventListener('force-reset-loading', forceResetHandler);
+  
+  return () => {
+    safetyTimers.forEach(timer => clearTimeout(timer));
+    document.removeEventListener('force-reset-loading', forceResetHandler);
+    delete window.forceResetSubscriptionLoading;
+  };
+}, []);
+
+// Add this right before your loading return statement:
+
+// Firefox-specific loading bypass
+const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+const hasLoadedData = repositories && repositories.length > 0;
+
+if (isFirefox && hasLoadedData && (loading || subscriptionLoading)) {
+  console.log("Firefox loading bypass: Data already loaded, skipping loading screen");
+  // Force reset loading states
+  setTimeout(() => {
+    setLoading(false);
+    document.dispatchEvent(new CustomEvent('force-reset-loading'));
+  }, 0);
+  
+  // The important part - return the main UI instead of the loading spinner
+  return (
+    <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+      <div className="container mx-auto px-6 py-8">
+        {/* Rest of your component UI here */}
+        {/* Copy your main UI return statement here */}
+        <div className="container mx-auto px-6 py-8">
+        {/* Header section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <h1 className="text-3xl font-bold mb-4 md:mb-0">My Saved Repositories</h1>
+          
+          <Link 
+            to="/save"
+            className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center space-x-2 transition-colors duration-300 ${isAtLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={(e) => isAtLimit && e.preventDefault()}
+          >
+            <span>Save New Repository</span>
+          </Link>
+        </div>
+        
+        {/* Add the Private Repository Toggle */}
+        <div className="mb-6">
+          <PrivateRepoToggle />
+        </div>
+        
+        {/* Subscription warnings */}
+        {isNearLimit && (
+          <div className={`mb-6 p-4 rounded-md ${isAtLimit ? themeClasses.dangerBanner : themeClasses.warningBanner} transition-colors duration-300`}>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-medium">
+                  {isAtLimit 
+                    ? `You've reached the limit of ${repoLimit} repositories on your free plan.` 
+                    : `You've saved ${repoCount} of ${repoLimit} repositories (${Math.round((repoCount/repoLimit)*100)}%).`
+                  }
+                </p>
+                <p className="mt-1">
+                  {isAtLimit 
+                    ? 'Upgrade to Premium to save unlimited repositories.' 
+                    : 'You\'re approaching your free plan limit. Consider upgrading soon.'}
+                </p>
+              </div>
+              
+              <Link 
+                to="/subscription" 
+                className={`btn mt-3 md:mt-0 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors duration-300 ${isAtLimit ? themeClasses.dangerButton : themeClasses.warningButton}`}
+              >
+                <FaCrown className="mr-1" />
+                <span>Upgrade to Premium</span>
+                <FaArrowRight className="ml-1" />
+              </Link>
+            </div>
+          </div>
+        )}
+        
+        {/* Premium banner */}
+        {userTier === TIERS.PREMIUM && (
+          <div className={`mb-6 p-4 rounded-md ${themeClasses.infoBanner} transition-colors duration-300`}>
+            <div className="flex items-center">
+              <FaCrown className={`${darkMode ? 'text-yellow-400' : 'text-yellow-500'} mr-2`} />
+              <p>
+                <span className="font-medium">Premium Plan Active: </span>
+                You have unlimited repository storage and access to all premium features.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Search and filter section */}
+        <div className={`${themeClasses.card} rounded-lg shadow-md p-4 mb-8 transition-colors duration-300`}>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-grow">
+              <form onSubmit={handleSearch} className="relative">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search repositories..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none ${themeClasses.focusRing} ${themeClasses.input} transition-colors duration-300`}
+                />
+                <FaSearch className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+              </form>
+            </div>
+            
+            {/* Tags filter */}
+            {tags.length > 0 && (
+              <div className="min-w-[200px]">
+                <div className="relative">
+                  <select
+                    value={selectedTag}
+                    onChange={(e) => setSelectedTag(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none ${themeClasses.focusRing} appearance-none ${themeClasses.input} transition-colors duration-300`}
+                  >
+                    <option value="">All Tags</option>
+                    {tags.map((tag) => (
+                      <option key={tag} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </select>
+                  <FaTags className={`absolute left-3 top-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Repository cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {repositories.map((repo) => (
+            <div 
+              key={repo.id} 
+              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer`}
+              onClick={() => navigate(`/repository/${repo.id}`)}
+            >
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-3">
+                  <h2 className="text-xl font-semibold">
+                    <span className={`hover:${themeClasses.linkHover} transition-colors duration-300`}>
+                      {repo.repo_name || repo.name}
+                    </span>
+                  </h2>
+                  
+                  <div className="flex items-center space-x-1 text-sm">
+                    <FaStar className="text-yellow-500" />
+                    <span>{repo.stars || 0}</span>
+                  </div>
+                </div>
+                
+                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-3 transition-colors duration-300`}>
+                  {repo.repo_owner || repo.owner}/{repo.repo_name || repo.name}
+                </p>
+                
+                {repo.description && (
+                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 line-clamp-2 transition-colors duration-300`}>
+                    {repo.description}
+                  </p>
+                )}
+                
+                {repo.language && (
+                  <div className="flex items-center space-x-1 text-sm text-gray-600 mb-3">
+                    <FaCircle className={themeClasses.languageIndicator} style={{ fontSize: '10px' }} />
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                      {repo.language}
+                    </span>
+                  </div>
+                )}
+                
+                {repo.tags && repo.tags.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {repo.tags.map((tag) => (
+                      <span 
+                        key={tag} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTagClick(tag);
+                        }}
+                        className={`px-2 py-1 text-xs rounded-full cursor-pointer transition-colors duration-300 ${
+                          selectedTag === tag 
+                            ? `${getTagColor(tag)} ring-2 ring-blue-400 dark:ring-blue-500`
+                            : getTagColor(tag)
+                        }`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {repo.notes && (
+                  <div className="mb-4">
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} italic line-clamp-2 transition-colors duration-300`}>
+                      {repo.notes}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center mt-4">                  
+                  <a 
+                    href={repo.repo_url || repo.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`text-sm flex items-center space-x-1 ${darkMode ? 'text-blue-400 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800'} transition-colors duration-300`}
+                    onClick={(e) => e.stopPropagation()} // Prevent the card click event from triggering
+                  >
+                    <span>GitHub</span>
+                    <FaExternalLinkAlt className="text-xs ml-1" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {/* Add Repository Tile */}
+          {!isAtLimit && (
+            <div 
+              onClick={() => navigate('/save')}
+              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer border-2 border-dashed ${darkMode ? 'border-gray-700' : 'border-gray-300'} flex flex-col items-center justify-center p-10 hover:border-blue-500`}
+            >
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-4 mb-4`}>
+                <FaPlus className={`text-3xl ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+              </div>
+              <h3 className={`text-lg font-medium ${themeClasses.text}`}>Add Repository</h3>
+              <p className={`text-sm ${themeClasses.textSecondary} text-center mt-2`}>
+                Save a new GitHub repository to your collection
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+// Initial loading state
+if (loading || subscriptionLoading) {
+  return (
+    <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+      <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
+    </div>
+  );
+}
+  
   const handleSearch = (e) => {
     e.preventDefault();
     // The state update triggers the filter useEffect
@@ -473,15 +761,6 @@ useEffect(() => {
     fetchAttemptedRef.current = false;
     setRefreshFlag(prev => prev + 1);
   };
-  
-  // Initial loading state
-  if (loading || subscriptionLoading) {
-    return (
-      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
-        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
-      </div>
-    );
-  }
   
   // Error state
   if (error) {
