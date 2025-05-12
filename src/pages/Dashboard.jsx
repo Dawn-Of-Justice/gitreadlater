@@ -46,7 +46,7 @@ const Dashboard = () => {
     const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
     if (isFirefox) {
       // Force clear subscription loading state for Firefox on component mount
-      console.log("Firefox direct fix: Forcing subscription loading reset");
+      //console.log("Firefox direct fix: Forcing subscription loading reset");
       setTimeout(() => {
         if (setSubscriptionLoading) {
           setSubscriptionLoading(false);
@@ -127,7 +127,7 @@ const Dashboard = () => {
         
         // Firefox-specific path
         if (isFirefox) {
-          console.log("Firefox: Starting repository fetch");
+          //console.log("Firefox: Starting repository fetch");
           
           // Try main repositories table first with explicit await
           const mainResponse = await supabase
@@ -137,7 +137,7 @@ const Dashboard = () => {
             .order('created_at', { ascending: false });
           
           let allRepos = mainResponse.data || [];
-          console.log("Firefox: Main repos fetch complete", allRepos?.length);
+          //console.log("Firefox: Main repos fetch complete", allRepos?.length);
           
           // If no results, try saved_repositories table
           if (!allRepos || allRepos.length === 0) {
@@ -148,7 +148,7 @@ const Dashboard = () => {
               .order('created_at', { ascending: false });
             
             allRepos = savedResponse.data || [];
-            console.log("Firefox: Saved repos fetch complete", allRepos?.length);
+            //console.log("Firefox: Saved repos fetch complete", allRepos?.length);
           }
           
           // Small delay to ensure state updates properly in Firefox
@@ -156,25 +156,25 @@ const Dashboard = () => {
           
           // Set repositories with explicit check
           if (Array.isArray(allRepos)) {
-            console.log("Firefox: Setting repositories", allRepos.length);
+            //console.log("Firefox: Setting repositories", allRepos.length);
             setRepositories(allRepos);
-            console.log(`Firefox: Repositories state set to length ${allRepos.length}`, allRepos);
+            //console.log(`Firefox: Repositories state set to length ${allRepos.length}`, allRepos);
 
             // Immediately check the state with setTimeout
             setTimeout(() => {
-              console.log("Firefox debug: Verifying repositories state after update");
+              //console.log("Firefox debug: Verifying repositories state after update");
             }, 0);
             
             // Also fetch tags if we have repositories
             if (allRepos.length > 0) {
               const userTags = await getUserTags();
               setTags(userTags);
-              console.log("Firefox: Tags loaded", userTags?.length);
+              //console.log("Firefox: Tags loaded", userTags?.length);
             }
             
             setIsFirstTimeUser(allRepos.length === 0);
           } else {
-            console.warn("Firefox: Invalid repository data", allRepos);
+            //console.warn("Firefox: Invalid repository data", allRepos);
             setRepositories([]);
             setIsFirstTimeUser(true);
           }
@@ -185,13 +185,13 @@ const Dashboard = () => {
           const exists = await checkRepositoriesTableExists();
           setTableExists(exists);
           
-          console.log('Dashboard: User session', { 
-            userId: session.user.id,
-            tableExists: exists
-          });
+          // console.log('Dashboard: User session', { 
+          //   userId: session.user.id,
+          //   tableExists: exists
+          // });
           
           if (!exists) {
-            console.log('Repositories table does not exist');
+            //console.log('Repositories table does not exist');
             setIsFirstTimeUser(true);
             setLoading(false);
             return;
@@ -229,15 +229,15 @@ const Dashboard = () => {
               throw error;
             }
             
-            console.log('Dashboard: Repository check', {
-              repositoriesFound: data && data.length > 0,
-              count,
-              isFirstTimeUser
-            });
+            // console.log('Dashboard: Repository check', {
+            //   repositoriesFound: data && data.length > 0,
+            //   count,
+            //   isFirstTimeUser
+            // });
             
             // If no repos, this is a first-time user or someone who deleted all repos
             if (!data || data.length === 0) {
-              console.log('User has no repositories');
+              //console.log('User has no repositories');
               setRepositories([]);
               setIsFirstTimeUser(true);
               setLoading(false);
@@ -299,7 +299,7 @@ const Dashboard = () => {
         fetchAttemptedRef.current = true;
         setLoading(false);
         
-        console.log(`${isFirefox ? 'Firefox' : 'Standard'} fetch complete`);
+        //console.log(`${isFirefox ? 'Firefox' : 'Standard'} fetch complete`);
       }
     };
 
@@ -338,14 +338,14 @@ const maintainFocus = useCallback(() => {
 useEffect(() => {
   // Add protection for Firefox repositories
   if (repositories.length > 0) {
-    console.log('Protection: Repositories already loaded, protecting state', repositories.length);
+    //console.log('Protection: Repositories already loaded, protecting state', repositories.length);
     
     // Store a flag in session storage to prevent overrides
     sessionStorage.setItem('firefox_repos_loaded', 'true');
     
     // Add debug output for UI rendering phase
     setTimeout(() => {
-      console.log('Protection: Verifying repositories still available during render', repositories.length);
+      //console.log('Protection: Verifying repositories still available during render', repositories.length);
     }, 100);
   }
 }, [repositories.length]);
@@ -360,7 +360,7 @@ useEffect(() => {
   const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
   
   if (isFirefox && firefoxReposLoaded && !debouncedSearchQuery && !selectedTag) {
-    console.log('Protection: Skipping search effect to preserve Firefox repositories');
+    //console.log('Protection: Skipping search effect to preserve Firefox repositories');
     return;
   }
   
@@ -399,7 +399,7 @@ useEffect(() => {
       // If no results or error, try saved_repositories table
       let data = mainData;
       if (!mainData || mainData.length === 0 || mainError) {
-        console.log('Search: No results in main table, checking saved_repositories');
+        //console.log('Search: No results in main table, checking saved_repositories');
         
         // Query the saved_repositories table
         let savedQuery = supabase
@@ -428,7 +428,7 @@ useEffect(() => {
         data = savedData;
       }
       
-      console.log(`Search results: Found ${data?.length || 0} repositories`);
+      //console.log(`Search results: Found ${data?.length || 0} repositories`);
       setRepositories(data || []);
       
       // More aggressive focus restoration
@@ -459,11 +459,11 @@ useEffect(() => {
   // Add multiple safety timeouts with increasing delays
   const safetyTimers = [
     setTimeout(() => {
-      console.log("Safety timer: Force resetting loading state (3s)");
+      //console.log("Safety timer: Force resetting loading state (3s)");
       setLoading(false);
     }, 3000),
     setTimeout(() => {
-      console.log("Safety timer: Force resetting loading state (8s)");
+      //console.log("Safety timer: Force resetting loading state (8s)");
       setLoading(false);
     }, 8000)
   ];
@@ -475,12 +475,12 @@ useEffect(() => {
 
 useEffect(() => {
   // Add console log to check initial states
-  console.log("Initial loading states:", { loading, subscriptionLoading });
+  //console.log("Initial loading states:", { loading, subscriptionLoading });
   
   // Add multiple safety timeouts with increasing delays
   const safetyTimers = [
     setTimeout(() => {
-      console.log("Safety timer: Force resetting all loading states (3s)");
+      //console.log("Safety timer: Force resetting all loading states (3s)");
       setLoading(false);
       // Access subscription context to force reset loading
       if (window.forceResetSubscriptionLoading) {
@@ -488,7 +488,7 @@ useEffect(() => {
       }
     }, 3000),
     setTimeout(() => {
-      console.log("Safety timer: Force resetting all loading states (8s)");
+      //console.log("Safety timer: Force resetting all loading states (8s)");
       setLoading(false);
       document.dispatchEvent(new CustomEvent('force-reset-loading'));
       // Force refresh on extreme delay
@@ -502,14 +502,14 @@ useEffect(() => {
   
   // Set up a global reset function for other contexts to use
   window.forceResetSubscriptionLoading = () => {
-    console.log("Force reset of subscription loading triggered");
+    //console.log("Force reset of subscription loading triggered");
     // Add a more aggressive approach to clear subscription loading
     document.dispatchEvent(new CustomEvent('subscription-loading-reset'));
   };
   
   // Listen for the custom event
   const forceResetHandler = () => {
-    console.log("Custom event: Force resetting loading states");
+    //console.log("Custom event: Force resetting loading states");
     setLoading(false);
   };
   document.addEventListener('force-reset-loading', forceResetHandler);
@@ -545,7 +545,7 @@ useEffect(() => {
   const hasLoadedData = repositories && repositories.length > 0;
 
   if (isFirefox && hasLoadedData && (loading || subscriptionLoading)) {
-    console.log("Firefox loading bypass: Data already loaded, forcing loading state reset");
+    //console.log("Firefox loading bypass: Data already loaded, forcing loading state reset");
     // Force reset loading states without trying to render JSX directly
     setTimeout(() => {
       setLoading(false);
@@ -563,7 +563,7 @@ useEffect(() => {
   // Hard timeout for loading state - force proceed after 5 seconds
   const timeoutId = setTimeout(() => {
     if (loading || subscriptionLoading) {
-      console.log("Hard loading timeout exceeded - forcing render");
+      //console.log("Hard loading timeout exceeded - forcing render");
       setLoadingTimeoutExceeded(true);
     }
   }, 5000);
