@@ -485,6 +485,8 @@ useEffect(() => {
   // Set up a global reset function for other contexts to use
   window.forceResetSubscriptionLoading = () => {
     console.log("Force reset of subscription loading triggered");
+    // Add a more aggressive approach to clear subscription loading
+    document.dispatchEvent(new CustomEvent('subscription-loading-reset'));
   };
   
   // Listen for the custom event
@@ -498,6 +500,22 @@ useEffect(() => {
     safetyTimers.forEach(timer => clearTimeout(timer));
     document.removeEventListener('force-reset-loading', forceResetHandler);
     delete window.forceResetSubscriptionLoading;
+  };
+}, []);
+
+// Add this event listener at application level
+useEffect(() => {
+  const subscriptionResetHandler = () => {
+    // Try to find and reset the subscription loading variable
+    if (window.__SUBSCRIPTION_CONTEXT__) {
+      window.__SUBSCRIPTION_CONTEXT__.setLoading(false);
+    }
+  };
+  
+  document.addEventListener('subscription-loading-reset', subscriptionResetHandler);
+  
+  return () => {
+    document.removeEventListener('subscription-loading-reset', subscriptionResetHandler);
   };
 }, []);
 
@@ -734,9 +752,28 @@ if (isFirefox && hasLoadedData && (loading || subscriptionLoading)) {
 
 // Initial loading state
 if (loading || subscriptionLoading) {
+  // Firefox-specific loading bypass - more aggressive version
+  const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+  const hasLoadedData = repositories && repositories.length > 0;
+  
+  if (isFirefox && hasLoadedData) {
+    console.log("Firefox spinner bypass: Data already loaded, forcing main UI render");
+    // Immediately render the main UI instead
+    return (
+      <div className={`min-h-screen ${themeClasses?.body || ''} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+        <div className="container mx-auto px-6 py-8">
+          {/* Main content will render here */}
+        </div>
+      </div>
+    );
+  }
+  
+  // Failsafe for spinner styling to handle undefined
+  const spinnerBorderClass = themeClasses?.spinnerBorder || 'border-blue-500 dark:border-blue-400';
+  
   return (
-    <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
-      <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
+    <div className={`min-h-screen ${themeClasses?.body || ''} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+      <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${spinnerBorderClass}`}></div>
     </div>
   );
 }
