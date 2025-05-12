@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash, FaPlus } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
+import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services.subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
@@ -315,10 +315,36 @@ const maintainFocus = useCallback(() => {
   }
 }, []);
 
+// Add this after the initial fetch effect to prevent search effect from overriding Firefox data
+
+useEffect(() => {
+  // Add protection for Firefox repositories
+  if (repositories.length > 0) {
+    console.log('Protection: Repositories already loaded, protecting state', repositories.length);
+    
+    // Store a flag in session storage to prevent overrides
+    sessionStorage.setItem('firefox_repos_loaded', 'true');
+    
+    // Add debug output for UI rendering phase
+    setTimeout(() => {
+      console.log('Protection: Verifying repositories still available during render', repositories.length);
+    }, 100);
+  }
+}, [repositories.length]);
+
 // Modify your existing search effect to use debouncedSearchQuery instead
 useEffect(() => {
   // Skip if we haven't done the initial load yet or user has no repositories
   if (!fetchAttemptedRef.current || isFirstTimeUser) return;
+  
+  // Add Firefox protection check
+  const firefoxReposLoaded = sessionStorage.getItem('firefox_repos_loaded') === 'true';
+  const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+  
+  if (isFirefox && firefoxReposLoaded && !debouncedSearchQuery && !selectedTag) {
+    console.log('Protection: Skipping search effect to preserve Firefox repositories');
+    return;
+  }
   
   const fetchFilteredRepositories = async () => {
     try {
