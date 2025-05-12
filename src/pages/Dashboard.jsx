@@ -44,18 +44,25 @@ const Dashboard = () => {
   // Firefox direct fix - must be before other effects
   useEffect(() => {
     const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-    if (isFirefox) {
-      // Force clear subscription loading state for Firefox on component mount
-      //console.log("Firefox direct fix: Forcing subscription loading reset");
-      setTimeout(() => {
-        if (setSubscriptionLoading) {
-          setSubscriptionLoading(false);
-        }
-      }, 2000);
+    
+    // Only apply this for Firefox
+    if (!isFirefox) return;
+    
+    // Watch for repositories being loaded - this is a more reliable indicator
+    // that loading should be complete
+    if (repositories.length > 0 && (loading || subscriptionLoading)) {
+      // Data is loaded but loading states haven't been reset - fix immediately
+      setLoading(false);
+      
+      // Reset subscription loading directly if possible
+      if (setSubscriptionLoading) {
+        setSubscriptionLoading(false);
+      }
+      
+      // Also set the timeout exceeded flag to ensure rendering occurs
+      setLoadingTimeoutExceeded(true);
     }
-  }, [setSubscriptionLoading]);
-  
-  const location = useLocation();
+  }, [repositories, loading, subscriptionLoading, setSubscriptionLoading]);
   
   // State
   const [repositories, setRepositories] = useState([]);
@@ -92,11 +99,11 @@ const Dashboard = () => {
     if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
     
     const checkUserAndFetch = async () => {
-      console.log('Dashboard: Starting fetch process', { 
-        forceRefresh: location.state?.forceRefresh,
-        refreshFlag,
-        fetchAttempted: fetchAttemptedRef.current
-      });
+      // console.log('Dashboard: Starting fetch process', { 
+      //   forceRefresh: location.state?.forceRefresh,
+      //   refreshFlag,
+      //   fetchAttempted: fetchAttemptedRef.current
+      // });
       
       const isFirefox = () => {
         const ua = navigator.userAgent.toLowerCase();
@@ -104,7 +111,7 @@ const Dashboard = () => {
       };
 
       const browserType = isFirefox() ? 'Firefox' : 'standard';
-      console.log(`Using ${browserType} fetch method`);
+      //console.log(`Using ${browserType} fetch method`);
       
       try {
         // Reset force refresh flag if it was set
@@ -164,6 +171,9 @@ const Dashboard = () => {
             setTimeout(() => {
               //console.log("Firefox debug: Verifying repositories state after update");
             }, 0);
+
+            setLoading(false);
+            if (setSubscriptionLoading) setSubscriptionLoading(false);
             
             // Also fetch tags if we have repositories
             if (allRepos.length > 0) {
@@ -537,22 +547,23 @@ useEffect(() => {
   };
 }, []);
 
-// REPLACE the entire Firefox bypass section with this simpler version:
-
-// Firefox-specific loading bypass - simpler approach
 useEffect(() => {
+  // Set a single reasonable timeout for Firefox loading
   const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-  const hasLoadedData = repositories && repositories.length > 0;
-
-  if (isFirefox && hasLoadedData && (loading || subscriptionLoading)) {
-    //console.log("Firefox loading bypass: Data already loaded, forcing loading state reset");
-    // Force reset loading states without trying to render JSX directly
-    setTimeout(() => {
+  
+  if (isFirefox) {
+    const timeoutId = setTimeout(() => {
+      // Reset all loading states if we still have them active after 3 seconds
       setLoading(false);
-      document.dispatchEvent(new CustomEvent('subscription-loading-reset'));
-    }, 0);
+      if (setSubscriptionLoading) {
+        setSubscriptionLoading(false);
+      }
+      setLoadingTimeoutExceeded(true);
+    }, 3000);
+    
+    return () => clearTimeout(timeoutId);
   }
-}, [repositories.length, loading, subscriptionLoading]);
+}, [setSubscriptionLoading]);
 
 // Replace the loading check with this version that includes a timeout bypass
 // Initial loading state
