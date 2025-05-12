@@ -388,62 +388,16 @@ useEffect(() => {
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
 
-useEffect(() => {
-  // Add multiple safety timeouts with increasing delays
-  const safetyTimers = [
-    setTimeout(() => {
-      // First safety net - just reset loading states but don't refresh
-      setLoading(false);
-      if (setSubscriptionLoading) setSubscriptionLoading(false);
-    }, 3000),
-    setTimeout(() => {
-      // Second safety net - check if we have repositories but loading is still true
-      if (repositories.length > 0) {
-        // We have data, just reset loading states
-        setLoading(false);
-        if (setSubscriptionLoading) setSubscriptionLoading(false);
-        setLoadingTimeoutExceeded(true);
-      } else if (loading || subscriptionLoading) {
-        // We don't have data AND we're still loading - now we should refresh
-        setLoading(false);
-        if (setSubscriptionLoading) setSubscriptionLoading(false);
-        setLoadingTimeoutExceeded(true);
-        
-        // Only refresh if we've truly detected a stalled loading with no data
-        if (!window.location.href.includes('force_refresh')) {
-          console.log("No data loaded after 8 seconds - forcing refresh");
-          window.location.href = window.location.href + 
-            (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
-        }
-      }
-    }, 8000)
-  ];
-  
-  return () => safetyTimers.forEach(timer => clearTimeout(timer));
-}, [repositories.length, loading, subscriptionLoading, setSubscriptionLoading]);
+// ADD this single, comprehensive safety net with a ref to prevent loops
+const safetyTimeoutsSetRef = useRef(false);
 
-// Add this event listener at application level
+// Place this effect right after your state declarations
 useEffect(() => {
-  const subscriptionResetHandler = () => {
-    // Try to find and reset the subscription loading variable
-    if (window.__SUBSCRIPTION_CONTEXT__) {
-      window.__SUBSCRIPTION_CONTEXT__.setLoading(false);
-    }
-  };
+  // Prevent multiple instances of safety timeouts
+  if (safetyTimeoutsSetRef.current) return;
   
-  document.addEventListener('subscription-loading-reset', subscriptionResetHandler);
-  
-  return () => {
-    document.removeEventListener('subscription-loading-reset', subscriptionResetHandler);
-  };
-}, []);
-
-// Single comprehensive loading safety net
-useEffect(() => {
-  if (!loading && !subscriptionLoading) {
-    // Already loaded, no need for safety timeouts
-    return;
-  }
+  // Only run this once per component mount
+  safetyTimeoutsSetRef.current = true;
   
   console.log("Setting up loading safety timeouts");
   
@@ -483,19 +437,7 @@ useEffect(() => {
     clearTimeout(timeout2);
     clearTimeout(timeout3);
   };
-}, [loading, subscriptionLoading, repositories.length]);
-
-useEffect(() => {
-  // Hard timeout for loading state - force proceed after 5 seconds
-  const timeoutId = setTimeout(() => {
-    if (loading || subscriptionLoading) {
-      //console.log("Hard loading timeout exceeded - forcing render");
-      setLoadingTimeoutExceeded(true);
-    }
-  }, 5000);
-  
-  return () => clearTimeout(timeoutId);
-}, [loading, subscriptionLoading]);
+}, []); // Empty dependency array - only run once
 
 // Then modify your loading check
 if ((loading || subscriptionLoading) && !loadingTimeoutExceeded) {
