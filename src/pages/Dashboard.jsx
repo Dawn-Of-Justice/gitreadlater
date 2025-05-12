@@ -352,14 +352,59 @@ useEffect(() => {
   const fetchRepositories = async () => {
     try {
       setLoading(true);
-      // Your existing repository fetching code...
+      
+      // Get user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
+        setLoading(false);
+        navigate('/login');
+        return;
+      }
+      
+      // Firefox-specific logging
+      console.log("Firefox compatibility: Starting repository fetch");
+      
+      // Try main repositories table first with explicit await
+      const mainResponse = await supabase
+        .from('repositories')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      
+      let allRepos = mainResponse.data || [];
+      console.log("Firefox compatibility: Main repos fetch complete", allRepos.length);
+      
+      // If no results, try saved_repositories table
+      if (!allRepos || allRepos.length === 0) {
+        const savedResponse = await supabase
+          .from('saved_repositories')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false });
+        
+        allRepos = savedResponse.data || [];
+        console.log("Firefox compatibility: Saved repos fetch complete", allRepos.length);
+      }
+      
+      // Force a small delay for Firefox
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Set repositories with explicit check
+      if (Array.isArray(allRepos)) {
+        console.log("Firefox compatibility: Setting repositories", allRepos.length);
+        setRepositories(allRepos);
+      } else {
+        console.warn("Firefox compatibility: Invalid repository data", allRepos);
+        setRepositories([]);
+      }
+      
+      setIsFirstTimeUser(allRepos.length === 0);
     } catch (error) {
-      console.error('Error fetching repositories:', error);
+      console.error('Firefox compatibility: Error fetching repositories:', error);
       setRepositories([]);
-      setIsFirstTimeUser(true);
       setError('Failed to load repositories. Please try again.');
     } finally {
-      // This ensures loading is always set to false, even in Firefox
+      console.log("Firefox compatibility: Fetch complete, resetting loading state");
       setLoading(false);
     }
   };
@@ -374,6 +419,17 @@ useEffect(() => {
   }, 8000);
   
   return () => clearTimeout(safetyTimer);
+}, []);
+
+useEffect(() => {
+  // Add multiple safety timeouts with increasing delays
+  const safetyTimers = [
+    setTimeout(() => setLoading(false), 3000),
+    setTimeout(() => setLoading(false), 5000),
+    setTimeout(() => setLoading(false), 8000)
+  ];
+  
+  return () => safetyTimers.forEach(timer => clearTimeout(timer));
 }, []);
 
   const handleSearch = (e) => {
