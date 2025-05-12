@@ -56,6 +56,7 @@ const Dashboard = () => {
   // Refs for tracking fetch status
   const fetchAttemptedRef = useRef(false);
   const userCheckedRef = useRef(false);
+  const isRefreshingRef = useRef(false);
 
   // Cache
   const { 
@@ -105,17 +106,14 @@ const Dashboard = () => {
           setLoading(false);
           if (setSubscriptionLoading) setSubscriptionLoading(false);
           
-          // Use a ref to track if background refresh is happening
-          const isRefreshing = useRef(false);
-          
-          // Only do background fetch if we haven't refreshed recently
-          if (!isRefreshing.current) {
-            isRefreshing.current = true;
+          // Use the component level ref instead of creating a new one
+          if (!isRefreshingRef.current) {
+            isRefreshingRef.current = true;
             
             // Add a longer delay to prevent rapid refreshes
             setTimeout(() => {
               fetchLatestRepositories(session.user.id, true); // Pass true for background refresh
-              isRefreshing.current = false;
+              isRefreshingRef.current = false;
             }, 2000);
           }
           
@@ -401,27 +399,29 @@ useEffect(() => {
   
   console.log("Setting up loading safety timeouts");
   
-  // Safety timeout 1: Basic timeout after 3s
-  const timeout1 = setTimeout(() => {
+  const timeouts = [];
+  
+  // Safety timeout 1
+  timeouts.push(setTimeout(() => {
     if (loading || subscriptionLoading) {
       console.log("Safety timeout 1 (3s): Resetting loading states");
       setLoading(false);
       if (setSubscriptionLoading) setSubscriptionLoading(false);
     }
-  }, 3000);
+  }, 3000));
   
   // Safety timeout 2: Force-render timeout after 5s
-  const timeout2 = setTimeout(() => {
+  timeouts.push(setTimeout(() => {
     if (loading || subscriptionLoading) {
       console.log("Safety timeout 2 (5s): Force exceeding loading timeout");
       setLoadingTimeoutExceeded(true);
       setLoading(false);
       if (setSubscriptionLoading) setSubscriptionLoading(false);
     }
-  }, 5000);
+  }, 5000));
   
   // Safety timeout 3: Last resort refresh after 10s only if no data
-  const timeout3 = setTimeout(() => {
+  timeouts.push(setTimeout(() => {
     if ((loading || subscriptionLoading) && repositories.length === 0) {
       console.log("Safety timeout 3 (10s): Force page refresh - no data loaded");
       // Only refresh if we haven't already tried
@@ -430,12 +430,12 @@ useEffect(() => {
           (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
       }
     }
-  }, 10000);
+  }, 10000));
   
   return () => {
-    clearTimeout(timeout1);
-    clearTimeout(timeout2);
-    clearTimeout(timeout3);
+    // Clear ALL timeouts on cleanup
+    timeouts.forEach(timeout => clearTimeout(timeout));
+    safetyTimeoutsSetRef.current = false; // Reset for component remount
   };
 }, []); // Empty dependency array - only run once
 
