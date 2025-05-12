@@ -91,6 +91,7 @@ const Dashboard = () => {
           return;
         }
         
+        // Replace the cache check section with this improved version
         // Check cache first - if we have cached repositories, use them initially
         if (cachedRepositories && cachedRepositories.length > 0 && !refreshFlag && !location.state?.forceRefresh) {
           console.log("Using cached repositories:", cachedRepositories.length);
@@ -100,12 +101,25 @@ const Dashboard = () => {
             setTags(cachedTags);
           }
           
-          // Still fetch in background to update cache if needed, but don't wait
-          setTimeout(() => fetchLatestRepositories(session.user.id), 100);
-          
+          // Set loading states to false immediately when using cache
           setLoading(false);
           if (setSubscriptionLoading) setSubscriptionLoading(false);
-          return;
+          
+          // Use a ref to track if background refresh is happening
+          const isRefreshing = useRef(false);
+          
+          // Only do background fetch if we haven't refreshed recently
+          if (!isRefreshing.current) {
+            isRefreshing.current = true;
+            
+            // Add a longer delay to prevent rapid refreshes
+            setTimeout(() => {
+              fetchLatestRepositories(session.user.id, true); // Pass true for background refresh
+              isRefreshing.current = false;
+            }, 2000);
+          }
+          
+          return; // IMPORTANT: Return early to skip the main fetch
         }
         
         // If we get here, we need to fetch from database
@@ -120,7 +134,7 @@ const Dashboard = () => {
     };
     
     // Helper function to fetch latest repositories and update cache
-    const fetchLatestRepositories = async (userId) => {
+    const fetchLatestRepositories = async (userId, isBackgroundRefresh = false) => {
       const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
       
       try {
@@ -146,8 +160,23 @@ const Dashboard = () => {
           }
           
           if (Array.isArray(allRepos)) {
-            setRepositories(allRepos);
-            setCachedRepositories(allRepos); // Update cache
+            // When updating state, don't update if this is a background refresh and data is the same
+            if (isBackgroundRefresh) {
+              // Compare with existing data before updating
+              const currentRepos = repositories.length;
+              const newRepos = allRepos?.length || 0;
+              
+              if (currentRepos === newRepos) {
+                console.log("Background refresh: No changes detected");
+                return; // Skip state updates if data is the same
+              }
+              
+              console.log("Background refresh: Updating with new data");
+            }
+            
+            // Update repositories and cache
+            setRepositories(allRepos || []);
+            setCachedRepositories(allRepos || []);
             
             if (allRepos.length > 0) {
               const userTags = await getUserTags();
@@ -174,12 +203,20 @@ const Dashboard = () => {
         if (setSubscriptionLoading) setSubscriptionLoading(false);
       } catch (err) {
         console.error(`Repository fetch error:`, err);
-        setError('Failed to load repositories. Please try again.');
+        if (!isBackgroundRefresh) {
+          // Only show error for foreground fetches
+          setError('Failed to load repositories. Please try again.');
+        }
+        
+        // Always reset loading states
+        setLoading(false);
+        if (setSubscriptionLoading) setSubscriptionLoading(false);
       }
     };
 
     checkUserAndFetch();
-  }, [navigate, location.state?.forceRefresh, refreshFlag, cachedRepositories, cachedTags]);
+// Remove cachedRepositories and cachedTags from dependency array
+}, [navigate, location.state?.forceRefresh, refreshFlag]);
 
 // Add debounce effect for search
 useEffect(() => {
@@ -380,6 +417,52 @@ useEffect(() => {
   };
 }, []);
 
+// Single comprehensive loading safety net
+useEffect(() => {
+  if (!loading && !subscriptionLoading) {
+    // Already loaded, no need for safety timeouts
+    return;
+  }
+  
+  console.log("Setting up loading safety timeouts");
+  
+  // Safety timeout 1: Basic timeout after 3s
+  const timeout1 = setTimeout(() => {
+    if (loading || subscriptionLoading) {
+      console.log("Safety timeout 1 (3s): Resetting loading states");
+      setLoading(false);
+      if (setSubscriptionLoading) setSubscriptionLoading(false);
+    }
+  }, 3000);
+  
+  // Safety timeout 2: Force-render timeout after 5s
+  const timeout2 = setTimeout(() => {
+    if (loading || subscriptionLoading) {
+      console.log("Safety timeout 2 (5s): Force exceeding loading timeout");
+      setLoadingTimeoutExceeded(true);
+      setLoading(false);
+      if (setSubscriptionLoading) setSubscriptionLoading(false);
+    }
+  }, 5000);
+  
+  // Safety timeout 3: Last resort refresh after 10s only if no data
+  const timeout3 = setTimeout(() => {
+    if ((loading || subscriptionLoading) && repositories.length === 0) {
+      console.log("Safety timeout 3 (10s): Force page refresh - no data loaded");
+      // Only refresh if we haven't already tried
+      if (!window.location.href.includes('force_refresh')) {
+        window.location.href = window.location.href + 
+          (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
+      }
+    }
+  }, 10000);
+  
+  return () => {
+    clearTimeout(timeout1);
+    clearTimeout(timeout2);
+    clearTimeout(timeout3);
+  };
+}, [loading, subscriptionLoading, repositories.length]);
 
 useEffect(() => {
   // Hard timeout for loading state - force proceed after 5 seconds
