@@ -207,3 +207,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - React and Vite for the frontend framework
 - Tailwind CSS for the styling
 - Paddle for the subscription payment system
+- patch
