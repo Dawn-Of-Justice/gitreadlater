@@ -22,7 +22,7 @@ export const ThemeProvider = ({ children }) => {
   });
   
   // Theme toggle function
-  const toggleTheme = () => {
+  const toggleDarkMode = () => {
     setDarkMode(prev => !prev);
   };
   
