@@ -144,63 +144,56 @@ const SaveRepository = () => {
 
   // Update the filtering effect with better debugging
   useEffect(() => {
+    console.log('Filter effect triggered');
     // Skip if there are no repositories to filter
     if (!repositories || repositories.length === 0) {
       console.log('No repositories to filter');
       return;
     }
     
-    const filterRepositories = () => {
-      const query = url.toLowerCase().trim();
-      console.log(`Filtering ${repositories.length} repositories with query: "${query}"`);
-      console.log(`Filter settings: showOwned=${showOwnedRepos}, showStarred=${showStarredRepos}`);
-      
-      // Apply repo type filters first (owned/starred)
-      let filtered = repositories.filter(repo => {
-        if (showOwnedRepos && showStarredRepos) return true;
-        if (showOwnedRepos && repo.isOwned) return true;
-        if (showStarredRepos && repo.isStarred) return true;
-        return false;
-      });
-      
-      // Then apply search query if present
-      if (query) {
-        filtered = filtered.filter(repo => 
-          (repo.name && repo.name.toLowerCase().includes(query)) || 
-          (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
-          (repo.description && repo.description.toLowerCase().includes(query))
-        );
-        console.log(`Found ${filtered.length} repositories matching "${query}"`);
-      } else {
-        console.log(`Showing ${filtered.length} repositories based on filters`);
-      }
+    const query = url.toLowerCase().trim();
+    console.log(`Filtering ${repositories.length} repositories with query: "${query}"`);
+    console.log(`Filter settings: showOwned=${showOwnedRepos}, showStarred=${showStarredRepos}`);
+    
+    // Apply repo type filters first (owned/starred)
+    let filtered = repositories.filter(repo => {
+      if (showOwnedRepos && showStarredRepos) return true;
+      if (showOwnedRepos && repo.isOwned) return true;
+      if (showStarredRepos && repo.isStarred) return true;
+      return false;
+    });
+    
+    // Then apply search query if present
+    if (query) {
+      filtered = filtered.filter(repo => 
+        (repo.name && repo.name.toLowerCase().includes(query)) || 
+        (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
+        (repo.description && repo.description.toLowerCase().includes(query))
+      );
+      console.log(`Found ${filtered.length} repositories matching "${query}"`);
+    } else {
+      console.log(`Showing ${filtered.length} repositories based on filters`);
+    }
 
-      setFilteredRepositories(filtered);
-    };
-    
-    // Use setTimeout to ensure DOM is ready in Firefox
-    setTimeout(filterRepositories, 0);
-    
+    setFilteredRepositories(filtered);
   }, [url, repositories, showOwnedRepos, showStarredRepos]);
 
   // Add click outside handler using useRef and useEffect
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && 
-          inputRef.current && !inputRef.current.contains(event.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowRepositories(false);
       }
     }
 
     // Add event listener when dropdown is shown
     if (showRepositories) {
-      // Use capture phase for Firefox compatibility
-      document.addEventListener("mousedown", handleClickOutside, true);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     
     // Clean up
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside, true);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showRepositories]);
 
@@ -520,15 +513,13 @@ const SaveRepository = () => {
     setUrl(searchValue);
     
     // Show repositories dropdown when typing
-    if (!showRepositories) {
+    if (!showRepositories && searchValue.trim()) {
       setShowRepositories(true);
-    }
-    
-    // Ensure repositories are loaded - use setTimeout to avoid Firefox timing issues
-    if (repositories.length === 0 && !isLoadingRepos) {
-      setTimeout(() => {
+      
+      // Load repositories if not already loaded
+      if (repositories.length === 0) {
         loadAllRepositories();
-      }, 0);
+      }
     }
   };
 

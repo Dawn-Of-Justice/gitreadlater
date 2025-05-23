@@ -29,21 +29,10 @@ const Header = ({ onLogout }) => {
   
   const handleSignOut = async () => {
     try {
-      const result = await signOut();
-      
-      // Navigate to login page after sign out
-      // Add a small delay for Firefox to ensure all cleanup is done
-      setTimeout(() => {
-        navigate('/login');
-        // Force reload to ensure clean state if needed
-        if (navigator.userAgent.toLowerCase().includes('firefox')) {
-          window.location.reload();
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Error during sign out:', error);
-      // Navigate anyway to let user escape
+      await signOut();
       navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
   };
 

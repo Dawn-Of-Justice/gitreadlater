@@ -4,7 +4,7 @@ import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrow
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
 import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
-import { useSubscription } from '../context/SubscriptionContext'; // Use the separated context
+import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
 import PrivateRepoToggle from '../components/PrivateRepoToggle';
@@ -35,28 +35,27 @@ const getTagColor = (tag) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { darkMode, themeClasses } = useTheme();
-  const { userSubscription, repoCount, loading: subscriptionLoading, setLoading: setSubscriptionLoading } = useSubscription();
+  const { userSubscription, repoCount, loading: subscriptionLoading } = useSubscription();
   
-  // State - MOVE loadingTimeoutExceeded here to fix Firefox reference error
+  // State
   const [repositories, setRepositories] = useState([]);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [loadingTimeoutExceeded, setLoadingTimeoutExceeded] = useState(false);
   const searchTimeoutRef = useRef(null);
   const [selectedTag, setSelectedTag] = useState('');
   const [tableExists, setTableExists] = useState(null); // null means we haven't checked yet
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
-  const searchInputRef = useRef(null); 
+  const searchInputRef = useRef(null); // Add this ref for the search input
   
   // Refs for tracking fetch status
   const fetchAttemptedRef = useRef(false);
   const userCheckedRef = useRef(false);
-  const isRefreshingRef = useRef(false);
 
   // Cache
   const { 
@@ -72,10 +71,15 @@ const Dashboard = () => {
 
   // Main effect for initial loading - runs once on component mount
   useEffect(() => {
-    // Skip if we've already fetched and no force refresh is requested
-    if (fetchAttemptedRef.current && !location.state?.forceRefresh && !refreshFlag) return;
+    if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
     
     const checkUserAndFetch = async () => {
+      console.log('Dashboard: Starting fetch process', { 
+        forceRefresh: location.state?.forceRefresh,
+        refreshFlag,
+        fetchAttempted: fetchAttemptedRef.current
+      });
+      
       try {
         // Reset force refresh flag if it was set
         if (location.state?.forceRefresh) {
@@ -92,150 +96,134 @@ const Dashboard = () => {
           return;
         }
         
-        // Replace the cache check section with this improved version
-        // Check cache first - if we have cached repositories, use them initially
-        if (cachedRepositories && cachedRepositories.length > 0 && !refreshFlag && !location.state?.forceRefresh) {
-          console.log("Using cached repositories:", cachedRepositories.length);
-          setRepositories(cachedRepositories);
-          
-          if (cachedTags && cachedTags.length > 0) {
-            setTags(cachedTags);
-          }
-          
-          // Set loading states to false immediately when using cache
+        // Mark that we've checked the user status
+        userCheckedRef.current = true;
+        
+        // Check if repositories table exists - this determines if we're a new installation
+        const exists = await checkRepositoriesTableExists();
+        setTableExists(exists);
+        
+        console.log('Dashboard: User session', { 
+          userId: session.user.id,
+          tableExists
+        });
+        
+        if (!exists) {
+          console.log('Repositories table does not exist - new installation');
+          setIsFirstTimeUser(true);
           setLoading(false);
-          if (setSubscriptionLoading) setSubscriptionLoading(false);
-          
-          // Use the component level ref instead of creating a new one
-          if (!isRefreshingRef.current) {
-            isRefreshingRef.current = true;
-            
-            // Add a longer delay to prevent rapid refreshes
-            setTimeout(() => {
-              fetchLatestRepositories(session.user.id, true); // Pass true for background refresh
-              isRefreshingRef.current = false;
-            }, 2000);
-          }
-          
-          return; // IMPORTANT: Return early to skip the main fetch
+          return;
         }
         
-        // If we get here, we need to fetch from database
-        await fetchLatestRepositories(session.user.id);
+        // Check for user's repositories - this determines if it's a first-time user
+        try {
+          let data, count;
+          try {
+            // Try main repositories table first
+            const response = await supabase
+              .from('repositories')
+              .select('*', { count: 'exact', head: false })
+              .eq('user_id', session.user.id)
+              .limit(1);
+              
+            data = response.data;
+            count = response.count;
+            
+            // If no results, try saved_repositories table
+            if (!data || data.length === 0) {
+              //console.log('No repos in main table, checking saved_repositories');
+              const savedResponse = await supabase
+                .from('saved_repositories')
+                .select('*', { count: 'exact', head: false })
+                .eq('user_id', session.user.id)
+                .limit(1);
+                
+              data = savedResponse.data;
+              count = savedResponse.count;
+            }
+          } catch (error) {
+            console.error('Error checking repositories:', error);
+            throw error;
+          }
+          
+          console.log('Dashboard: Repository check', {
+            repositoriesFound: data && data.length > 0,
+            count,
+            isFirstTimeUser
+          });
+          
+          // If no repos, this is a first-time user or someone who deleted all repos
+          if (!data || data.length === 0) {
+            console.log('User has no repositories');
+            setRepositories([]);
+            setIsFirstTimeUser(true);
+            setLoading(false);
+            return;
+          }
+          
+          // If we get here, user has repositories, so fetch them all
+          let allRepos;
+          try {
+            // Try main repositories table first
+            const { data: mainRepos, error: mainError } = await supabase
+              .from('repositories')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false });
+              
+            if (mainError) throw mainError;
+            
+            // If no results or very few, also check saved_repositories table
+            if (!mainRepos || mainRepos.length === 0) {
+              //console.log('Checking saved_repositories table');
+              const { data: savedRepos, error: savedError } = await supabase
+                .from('saved_repositories')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false });
+                
+              if (savedError) throw savedError;
+              allRepos = savedRepos || [];
+            } else {
+              allRepos = mainRepos;
+            }
+            
+            setRepositories(allRepos || []);
+            
+            // Fetch tags if we have repositories
+            const userTags = await getUserTags();
+            setTags(userTags);
+            
+            setIsFirstTimeUser(false);
+          } catch (repoError) {
+            console.error('Error fetching user repositories:', repoError);
+            // Rest of your error handling...
+          }
+        } catch (repoError) {
+          console.error('Error fetching user repositories:', repoError);
+          // If the error is about missing table, treat as first time user
+          if (repoError.code === '42P01') {
+            setIsFirstTimeUser(true);
+          } else {
+            setError('Error loading your repositories. Please refresh the page.');
+          }
+        }
       } catch (err) {
-        console.error("Error in checkUserAndFetch:", err);
-        setError('Failed to load repositories. Please try again.');
+        console.error('Error in initial user check:', err);
+        setError('Failed to load your saved repositories. Please try refreshing the page.');
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
-      }
-    };
-    
-    // Helper function to fetch latest repositories and update cache
-    const fetchLatestRepositories = async (userId, isBackgroundRefresh = false) => {
-      const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-      
-      try {
-        // Use either Firefox or standard fetch path
-        if (isFirefox) {
-          // Firefox-specific fetch implementation
-          const mainResponse = await supabase
-            .from('repositories')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-          
-          let allRepos = mainResponse.data || [];
-          
-          if (!allRepos || allRepos.length === 0) {
-            const savedResponse = await supabase
-              .from('saved_repositories')
-              .select('*')
-              .eq('user_id', userId)
-              .order('created_at', { ascending: false });
-            
-            allRepos = savedResponse.data || [];
-          }
-          
-          if (Array.isArray(allRepos)) {
-            // When updating state, don't update if this is a background refresh and data is the same
-            if (isBackgroundRefresh) {
-              // Compare with existing data before updating
-              const currentRepos = repositories.length;
-              const newRepos = allRepos?.length || 0;
-              
-              if (currentRepos === newRepos) {
-                console.log("Background refresh: No changes detected");
-                return; // Skip state updates if data is the same
-              }
-              
-              console.log("Background refresh: Updating with new data");
-            }
-            
-            // Update repositories and cache
-            setRepositories(allRepos || []);
-            setCachedRepositories(allRepos || []);
-            
-            if (allRepos.length > 0) {
-              const userTags = await getUserTags();
-              setTags(userTags);
-              setCachedTags(userTags); // Update tags cache
-            }
-            
-            setIsFirstTimeUser(allRepos.length === 0);
-          }
-        } else {
-          // Standard fetch path - properly initialize allRepos
-          const mainResponse = await supabase
-            .from('repositories')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-          
-          let allRepos = mainResponse.data || [];
-          
-          // Check if we need to fetch from saved_repositories
-          if (!allRepos || allRepos.length === 0) {
-            const savedResponse = await supabase
-              .from('saved_repositories')
-              .select('*')
-              .eq('user_id', userId)
-              .order('created_at', { ascending: false });
-            
-            allRepos = savedResponse.data || [];
-          }
-          
-          // Now use allRepos which is properly defined
-          setRepositories(allRepos || []);
-          setCachedRepositories(allRepos || []); // Update cache
-          
-          if (allRepos.length > 0) {
-            const userTags = await getUserTags();
-            setTags(userTags);
-            setCachedTags(userTags); // Update tags cache
-          }
-          
-          setIsFirstTimeUser(allRepos.length === 0);
-        }
         
-        setLoading(false);
-        if (setSubscriptionLoading) setSubscriptionLoading(false);
-      } catch (err) {
-        console.error(`Repository fetch error:`, err);
-        if (!isBackgroundRefresh) {
-          // Only show error for foreground fetches
-          setError('Failed to load repositories. Please try again.');
-        }
-        
-        // Always reset loading states
-        setLoading(false);
-        if (setSubscriptionLoading) setSubscriptionLoading(false);
+        console.log('Dashboard: Fetch complete', {
+          repositories: repositories.length,
+          tags: tags.length
+        });
       }
     };
 
     checkUserAndFetch();
-// Remove cachedRepositories and cachedTags from dependency array
-}, [navigate, location.state?.forceRefresh, refreshFlag]);
+  }, [navigate, location.state?.forceRefresh, refreshFlag]);
 
 // Add debounce effect for search
 useEffect(() => {
@@ -264,36 +252,10 @@ const maintainFocus = useCallback(() => {
   }
 }, []);
 
-// Add this after the initial fetch effect to prevent search effect from overriding Firefox data
-
-useEffect(() => {
-  // Add protection for Firefox repositories
-  if (repositories.length > 0) {
-    //console.log('Protection: Repositories already loaded, protecting state', repositories.length);
-    
-    // Store a flag in session storage to prevent overrides
-    sessionStorage.setItem('firefox_repos_loaded', 'true');
-    
-    // Add debug output for UI rendering phase
-    setTimeout(() => {
-      //console.log('Protection: Verifying repositories still available during render', repositories.length);
-    }, 100);
-  }
-}, [repositories.length]);
-
 // Modify your existing search effect to use debouncedSearchQuery instead
 useEffect(() => {
   // Skip if we haven't done the initial load yet or user has no repositories
   if (!fetchAttemptedRef.current || isFirstTimeUser) return;
-  
-  // Add Firefox protection check
-  const firefoxReposLoaded = sessionStorage.getItem('firefox_repos_loaded') === 'true';
-  const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-  
-  if (isFirefox && firefoxReposLoaded && !debouncedSearchQuery && !selectedTag) {
-    //console.log('Protection: Skipping search effect to preserve Firefox repositories');
-    return;
-  }
   
   const fetchFilteredRepositories = async () => {
     try {
@@ -330,7 +292,7 @@ useEffect(() => {
       // If no results or error, try saved_repositories table
       let data = mainData;
       if (!mainData || mainData.length === 0 || mainError) {
-        //console.log('Search: No results in main table, checking saved_repositories');
+        console.log('Search: No results in main table, checking saved_repositories');
         
         // Query the saved_repositories table
         let savedQuery = supabase
@@ -359,7 +321,7 @@ useEffect(() => {
         data = savedData;
       }
       
-      //console.log(`Search results: Found ${data?.length || 0} repositories`);
+      console.log(`Search results: Found ${data?.length || 0} repositories`);
       setRepositories(data || []);
       
       // More aggressive focus restoration
@@ -386,67 +348,34 @@ useEffect(() => {
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
 
-// Replace the existing safety timeout effect with this:
-const mountedRef = useRef(false);
+useEffect(() => {
+  const fetchRepositories = async () => {
+    try {
+      setLoading(true);
+      // Your existing repository fetching code...
+    } catch (error) {
+      console.error('Error fetching repositories:', error);
+      setRepositories([]);
+      setIsFirstTimeUser(true);
+      setError('Failed to load repositories. Please try again.');
+    } finally {
+      // This ensures loading is always set to false, even in Firefox
+      setLoading(false);
+    }
+  };
+
+  fetchRepositories();
+}, [navigate, location.state?.forceRefresh, refreshFlag]);
 
 useEffect(() => {
-  // Only run once ever per component instance
-  if (mountedRef.current) return;
-  mountedRef.current = true;
+  // Add a safety timeout to reset loading state after 10 seconds
+  const safetyTimer = setTimeout(() => {
+    setLoading(false);
+  }, 8000);
   
-  console.log("Setting up loading safety timeouts");
-  
-  const timeouts = [];
-  
-  // Safety timeout 1
-  timeouts.push(setTimeout(() => {
-    if (loading || subscriptionLoading) {
-      console.log("Safety timeout 1 (3s): Resetting loading states");
-      setLoading(false);
-      if (setSubscriptionLoading) setSubscriptionLoading(false);
-    }
-  }, 3000));
-  
-  // Safety timeout 2: Force-render timeout after 5s
-  timeouts.push(setTimeout(() => {
-    if (loading || subscriptionLoading) {
-      console.log("Safety timeout 2 (5s): Force exceeding loading timeout");
-      setLoadingTimeoutExceeded(true);
-      setLoading(false);
-      if (setSubscriptionLoading) setSubscriptionLoading(false);
-    }
-  }, 5000));
-  
-  // Safety timeout 3: Last resort refresh after 10s only if no data
-  timeouts.push(setTimeout(() => {
-    if ((loading || subscriptionLoading) && repositories.length === 0) {
-      console.log("Safety timeout 3 (10s): Force page refresh - no data loaded");
-      // Only refresh if we haven't already tried
-      if (!window.location.href.includes('force_refresh')) {
-        window.location.href = window.location.href + 
-          (window.location.href.includes('?') ? '&' : '?') + 'force_refresh=true';
-      }
-    }
-  }, 10000));
-  
-  return () => {
-    // Clear ALL timeouts on cleanup
-    timeouts.forEach(timeout => clearTimeout(timeout));
-  };
-}, []); // Empty dependency array - only run once
+  return () => clearTimeout(safetyTimer);
+}, []);
 
-// Then modify your loading check
-if ((loading || subscriptionLoading) && !loadingTimeoutExceeded) {
-  // Failsafe for spinner styling to handle undefined
-  const spinnerBorderClass = themeClasses?.spinnerBorder || 'border-blue-500 dark:border-blue-400';
-  
-  return (
-    <div className="min-h-screen flex justify-center items-center" style={{backgroundColor: 'var(--bg-color, inherit)'}}>
-      <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${spinnerBorderClass}`}></div>
-    </div>
-  );
-}
-  
   const handleSearch = (e) => {
     e.preventDefault();
     // The state update triggers the filter useEffect
@@ -462,15 +391,20 @@ if ((loading || subscriptionLoading) && !loadingTimeoutExceeded) {
   const isAtLimit = userTier === TIERS.FREE && repoCount >= repoLimit;
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
-  // Update the manual refresh function
+  // Add a manual refresh function
   const refreshRepositories = () => {
-    // Invalidate cache
-    invalidateRepositories();
-    
-    // Reset fetch flag and trigger refresh
     fetchAttemptedRef.current = false;
     setRefreshFlag(prev => prev + 1);
   };
+  
+  // Initial loading state
+  if (loading || subscriptionLoading) {
+    return (
+      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
+      </div>
+    );
+  }
   
   // Error state
   if (error) {

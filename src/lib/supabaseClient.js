@@ -51,45 +51,10 @@ export const signInWithGitHub = async () => {
 
 // Sign out helper
 export const signOut = async () => {
-  try {
-    // Try to get the session first to check if it exists
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    // If session exists, sign out normally
-    if (session) {
-      await supabase.auth.signOut();
-    } else {
-      console.log('No active session found, cleaning up local storage only');
-    }
-    
-    // Always clean up local storage regardless of session state
-    localStorage.removeItem('supabase.auth.token');
-    
-    // Clear all Supabase-related items from localStorage for Firefox compatibility
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-') || key.includes('supabase')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error during sign out process:', error);
-    
-    // Even if official sign out fails, try to clear local storage
-    try {
-      localStorage.removeItem('supabase.auth.token');
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch (localStorageError) {
-      console.error('Error clearing local storage:', localStorageError);
-    }
-    
-    // Consider this a success even if the official sign out failed
-    // This gives users a way to escape a broken auth state
-    return { success: true };
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    console.error('Error signing out:', error);
+    throw error;
   }
 };
