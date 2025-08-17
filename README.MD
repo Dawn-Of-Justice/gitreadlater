@@ -91,8 +91,26 @@ npm install
 2. **Environment Configuration**
 ```bash
 cp .env.example .env
-# Configure your environment variables
+# Configure your environment variables with new Supabase API keys
 ```
+
+**Environment Variables Setup:**
+```env
+# Supabase Configuration (New API Keys Format)
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_[your_key_here]
+
+# Backend Service Role Key
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_[your_secret_key_here]
+
+# GitHub OAuth
+VITE_GITHUB_CLIENT_ID=your_github_client_id
+VITE_REDIRECT_URL=http://localhost:5173/auth/callback
+```
+
+> **⚠️ Important:** Use the new Supabase API key format:
+> - **Publishable Key**: Starts with `sb_publishable_` (safe for frontend)
+> - **Secret Key**: Starts with `sb_secret_` (backend only, never expose)
 
 3. **Database Setup**
 ```sql
