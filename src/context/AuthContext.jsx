@@ -17,72 +17,76 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  // Initialize with cached data if available
+  // Secure cache implementation - only store minimal, non-sensitive data
   const getInitialAuthState = () => {
     try {
-      const cachedUser = localStorage.getItem('readlater_user');
-      const cachedExpiry = localStorage.getItem('readlater_user_expiry');
+      const cachedAuthFlag = localStorage.getItem('readlater_auth_state');
+      const cachedExpiry = localStorage.getItem('readlater_auth_expiry');
       
-      if (cachedUser && cachedExpiry) {
+      if (cachedAuthFlag && cachedExpiry) {
         const expiryTime = parseInt(cachedExpiry);
         const currentTime = Date.now();
         
+        // Only cache for 2 minutes for security
         if (currentTime < expiryTime) {
-          return JSON.parse(cachedUser);
+          return cachedAuthFlag === 'authenticated';
+        } else {
+          // Cache expired, clear it
+          localStorage.removeItem('readlater_auth_state');
+          localStorage.removeItem('readlater_auth_expiry');
         }
       }
     } catch (error) {
       console.error('Error reading initial auth state:', error);
+      localStorage.removeItem('readlater_auth_state');
+      localStorage.removeItem('readlater_auth_expiry');
     }
-    return null;
+    return false;
   };
 
-  const initialUser = getInitialAuthState();
-  const [user, setUser] = useState(initialUser);
-  const [loading, setLoading] = useState(!initialUser); // If we have cached user, don't show loading
-  const [isAdmin, setIsAdmin] = useState(initialUser?.id === ADMIN_USER_ID);
+  const hasAuthCache = getInitialAuthState();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(!hasAuthCache); // Reduce loading if we know user was recently authenticated
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     
-    // Check for cached auth state first
+    // Check for cached auth state first (security-focused)
     const getCachedAuthState = () => {
       try {
-        const cachedUser = localStorage.getItem('readlater_user');
-        const cachedExpiry = localStorage.getItem('readlater_user_expiry');
+        const cachedAuthFlag = localStorage.getItem('readlater_auth_state');
+        const cachedExpiry = localStorage.getItem('readlater_auth_expiry');
         
-        if (cachedUser && cachedExpiry) {
+        if (cachedAuthFlag && cachedExpiry) {
           const expiryTime = parseInt(cachedExpiry);
           const currentTime = Date.now();
           
-          // If cache is still valid (less than 5 minutes old)
+          // Shorter cache time for security (2 minutes)
           if (currentTime < expiryTime) {
-            const userData = JSON.parse(cachedUser);
-            setUser(userData);
-            setIsAdmin(userData.id === ADMIN_USER_ID);
-            return true; // Cache hit
+            return cachedAuthFlag === 'authenticated';
           } else {
             // Cache expired, clear it
-            localStorage.removeItem('readlater_user');
-            localStorage.removeItem('readlater_user_expiry');
+            localStorage.removeItem('readlater_auth_state');
+            localStorage.removeItem('readlater_auth_expiry');
           }
         }
       } catch (error) {
         console.error('Error reading cached auth state:', error);
-        localStorage.removeItem('readlater_user');
-        localStorage.removeItem('readlater_user_expiry');
+        localStorage.removeItem('readlater_auth_state');
+        localStorage.removeItem('readlater_auth_expiry');
       }
-      return false; // Cache miss
+      return false;
     };
     
     // Check for existing session
     const checkSession = async () => {
       try {
-        // First check cache - if valid, use it and set loading to false immediately
-        const hasCachedAuth = getCachedAuthState();
-        if (hasCachedAuth && isMounted) {
+        // Check cache first - but don't set user data from cache for security
+        const hadAuthCache = getCachedAuthState();
+        if (hadAuthCache && isMounted) {
+          // Reduce loading time but still verify with Supabase
           setLoading(false);
-          // Still verify with Supabase in background, but don't show loading
         }
         
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -97,10 +101,10 @@ export function AuthProvider({ children }) {
           setUser(session.user);
           setIsAdmin(session.user.id === ADMIN_USER_ID);
           
-          // Cache the user data for 5 minutes
+          // Cache only authentication status, not sensitive user data
           try {
-            localStorage.setItem('readlater_user', JSON.stringify(session.user));
-            localStorage.setItem('readlater_user_expiry', (Date.now() + 5 * 60 * 1000).toString());
+            localStorage.setItem('readlater_auth_state', 'authenticated');
+            localStorage.setItem('readlater_auth_expiry', (Date.now() + 2 * 60 * 1000).toString()); // 2 minutes
           } catch (error) {
             console.error('Error caching auth state:', error);
           }
@@ -109,8 +113,8 @@ export function AuthProvider({ children }) {
           setIsAdmin(false);
           
           // Clear cache if no session
-          localStorage.removeItem('readlater_user');
-          localStorage.removeItem('readlater_user_expiry');
+          localStorage.removeItem('readlater_auth_state');
+          localStorage.removeItem('readlater_auth_expiry');
         }
         
         setLoading(false);
@@ -122,8 +126,8 @@ export function AuthProvider({ children }) {
           setLoading(false);
           
           // Clear cache on error
-          localStorage.removeItem('readlater_user');
-          localStorage.removeItem('readlater_user_expiry');
+          localStorage.removeItem('readlater_auth_state');
+          localStorage.removeItem('readlater_auth_expiry');
         }
       }
     };
@@ -138,24 +142,24 @@ export function AuthProvider({ children }) {
         if (event === 'SIGNED_OUT') {
           setUser(null);
           setIsAdmin(false);
-          localStorage.removeItem('readlater_user');
-          localStorage.removeItem('readlater_user_expiry');
+          localStorage.removeItem('readlater_auth_state');
+          localStorage.removeItem('readlater_auth_expiry');
         } else if (session?.user) {
           setUser(session.user);
           setIsAdmin(session.user.id === ADMIN_USER_ID);
           
-          // Update cache
+          // Update cache with just auth status
           try {
-            localStorage.setItem('readlater_user', JSON.stringify(session.user));
-            localStorage.setItem('readlater_user_expiry', (Date.now() + 5 * 60 * 1000).toString());
+            localStorage.setItem('readlater_auth_state', 'authenticated');
+            localStorage.setItem('readlater_auth_expiry', (Date.now() + 2 * 60 * 1000).toString());
           } catch (error) {
             console.error('Error caching auth state:', error);
           }
         } else {
           setUser(null);
           setIsAdmin(false);
-          localStorage.removeItem('readlater_user');
-          localStorage.removeItem('readlater_user_expiry');
+          localStorage.removeItem('readlater_auth_state');
+          localStorage.removeItem('readlater_auth_expiry');
         }
       }
     );
