@@ -398,20 +398,14 @@ const Login = () => {
                 className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} rounded-lg border overflow-hidden cursor-pointer h-full flex items-center justify-center relative group`}
                 onClick={() => setShowImagePopup(true)}
               >
-                <picture>
-                  <source 
-                    srcSet="/assets/preview-optimized.webp" 
-                    type="image/webp" 
-                  />
-                  <img 
-                    src="/assets/preview-optimized.png" 
-                    alt="Git ReadLater App Interface" 
-                    className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-90"
-                    loading="lazy"
-                    width="800"
-                    height="450"
-                  />
-                </picture>
+                <img 
+                  src={previewImage} 
+                  alt="Git ReadLater App Interface" 
+                  className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-90"
+                  loading="lazy"
+                  width="800"
+                  height="450"
+                />
                 
                 {/* Maximize icon overlay - positioned in top right */}
                 <div className="absolute inset-0 flex items-start justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
