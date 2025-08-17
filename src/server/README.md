@@ -55,7 +55,50 @@ npm start
 
 ## Deployment
 
-This backend is designed to work with Vercel. The `vercel.json` configuration file handles the deployment settings.
+### Vercel Deployment
+
+1. **Set up environment variables in Vercel:**
+   - Go to your Vercel dashboard
+   - Navigate to your project settings
+   - Go to "Environment Variables" section
+   - Add the following variables:
+     - `VITE_SUPABASE_URL` = your Supabase project URL
+     - `VITE_SUPABASE_ANON_KEY` = your Supabase anonymous key
+
+2. **Deploy:**
+   ```bash
+   # Deploy to Vercel
+   vercel --prod
+   ```
+
+### Manual Environment Variable Setup
+
+If you're setting up Vercel for the first time:
+
+```bash
+# Install Vercel CLI (if not already installed)
+npm i -g vercel
+
+# Login to Vercel
+vercel login
+
+# Set environment variables
+vercel env add VITE_SUPABASE_URL
+vercel env add VITE_SUPABASE_ANON_KEY
+
+# Deploy
+vercel --prod
+```
+
+### Local Development
+
+Create a `.env` file in this directory (copy from `.env.example`):
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+PORT=3001
+```
 
 ## Contributing
 

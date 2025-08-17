@@ -11,8 +11,8 @@ app.use(express.json());
 
 // Supabase client (using environment variables)
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
+  process.env.vite_supabase_url || process.env.VITE_SUPABASE_URL,
+  process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // Health check endpoint
