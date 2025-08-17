@@ -530,13 +530,15 @@ useEffect(() => {
           {repositories.map((repo, index) => (
             <div 
               key={repo.id} 
-              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-all duration-500 cursor-pointer transform ${
+              className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-all duration-700 ease-out ${
                 animateRepositories 
-                  ? 'translate-y-0 opacity-100' 
-                  : 'translate-y-8 opacity-0'
+                  ? 'translate-y-0 opacity-100 scale-100 repo-card-enter' 
+                  : 'translate-y-12 opacity-0 scale-95'
               }`}
               style={{
-                transitionDelay: animateRepositories ? `${index * 100}ms` : '0ms'
+                animationDelay: animateRepositories ? `${index * 150}ms` : '0ms',
+                animationFillMode: 'both',
+                willChange: 'transform, opacity'
               }}
               onClick={() => navigate(`/repository/${repo.id}`)}
             >
