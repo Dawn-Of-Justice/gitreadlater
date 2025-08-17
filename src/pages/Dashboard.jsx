@@ -552,6 +552,18 @@ useEffect(() => {
                 animationFillMode: 'both',
                 willChange: 'transform, opacity'
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-12px) scale(1.03)';
+                e.currentTarget.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px 0 rgba(0, 0, 0, 0.12)';
+                e.currentTarget.style.zIndex = '10';
+                e.currentTarget.style.border = '2px solid rgba(59, 130, 246, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0px) scale(1)';
+                e.currentTarget.style.boxShadow = '';
+                e.currentTarget.style.zIndex = '';
+                e.currentTarget.style.border = '';
+              }}
               onClick={() => navigate(`/repository/${repo.id}`)}
             >
               <div className="p-5">
@@ -635,7 +647,17 @@ useEffect(() => {
           {/* Add Repository Tile */}
           <div 
             onClick={() => navigate('/save')}
-            className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer border-2 border-dashed ${darkMode ? 'border-gray-700' : 'border-gray-300'} flex flex-col items-center justify-center p-10 hover:border-blue-500`}
+            className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden transition-colors duration-300 cursor-pointer border-2 border-dashed ${darkMode ? 'border-gray-700' : 'border-gray-300'} flex flex-col items-center justify-center p-10 hover:border-blue-500`}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-12px) scale(1.03)';
+              e.currentTarget.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px 0 rgba(0, 0, 0, 0.12)';
+              e.currentTarget.style.zIndex = '10';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0px) scale(1)';
+              e.currentTarget.style.boxShadow = '';
+              e.currentTarget.style.zIndex = '';
+            }}
           >
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-4 mb-4`}>
                 <FaPlus className={`text-3xl ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
