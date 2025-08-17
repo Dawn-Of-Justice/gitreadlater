@@ -119,16 +119,17 @@ app.get('/health', (req, res) => {
 app.get('/api/repositories', optionalAuth, async (req, res) => {
   try {
     let query = supabase
-      .from('repositories')
+      .from('saved_repositories')
       .select('*')
       .order('created_at', { ascending: false });
     
-    // If user is authenticated, show their private repos too
-    // If not authenticated, only show public repos
+    // If user is authenticated, show only their repos
+    // If not authenticated, return empty array (all repos are private to users)
     if (req.user) {
-      query = query.or(`is_private.eq.false,user_id.eq.${req.user.id}`);
+      query = query.eq('user_id', req.user.id);
     } else {
-      query = query.eq('is_private', false);
+      // Return empty array for unauthenticated users
+      return res.json({ data: [] });
     }
 
     const { data, error } = await query;
@@ -151,17 +152,16 @@ app.get('/api/repositories/:id', optionalAuth, async (req, res) => {
     const { id } = req.params;
     
     let query = supabase
-      .from('repositories')
+      .from('saved_repositories')
       .select('*')
       .eq('id', id);
     
-    // If user is authenticated, they can see their private repos
-    // If not authenticated, only public repos
+    // Users can only see their own repositories
     if (!req.user) {
-      query = query.eq('is_private', false);
-    } else {
-      query = query.or(`is_private.eq.false,user_id.eq.${req.user.id}`);
+      return res.status(401).json({ error: 'Authentication required' });
     }
+    
+    query = query.eq('user_id', req.user.id);
     
     const { data, error } = await query.single();
 
@@ -183,7 +183,7 @@ app.get('/api/repositories/:id', optionalAuth, async (req, res) => {
 // Save repository
 app.post('/api/repositories', authenticateUser, async (req, res) => {
   try {
-    const { url, title, description, tags, is_private } = req.body;
+    const { url, title, description, tags, repo_owner, repo_name, stars, language, notes } = req.body;
     const user_id = req.user.id; // Get user ID from authenticated user
 
     if (!url) {
@@ -198,15 +198,19 @@ app.post('/api/repositories', authenticateUser, async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('repositories')
+      .from('saved_repositories')
       .insert([{
-        url: url.trim(),
-        title: title?.trim() || null,
+        repo_url: url.trim(),
+        repo_owner: repo_owner || '',
+        repo_name: repo_name || title || '',
         description: description?.trim() || null,
+        stars: stars || 0,
+        language: language || null,
+        notes: notes?.trim() || '',
         tags: Array.isArray(tags) ? tags : [],
         user_id,
-        is_private: Boolean(is_private),
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select()
       .single();
@@ -227,12 +231,12 @@ app.post('/api/repositories', authenticateUser, async (req, res) => {
 app.put('/api/repositories/:id', authenticateUser, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, tags, is_private } = req.body;
+    const { description, notes, tags } = req.body;
     const user_id = req.user.id;
 
     // First check if the repository exists and belongs to the user
     const { data: existingRepo, error: fetchError } = await supabase
-      .from('repositories')
+      .from('saved_repositories')
       .select('user_id')
       .eq('id', id)
       .single();
@@ -249,12 +253,11 @@ app.put('/api/repositories/:id', authenticateUser, async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('repositories')
+      .from('saved_repositories')
       .update({
-        title: title?.trim() || null,
         description: description?.trim() || null,
+        notes: notes?.trim() || '',
         tags: Array.isArray(tags) ? tags : [],
-        is_private: Boolean(is_private),
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -281,7 +284,7 @@ app.delete('/api/repositories/:id', authenticateUser, async (req, res) => {
 
     // First check if the repository exists and belongs to the user
     const { data: existingRepo, error: fetchError } = await supabase
-      .from('repositories')
+      .from('saved_repositories')
       .select('user_id')
       .eq('id', id)
       .single();
@@ -298,7 +301,7 @@ app.delete('/api/repositories/:id', authenticateUser, async (req, res) => {
     }
 
     const { error } = await supabase
-      .from('repositories')
+      .from('saved_repositories')
       .delete()
       .eq('id', id);
 
@@ -323,20 +326,17 @@ app.get('/api/repositories/search/:query', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
     }
 
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const searchTerm = query.trim();
     let supabaseQuery = supabase
-      .from('repositories')
+      .from('saved_repositories')
       .select('*')
-      .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,url.ilike.%${searchTerm}%`)
+      .eq('user_id', req.user.id)
+      .or(`repo_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,notes.ilike.%${searchTerm}%`)
       .order('created_at', { ascending: false });
-
-    // If user is authenticated, show their private repos in results too
-    // If not authenticated, only search public repos
-    if (req.user) {
-      supabaseQuery = supabaseQuery.or(`is_private.eq.false,user_id.eq.${req.user.id}`);
-    } else {
-      supabaseQuery = supabaseQuery.eq('is_private', false);
-    }
 
     const { data, error } = await supabaseQuery;
 

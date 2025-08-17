@@ -65,8 +65,26 @@ export const checkRepositoriesTableExists = async () => {
     return true;
   } catch (error) {
     console.error('Error checking API availability:', error);
-    repositoriesTableExists = true;
-    return true;
+    // Fallback to direct Supabase check for saved_repositories table
+    try {
+      const { count, error } = await supabase
+        .from('saved_repositories')
+        .select('*', { count: 'exact', head: true })
+        .limit(1);
+        
+      if (error && error.code === '42P01') {
+        console.log('Saved repositories table does not exist');
+        repositoriesTableExists = false;
+        return false;
+      }
+      
+      repositoriesTableExists = true;
+      return true;
+    } catch (fallbackError) {
+      console.error('Error checking saved repositories table:', fallbackError);
+      repositoriesTableExists = true;
+      return true;
+    }
   }
 };
 
@@ -90,13 +108,16 @@ export const saveRepository = async (url, notes = '', tags = [], invalidateCache
     // Get repository details from GitHub API
     const repoDetails = await getRepositoryDetails(owner, repo);
     
-    // Prepare repository data
+    // Prepare repository data to match saved_repositories schema
     const repositoryData = {
-      url: repoDetails.html_url,
-      title: repoDetails.name,
+      repo_url: repoDetails.html_url,
+      repo_owner: repoDetails.owner.login,
+      repo_name: repoDetails.name,
       description: repoDetails.description || '',
+      stars: repoDetails.stargazers_count || 0,
+      language: repoDetails.language || null,
+      notes: notes || '',
       tags: Array.isArray(tags) ? tags : [],
-      is_private: false,
     };
 
     // Save via API
