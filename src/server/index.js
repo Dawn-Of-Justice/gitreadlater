@@ -183,16 +183,16 @@ app.get('/api/repositories/:id', optionalAuth, async (req, res) => {
 // Save repository
 app.post('/api/repositories', authenticateUser, async (req, res) => {
   try {
-    const { url, title, description, tags, repo_owner, repo_name, stars, language, notes } = req.body;
+    const { repo_url, repo_owner, repo_name, description, tags, stars, language, notes } = req.body;
     const user_id = req.user.id; // Get user ID from authenticated user
 
-    if (!url) {
-      return res.status(400).json({ error: 'URL is required' });
+    if (!repo_url) {
+      return res.status(400).json({ error: 'Repository URL is required' });
     }
 
     // Validate URL format
     try {
-      new URL(url);
+      new URL(repo_url);
     } catch {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
@@ -200,9 +200,9 @@ app.post('/api/repositories', authenticateUser, async (req, res) => {
     const { data, error } = await supabase
       .from('saved_repositories')
       .insert([{
-        repo_url: url.trim(),
+        repo_url: repo_url.trim(),
         repo_owner: repo_owner || '',
-        repo_name: repo_name || title || '',
+        repo_name: repo_name || '',
         description: description?.trim() || null,
         stars: stars || 0,
         language: language || null,
