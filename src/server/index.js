@@ -56,8 +56,9 @@ const authenticateUser = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
     
-    // Add user to request object for use in route handlers
+    // Add user and user-context client to request object
     req.user = user;
+    req.userSupabase = createUserClient(token);
     next();
   } catch (error) {
     console.error('Authentication error:', error);
@@ -76,6 +77,7 @@ const optionalAuth = async (req, res, next) => {
       
       if (!error && user) {
         req.user = user;
+        req.userSupabase = createUserClient(token);
       }
     }
     
@@ -88,14 +90,30 @@ const optionalAuth = async (req, res, next) => {
 
 // Supabase client (using environment variables)
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Add service role key
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing required environment variables');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Create base client with anon key for auth operations
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Create service role client for admin operations (bypasses RLS)
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
+// Helper function to create user-context client
+const createUserClient = (accessToken) => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }
+  });
+};
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -118,28 +136,23 @@ app.get('/health', (req, res) => {
 // Repository endpoints (basic CRUD operations)
 app.get('/api/repositories', optionalAuth, async (req, res) => {
   try {
-    let query = supabase
-      .from('saved_repositories')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    // If user is authenticated, show only their repos
-    // If not authenticated, return empty array (all repos are private to users)
-    if (req.user) {
-      query = query.eq('user_id', req.user.id);
+    // If user is authenticated, use user-context client and show only their repos
+    if (req.user && req.userSupabase) {
+      const { data, error } = await req.userSupabase
+        .from('saved_repositories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching repositories:', error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      res.json({ data });
     } else {
       // Return empty array for unauthenticated users
-      return res.json({ data: [] });
+      res.json({ data: [] });
     }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching repositories:', error);
-      return res.status(500).json({ error: error.message });
-    }
-
-    res.json({ data });
   } catch (error) {
     console.error('Server error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -151,19 +164,16 @@ app.get('/api/repositories/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    let query = supabase
-      .from('saved_repositories')
-      .select('*')
-      .eq('id', id);
-    
     // Users can only see their own repositories
-    if (!req.user) {
+    if (!req.user || !req.userSupabase) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    query = query.eq('user_id', req.user.id);
-    
-    const { data, error } = await query.single();
+    const { data, error } = await req.userSupabase
+      .from('saved_repositories')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -197,7 +207,7 @@ app.post('/api/repositories', authenticateUser, async (req, res) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await req.userSupabase
       .from('saved_repositories')
       .insert([{
         repo_url: repo_url.trim(),
@@ -234,25 +244,8 @@ app.put('/api/repositories/:id', authenticateUser, async (req, res) => {
     const { description, notes, tags } = req.body;
     const user_id = req.user.id;
 
-    // First check if the repository exists and belongs to the user
-    const { data: existingRepo, error: fetchError } = await supabase
-      .from('saved_repositories')
-      .select('user_id')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Repository not found' });
-      }
-      return res.status(500).json({ error: 'Error checking repository ownership' });
-    }
-
-    if (existingRepo.user_id !== user_id) {
-      return res.status(403).json({ error: 'You can only update your own repositories' });
-    }
-
-    const { data, error } = await supabase
+    // With user-context client, we can directly update - RLS will ensure user owns the repo
+    const { data, error } = await req.userSupabase
       .from('saved_repositories')
       .update({
         description: description?.trim() || null,
@@ -265,6 +258,9 @@ app.put('/api/repositories/:id', authenticateUser, async (req, res) => {
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Repository not found or access denied' });
+      }
       console.error('Error updating repository:', error);
       return res.status(500).json({ error: error.message });
     }
@@ -280,32 +276,17 @@ app.put('/api/repositories/:id', authenticateUser, async (req, res) => {
 app.delete('/api/repositories/:id', authenticateUser, async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user.id;
 
-    // First check if the repository exists and belongs to the user
-    const { data: existingRepo, error: fetchError } = await supabase
-      .from('saved_repositories')
-      .select('user_id')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Repository not found' });
-      }
-      return res.status(500).json({ error: 'Error checking repository ownership' });
-    }
-
-    if (existingRepo.user_id !== user_id) {
-      return res.status(403).json({ error: 'You can only delete your own repositories' });
-    }
-
-    const { error } = await supabase
+    // With user-context client, we can directly delete - RLS will ensure user owns the repo
+    const { error } = await req.userSupabase
       .from('saved_repositories')
       .delete()
       .eq('id', id);
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Repository not found or access denied' });
+      }
       console.error('Error deleting repository:', error);
       return res.status(500).json({ error: error.message });
     }
@@ -326,19 +307,16 @@ app.get('/api/repositories/search/:query', optionalAuth, async (req, res) => {
       return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
     }
 
-    if (!req.user) {
+    if (!req.user || !req.userSupabase) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const searchTerm = query.trim();
-    let supabaseQuery = supabase
+    const { data, error } = await req.userSupabase
       .from('saved_repositories')
       .select('*')
-      .eq('user_id', req.user.id)
       .or(`repo_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,notes.ilike.%${searchTerm}%`)
       .order('created_at', { ascending: false });
-
-    const { data, error } = await supabaseQuery;
 
     if (error) {
       console.error('Error searching repositories:', error);

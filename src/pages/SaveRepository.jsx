@@ -5,6 +5,7 @@ import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryD
 import { saveRepository, getUserTags } from '../services/repositoryService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
 const getTagColor = (tag) => {
@@ -32,6 +33,7 @@ const getTagColor = (tag) => {
 
 const SaveRepository = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   
@@ -41,7 +43,7 @@ const SaveRepository = () => {
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   
   // Combined repository states
@@ -64,14 +66,26 @@ const SaveRepository = () => {
   const [showOwnedRepos, setShowOwnedRepos] = useState(true);
   const [showStarredRepos, setShowStarredRepos] = useState(true);
 
+  // Check authentication on mount
+  useEffect(() => {
+    if (!loading && !user) {
+      // User is not authenticated, redirect to login
+      navigate('/login');
+      return;
+    }
+  }, [user, loading, navigate]);
+
   // Load user's repositories and starred repos on component mount
   useEffect(() => {
     // Clear any previously saved URL and preview when component mounts fresh
     localStorage.removeItem('saved_repo_url');
     localStorage.removeItem('saved_repo_preview');
     
-    loadAllRepositories();
-  }, []);
+    // Only load repositories if user is authenticated
+    if (user) {
+      loadAllRepositories();
+    }
+  }, [user]);
   
   // Save URL to localStorage whenever it changes
   useEffect(() => {
@@ -151,6 +165,13 @@ const SaveRepository = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check authentication first
+    if (!user) {
+      setError('You must be logged in to save repositories. Please log in first.');
+      navigate('/login');
+      return;
+    }
+    
     if (!url.trim()) {
       setError('Please enter a GitHub repository URL');
       return;
@@ -170,7 +191,7 @@ const SaveRepository = () => {
     }
     
     try {
-      setLoading(true);
+      setSaving(true);
       setError(null);
       
       // Save repository and invalidate cache
@@ -184,9 +205,17 @@ const SaveRepository = () => {
       navigate('/');
     } catch (err) {
       console.error('Error saving repository:', err);
-      setError(err.message || 'Failed to save repository. Please try again.');
+      
+      // Handle specific authentication errors
+      if (err.message?.includes('row-level security') || err.message?.includes('Authentication')) {
+        setError('Authentication error. Please log out and log back in.');
+      } else if (err.message?.includes('URL is required')) {
+        setError('Repository URL is missing. Please try again.');
+      } else {
+        setError(err.message || 'Failed to save repository. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
   
@@ -465,6 +494,18 @@ const SaveRepository = () => {
       <div className="container mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold mb-8">Save Repository</h1>
         
+        {/* Show loading state while checking authentication */}
+        {loading && (
+          <div className={`${themeClasses.card} rounded-lg shadow-md p-6 transition-colors duration-300`}>
+            <div className="flex items-center justify-center py-8">
+              <FaSpinner className="animate-spin mr-2" />
+              <span>Loading...</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Show form only when user is authenticated */}
+        {!loading && user && (
         <div className={`${themeClasses.card} rounded-lg shadow-md p-6 transition-colors duration-300`}>
           <form onSubmit={handleSubmit}>
             {/* Repository URL */}
@@ -824,15 +865,16 @@ const SaveRepository = () => {
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={loading || !url.trim()}
-                className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center space-x-2 transition-colors duration-300 ${(!url.trim() && !loading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={saving || !url.trim()}
+                className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center space-x-2 transition-colors duration-300 ${(!url.trim() && !saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {loading && <FaSpinner className="animate-spin mr-2" />}
+                {saving && <FaSpinner className="animate-spin mr-2" />}
                 <span>Save Repository</span>
               </button>
             </div>
           </form>
         </div>
+        )}
       </div>
     </div>
   );
