@@ -104,21 +104,30 @@ const Login = () => {
         </div>
         <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 mb-4`}>
           <div className="aspect-w-16 aspect-h-9" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-            <iframe
-              src="https://www.youtube.com/embed/_6nZszL1P0w"
-              title="GitReadLater Demo"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+            <a
+              href="https://youtu.be/_6nZszL1P0w"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute inset-0 flex items-center justify-center group cursor-pointer"
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
+                background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(https://img.youtube.com/vi/_6nZszL1P0w/maxresdefault.jpg)`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 borderRadius: '8px'
               }}
-            ></iframe>
+            >
+              {/* Play button overlay */}
+              <div className="bg-red-600 rounded-full p-4 group-hover:bg-red-700 transition-colors duration-200 shadow-lg">
+                <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+              
+              {/* YouTube logo in corner */}
+              <div className="absolute bottom-4 right-4 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                YouTube
+              </div>
+            </a>
           </div>
         </div>
         <div className="flex justify-between items-center">
