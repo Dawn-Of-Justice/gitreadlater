@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabaseClient';
 import { getRepositoryDetails, parseGitHubUrl } from './githubService';
 
+// API base URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 let loggedRepoCache = false;
 let loggedRepoFetch = false;
 let loggedTagCache = false;
@@ -9,6 +12,41 @@ let loggedTagFetch = false;
 // Add a cache for the repositories table existence check
 let repositoriesTableExists = null; // null = unknown, true/false = checked
 
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+  
+  return headers;
+};
+
+// Helper function to make authenticated API calls
+const apiCall = async (endpoint, options = {}) => {
+  const headers = await getAuthHeaders();
+  
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...headers,
+      ...options.headers,
+    },
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Network error' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+  
+  return response.json();
+};
+
 export const checkRepositoriesTableExists = async () => {
   // Return cached result if available
   if (repositoriesTableExists !== null) {
@@ -16,23 +54,12 @@ export const checkRepositoriesTableExists = async () => {
   }
   
   try {
-    // Try a count query which will fail if table doesn't exist
-    const { count, error } = await supabase
-      .from('repositories')
-      .select('*', { count: 'exact', head: true })
-      .limit(1);
-      
-    if (error && error.code === '42P01') {
-      console.log('Repositories table does not exist');
-      repositoriesTableExists = false;
-      return false;
-    }
-    
+    // Try the API health check instead
+    await fetch(`${API_URL}/health`);
     repositoriesTableExists = true;
     return true;
   } catch (error) {
-    console.error('Error checking repositories table:', error);
-    // Assume table exists on error to avoid blocking UI
+    console.error('Error checking API availability:', error);
     repositoriesTableExists = true;
     return true;
   }
@@ -52,313 +79,143 @@ const getCurrentUser = async () => {
 // Save repository to user's collection
 export const saveRepository = async (url, notes = '', tags = [], invalidateCache) => {
   try {
-    const user = await getCurrentUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
     // Parse GitHub URL
     const { owner, repo } = parseGitHubUrl(url);
     
     // Get repository details from GitHub API
     const repoDetails = await getRepositoryDetails(owner, repo);
     
-    // Save to Supabase
-    const { data, error } = await supabase
-      .from('saved_repositories')
-      .insert([
-        {
-          user_id: user.id,
-          repo_owner: owner,
-          repo_name: repo,
-          repo_url: repoDetails.html_url,
-          description: repoDetails.description,
-          stars: repoDetails.stargazers_count,
-          language: repoDetails.language,
-          notes,
-          tags,
-          created_at: new Date(),
-          updated_at: new Date(),
-        }
-      ])
-      .select();
+    // Prepare repository data
+    const repositoryData = {
+      url: repoDetails.html_url,
+      title: repoDetails.name,
+      description: repoDetails.description || '',
+      tags: Array.isArray(tags) ? tags : [],
+      is_private: false,
+    };
+
+    // Save via API
+    const result = await apiCall('/api/repositories', {
+      method: 'POST',
+      body: JSON.stringify(repositoryData),
+    });
     
-    if (error) throw error;
-    
-    // Invalidate repositories cache after saving a new one
     if (invalidateCache) {
       invalidateCache();
     }
     
-    const savedRepo = data[0];
-    
-    // Return the data and a success flag
-    return { data: savedRepo, success: true };
+    return result.data;
   } catch (error) {
     console.error('Error saving repository:', error);
-    return { error: error.message, success: false };
-  }
-};
-
-// Get user's saved repositories
-export const getSavedRepositories = async (filters = {}, cachedRepos = [], setCachedRepos = null) => {
-  try {
-    const user = await getCurrentUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    // If we have filters, we need to get fresh data from the database
-    // If we have cached repositories and no filters, return the cached data
-    if (cachedRepos.length > 0 && !filters.tag && !filters.search) {
-      if (!loggedRepoCache) {
-        console.log('Using cached repositories');
-        loggedRepoCache = true;
-        setTimeout(() => { loggedRepoCache = false; }, 1000);
-      }
-      return cachedRepos;
-    }
-    
-    if (!loggedRepoFetch) {
-      console.log('Fetching repositories from database');
-      loggedRepoFetch = true;
-      setTimeout(() => { loggedRepoFetch = false; }, 1000);
-    }
-    
-    let query = supabase
-      .from('saved_repositories')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    
-    // Apply filters
-    if (filters.tag) {
-      query = query.contains('tags', [filters.tag]);
-    }
-    
-    if (filters.search) {
-      query = query.or(`repo_name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    // Update cache if we're getting all repositories
-    if (!filters.tag && !filters.search && setCachedRepos) {
-      setCachedRepos(data);
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error getting saved repositories:', error);
     throw error;
   }
 };
 
-// Update repository notes and tags
+// Get user's saved repositories
+export const getSavedRepositories = async (filters = {}) => {
+  try {
+    let endpoint = '/api/repositories';
+    
+    if (filters.search) {
+      endpoint = `/api/repositories/search/${encodeURIComponent(filters.search)}`;
+    }
+    
+    const result = await apiCall(endpoint);
+    let repositories = result.data;
+    
+    if (filters.tag) {
+      repositories = repositories.filter(repo => 
+        repo.tags && repo.tags.includes(filters.tag)
+      );
+    }
+    
+    return repositories;
+  } catch (error) {
+    console.error('Error fetching repositories:', error);
+    throw error;
+  }
+};
+
+// Update repository
 export const updateRepository = async (id, updates = {}, invalidateCache = null) => {
   try {
-    const user = await getCurrentUser();
+    const result = await apiCall(`/api/repositories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
     
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    // Prepare update object
-    const updateData = {
-      updated_at: new Date(),
-    };
-    
-    if (updates.notes !== undefined) {
-      updateData.notes = updates.notes;
-    }
-    
-    if (updates.tags !== undefined) {
-      updateData.tags = updates.tags;
-    }
-    
-    // Update in Supabase
-    const { data, error } = await supabase
-      .from('saved_repositories')
-      .update(updateData)
-      .eq('id', id)
-      .eq('user_id', user.id) // Ensure user owns this record
-      .select();
-    
-    if (error) throw error;
-    
-    // Invalidate cache since we updated a repository
     if (invalidateCache) {
       invalidateCache();
     }
     
-    return data[0];
+    return result.data;
   } catch (error) {
     console.error('Error updating repository:', error);
     throw error;
   }
 };
 
+// Delete repository
 export const deleteRepository = async (id, invalidateCache = null) => {
   try {
-    const user = await getCurrentUser();
+    await apiCall(`/api/repositories/${id}`, {
+      method: 'DELETE',
+    });
     
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    console.log('Attempting to delete repository with ID:', id);
-    
-    // Delete from saved_repositories
-    const { error } = await supabase
-      .from('saved_repositories')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
-    
-    if (error) {
-      console.error('Error deleting repository:', error);
-      throw error;
-    }
-    
-    // Invalidate cache after deletion
     if (invalidateCache) {
       invalidateCache();
     }
     
-    console.log('Repository deleted successfully');
-    return { success: true };
+    return true;
   } catch (error) {
     console.error('Error deleting repository:', error);
     throw error;
   }
 };
 
-// Get unique tags used by the user
-export const getUserTags = async (cachedTags = [], setCachedTags = null) => {
+// Get all unique tags
+export const getAllTags = async () => {
   try {
-    // If we have cached tags, return them
-    if (cachedTags.length > 0) {
-      if (!loggedTagCache) {
-        console.log('Using cached tags');
-        loggedTagCache = true;
-        setTimeout(() => { loggedTagCache = false; }, 1000);
+    const repositories = await getSavedRepositories();
+    const allTags = repositories.reduce((tags, repo) => {
+      if (repo.tags && Array.isArray(repo.tags)) {
+        repo.tags.forEach(tag => {
+          if (tag && !tags.includes(tag)) {
+            tags.push(tag);
+          }
+        });
       }
-      return cachedTags;
-    }
+      return tags;
+    }, []);
     
-    const user = await getCurrentUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    if (!loggedTagFetch) {
-      //console.log('Fetching tags from database');
-      loggedTagFetch = true;
-      setTimeout(() => { loggedTagFetch = false; }, 1000);
-    }
-    
-    const { data, error } = await supabase
-      .from('saved_repositories')
-      .select('tags')
-      .eq('user_id', user.id);
-    
-    if (error) throw error;
-    
-    // Extract unique tags
-    const allTags = data.flatMap(repo => repo.tags || []);
-    const uniqueTags = [...new Set(allTags)];
-    
-    // Update cache
-    if (setCachedTags) {
-      setCachedTags(uniqueTags);
-    }
-    
-    return uniqueTags;
+    return allTags.sort();
   } catch (error) {
-    console.error('Error getting user tags:', error);
+    console.error('Error getting tags:', error);
+    return [];
+  }
+};
+
+// Get repository by ID
+export const getRepository = async (id) => {
+  try {
+    const result = await apiCall(`/api/repositories/${id}`);
+    return result.data;
+  } catch (error) {
+    console.error('Error fetching repository:', error);
     throw error;
   }
 };
 
-// Cache for recently refreshed repositories to prevent duplicate API calls
-const recentlyRefreshedRepos = new Map();
-
-/**
- * Refreshes repository data from GitHub if it's stale
- * @param {string} id - Repository ID
- * @param {boolean} force - Force refresh regardless of cache
- * @returns {Object} Updated repository data
- */
-export const refreshRepositoryData = async (id, force = false) => {
-  try {
-    // Check if repository was recently refreshed (within last 5 minutes)
-    const cacheKey = `repo_${id}`;
-    const now = Date.now();
-    const cacheEntry = recentlyRefreshedRepos.get(cacheKey);
-    
-    if (!force && cacheEntry && (now - cacheEntry.timestamp < 5 * 60 * 1000)) {
-      console.log('Using cached repository data');
-      return cacheEntry.data;
-    }
-    
-    // Get current repository data
-    const { data: repo, error } = await supabase
-      .from('saved_repositories')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (error) throw error;
-    if (!repo) throw new Error('Repository not found');
-    
-    // Check if data is stale (older than 24 hours)
-    const lastFetched = new Date(repo.last_fetched || repo.created_at);
-    const isStale = (now - lastFetched.getTime()) > 24 * 60 * 60 * 1000;
-    
-    // Only refresh if force=true or data is stale
-    if (force || isStale) {
-      console.log(`Refreshing repository data for ${repo.repo_owner}/${repo.repo_name}`);
-      
-      // Get fresh data from GitHub
-      const freshData = await getRepositoryDetails(repo.repo_owner, repo.repo_name);
-      
-      // Update repository in database
-      const { data: updatedRepo, error: updateError } = await supabase
-        .from('saved_repositories')
-        .update({
-          description: freshData.description,
-          stars: freshData.stargazers_count,
-          language: freshData.language,
-          last_fetched: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select();
-        
-      if (updateError) throw updateError;
-      
-      // Store in cache
-      recentlyRefreshedRepos.set(cacheKey, {
-        timestamp: now,
-        data: updatedRepo[0]
-      });
-      
-      // Clean up old cache entries (keep cache size reasonable)
-      if (recentlyRefreshedRepos.size > 100) {
-        const oldestKey = [...recentlyRefreshedRepos.keys()][0];
-        recentlyRefreshedRepos.delete(oldestKey);
-      }
-      
-      return updatedRepo[0];
-    }
-    
-    return repo;
-  } catch (error) {
-    console.error('Error refreshing repository data:', error);
-    throw error;
-  }
+// Legacy functions for backward compatibility
+export const checkUserLimit = async () => {
+  return { canAddMore: true, used: 0, limit: null };
 };
+
+export const updateUserLimit = async (increment = 1) => {
+  return { canAddMore: true, used: 0, limit: null };
+};
+
+// Legacy function aliases
+export const getUserTags = getAllTags;
+export const getRepositoryById = getRepository;
+export const refreshRepositoryData = getSavedRepositories;
