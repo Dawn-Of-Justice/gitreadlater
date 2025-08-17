@@ -40,6 +40,7 @@ const Dashboard = () => {
   const [repositories, setRepositories] = useState([]);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [repositoriesLoaded, setRepositoriesLoaded] = useState(false); // Track if we've loaded repos
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -105,6 +106,7 @@ const Dashboard = () => {
         if (!exists) {
           console.log('Repositories table does not exist - new installation');
           setIsFirstTimeUser(true);
+          setRepositoriesLoaded(true); // No repositories to load if table doesn't exist
           setLoading(false);
           return;
         }
@@ -151,6 +153,7 @@ const Dashboard = () => {
             console.log('User has no repositories');
             setRepositories([]);
             setIsFirstTimeUser(true);
+            setRepositoriesLoaded(true); // Mark that we've completed the repository check
             setLoading(false);
             return;
           }
@@ -189,6 +192,7 @@ const Dashboard = () => {
             setTags(userTags);
             
             setIsFirstTimeUser(false);
+            setRepositoriesLoaded(true); // Mark that we've successfully loaded repositories
           } catch (repoError) {
             console.error('Error fetching user repositories:', repoError);
             // Rest of your error handling...
@@ -198,13 +202,16 @@ const Dashboard = () => {
           // If the error is about missing table, treat as first time user
           if (repoError.code === '42P01') {
             setIsFirstTimeUser(true);
+            setRepositoriesLoaded(true); // We've determined there are no repositories
           } else {
             setError('Error loading your repositories. Please refresh the page.');
+            setRepositoriesLoaded(true); // We've attempted to load, even if failed
           }
         }
       } catch (err) {
         console.error('Error in initial user check:', err);
         setError('Failed to load your saved repositories. Please try refreshing the page.');
+        setRepositoriesLoaded(true); // We've attempted to load, even if failed
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
@@ -416,8 +423,8 @@ useEffect(() => {
     );
   }
   
-  // First time user or user with no repositories (but only if we're done loading)
-  if (!loading && (isFirstTimeUser || repositories.length === 0)) {
+  // First time user or user with no repositories (but only if we've actually loaded repositories)
+  if (repositoriesLoaded && (isFirstTimeUser || repositories.length === 0)) {
     return (
       // Add the same theme class and style as your main dashboard
       <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
