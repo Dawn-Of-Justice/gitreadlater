@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [repositoriesLoaded, setRepositoriesLoaded] = useState(false); // Track if we've loaded repos
   const [animateRepositories, setAnimateRepositories] = useState(false); // Track animation state
+  const [visibleCards, setVisibleCards] = useState(0); // Track how many cards should be visible
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -55,6 +56,23 @@ const Dashboard = () => {
   // Refs for tracking fetch status
   const fetchAttemptedRef = useRef(false);
   const userCheckedRef = useRef(false);
+
+  // Function to start staggered animation
+  const startStaggeredAnimation = useCallback((totalCards) => {
+    setVisibleCards(0);
+    let currentCard = 0;
+    
+    const showNextCard = () => {
+      if (currentCard < totalCards) {
+        setVisibleCards(currentCard + 1);
+        currentCard++;
+        setTimeout(showNextCard, 150); // 150ms delay between each card
+      }
+    };
+    
+    // Start showing cards after a brief delay
+    setTimeout(showNextCard, 200);
+  }, []);
 
   // Cache
   const { 
@@ -195,9 +213,10 @@ const Dashboard = () => {
             setIsFirstTimeUser(false);
             setRepositoriesLoaded(true); // Mark that we've successfully loaded repositories
             
-            // Trigger staggered animation after a brief delay
+            // Start staggered animation
             setTimeout(() => {
               setAnimateRepositories(true);
+              startStaggeredAnimation(allRepos.length);
             }, 100);
           } catch (repoError) {
             console.error('Error fetching user repositories:', repoError);
@@ -358,14 +377,16 @@ useEffect(() => {
 // Trigger animation when repositories change (search/filter results)
 useEffect(() => {
   if (repositories.length > 0 && repositoriesLoaded) {
+    setVisibleCards(0);
     setAnimateRepositories(false);
-    // Small delay to reset animation, then trigger it
+    // Small delay to reset animation, then trigger staggered animation
     const timer = setTimeout(() => {
       setAnimateRepositories(true);
+      startStaggeredAnimation(repositories.length);
     }, 50);
     return () => clearTimeout(timer);
   }
-}, [debouncedSearchQuery, selectedTag, repositories.length, repositoriesLoaded]);
+}, [debouncedSearchQuery, selectedTag, repositories.length, repositoriesLoaded, startStaggeredAnimation]);
 
 useEffect(() => {
   const fetchRepositories = async () => {
@@ -530,14 +551,12 @@ useEffect(() => {
           {repositories.map((repo, index) => (
             <div 
               key={repo.id} 
-              className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-all duration-700 ease-out ${
-                animateRepositories 
+              className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-all duration-600 ease-out ${
+                index < visibleCards
                   ? 'translate-y-0 opacity-100 scale-100 repo-card-enter' 
                   : 'translate-y-12 opacity-0 scale-95'
               }`}
               style={{
-                animationDelay: animateRepositories ? `${index * 150}ms` : '0ms',
-                animationFillMode: 'both',
                 willChange: 'transform, opacity'
               }}
               onClick={() => navigate(`/repository/${repo.id}`)}
