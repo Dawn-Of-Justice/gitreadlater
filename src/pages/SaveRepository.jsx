@@ -36,6 +36,7 @@ const SaveRepository = () => {
   const { user, loading } = useAuth();
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
+  const tagDropdownRef = useRef(null);
   
   // Form states
   const [url, setUrl] = useState(''); // Start with empty URL instead of localStorage value
@@ -160,6 +161,25 @@ const SaveRepository = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showRepositories]);
+
+  // Add click outside handler for tag suggestions dropdown
+  useEffect(() => {
+    function handleTagClickOutside(event) {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target)) {
+        setShowTagSuggestions(false);
+      }
+    }
+
+    // Add event listener when tag dropdown is shown
+    if (showTagSuggestions) {
+      document.addEventListener("mousedown", handleTagClickOutside);
+    }
+    
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleTagClickOutside);
+    };
+  }, [showTagSuggestions]);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -448,6 +468,14 @@ const SaveRepository = () => {
     setShowTagSuggestions(true);
   };
 
+  // Handle tag input blur
+  const handleTagInputBlur = () => {
+    // Don't hide immediately to allow clicking on suggestions
+    setTimeout(() => {
+      setShowTagSuggestions(false);
+    }, 150);
+  };
+
   // Handle tag suggestion selection
   const selectTag = (tag) => {
     if (!tags.includes(tag)) {
@@ -455,6 +483,14 @@ const SaveRepository = () => {
     }
     setTagInput('');
     setShowTagSuggestions(false);
+    
+    // Focus back to tag input for better UX
+    setTimeout(() => {
+      const tagInput = document.getElementById('tags');
+      if (tagInput) {
+        tagInput.focus();
+      }
+    }, 50);
   };
 
   // Filter tag suggestions based on input
@@ -471,6 +507,19 @@ const SaveRepository = () => {
       // Implement arrow down navigation if needed
       e.preventDefault();
       // Future enhancement: select first repo in list
+    }
+  };
+
+  // Handle tag input change
+  const handleTagInputChange = (e) => {
+    const value = e.target.value;
+    setTagInput(value);
+    
+    // Show suggestions when typing, hide when input is empty
+    if (value.trim()) {
+      setShowTagSuggestions(true);
+    } else {
+      setShowTagSuggestions(false);
     }
   };
 
@@ -737,9 +786,10 @@ const SaveRepository = () => {
                     id="tags"
                     placeholder="Add tags... (max 30 characters)"
                     value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
+                    onChange={handleTagInputChange}
                     onKeyDown={handleTagKeyDown}
                     onFocus={handleTagInputFocus}
+                    onBlur={handleTagInputBlur}
                     maxLength={30}
                     disabled={tags.length >= 5}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${themeClasses.input} transition-colors duration-300 ${tagInput.length >= 30 ? 'border-yellow-500' : ''} ${tags.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -753,7 +803,7 @@ const SaveRepository = () => {
                   
                   {/* Tag Suggestions Dropdown */}
                   {showTagSuggestions && filteredTagSuggestions.length > 0 && (
-                    <div className={`absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-colors duration-300`}>
+                    <div ref={tagDropdownRef} className={`absolute z-20 mt-1 w-full max-h-48 overflow-y-auto border rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-colors duration-300`}>
                       <div className={`p-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} transition-colors duration-300`}>
                         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
                           Previously used tags
@@ -764,6 +814,7 @@ const SaveRepository = () => {
                           <li 
                             key={tag} 
                             className={`px-4 py-2 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors duration-300`}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => selectTag(tag)}
                           >
                             {tag}
@@ -806,7 +857,7 @@ const SaveRepository = () => {
               )}
               
               {/* Quick-select Popular Tags */}
-              {previousTags.length > 0 && !showTagSuggestions && (
+              {previousTags.length > 0 && !showTagSuggestions && !tagInput.trim() && (
                 <div className="mt-3">
                   <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} transition-colors duration-300`}>
                     Quick-select from your tags:
