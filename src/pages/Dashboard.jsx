@@ -67,10 +67,16 @@ const Dashboard = () => {
 
   // Clear search when navigating to dashboard
   useEffect(() => {
+    console.log('Dashboard mounted, clearing search state');
     setSearchQuery('');
     setDebouncedSearchQuery('');
     setSelectedTag('');
-  }, []); // Empty dependency array means this runs only on mount
+    
+    // Also clear the input field directly
+    if (searchInputRef.current) {
+      searchInputRef.current.value = '';
+    }
+  }, [location.pathname]); // Reset when route changes to dashboard
 
   // Main effect for initial loading - runs once on component mount
   useEffect(() => {
