@@ -31,7 +31,12 @@ const getAuthHeaders = async () => {
 const apiCall = async (endpoint, options = {}) => {
   const headers = await getAuthHeaders();
   
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  // Ensure clean URL construction without double slashes
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const cleanAPIURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const fullURL = `${cleanAPIURL}${cleanEndpoint}`;
+  
+  const response = await fetch(fullURL, {
     ...options,
     headers: {
       ...headers,
