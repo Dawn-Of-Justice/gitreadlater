@@ -11,6 +11,16 @@
 
 GitReadLater is more than just a bookmark manager - it's a comprehensive repository discovery platform that demonstrates advanced full-stack development skills. The application features a robust backend API, secure authentication, and efficient data management.
 
+## 🎥 Demo Video
+
+Watch GitReadLater in action - see how easy it is to save, organize, and rediscover GitHub repositories:
+
+<div align="center">
+  <iframe width="800" height="450" src="https://www.youtube.com/embed/_6nZszL1P0w" title="Git ReadLater- save, organise, and rediscover repositories with custom tags and notes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+*Click the video above to see the full demo of GitReadLater's features and capabilities.*
+
 ## ✨ Key Features
 
 ### 🔧 Backend Architecture

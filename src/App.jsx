@@ -52,18 +52,27 @@ function AppContent() {
         <Header user={user} onLogout={null} />
         
         <main className="flex-grow">
-          <Routes>
-            {/* Public routes only when not authenticated */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/roadmap" element={<Roadmap />} />
-            
-            {/* Redirect all other routes to login when not authenticated */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
+          <Suspense fallback={
+            <div className="flex justify-center items-center min-h-screen">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+              </div>
+            </div>
+          }>
+            <Routes>
+              {/* Public routes only when not authenticated */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/roadmap" element={<Roadmap />} />
+              
+              {/* Redirect all other routes to login when not authenticated */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Suspense>
         </main>
         
         <Footer />
@@ -89,31 +98,40 @@ function AppContent() {
       <Header user={user} onLogout={handleLogout} />
       
       <main className="flex-grow">
-        <Routes>
-          {/* Public routes available to authenticated users */}
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/roadmap" element={<Roadmap />} />
-          
-          {/* Protected routes */}
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/save" element={<SaveRepository />} />
-          <Route path="/repository/:id" element={<RepositoryDetails />} />
-          
-          <Route path="/admin/voting-dashboard" element={
-            <AdminRoute>
-              <VotingDashboard />
-            </AdminRoute>
-          } />
-          
-          {/* Redirect login to dashboard if already authenticated */}
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="/auth/callback" element={<Navigate to="/" replace />} />
-          
-          {/* Catch all - redirect to dashboard */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+            </div>
+          </div>
+        }>
+          <Routes>
+            {/* Public routes available to authenticated users */}
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/save" element={<SaveRepository />} />
+            <Route path="/repository/:id" element={<RepositoryDetails />} />
+            
+            <Route path="/admin/voting-dashboard" element={
+              <AdminRoute>
+                <VotingDashboard />
+              </AdminRoute>
+            } />
+            
+            {/* Redirect login to dashboard if already authenticated */}
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/auth/callback" element={<Navigate to="/" replace />} />
+            
+            {/* Catch all - redirect to dashboard */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       
       <Footer />

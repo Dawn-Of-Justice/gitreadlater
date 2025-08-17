@@ -90,7 +90,7 @@ const Login = () => {
   // Demo modal component
   const DemoModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`${darkMode ? 'bg-[#21262d]' : 'bg-white'} rounded-lg shadow-xl p-6 max-w-3xl w-full`}>
+      <div className={`${darkMode ? 'bg-[#21262d]' : 'bg-white'} rounded-lg shadow-xl p-6 max-w-4xl w-full`}>
         <div className="flex justify-between items-center mb-4">
           <h3 className={`text-xl font-bold ${themeClasses.text}`}>Git ReadLater Demo</h3>
           <button 
@@ -103,29 +103,42 @@ const Login = () => {
           </button>
         </div>
         <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 mb-4`}>
-          <div className="aspect-w-16 aspect-h-9">
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <p className={themeClasses.textSecondary}>
-                  You caught me 😅, I'm recording the video only, Please check later.
-                </p>
-              </div>
-            </div>
+          <div className="aspect-w-16 aspect-h-9" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+            <iframe
+              src="https://www.youtube.com/embed/_6nZszL1P0w"
+              title="GitReadLater Demo"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                borderRadius: '8px'
+              }}
+            ></iframe>
           </div>
         </div>
-        <div className="flex justify-end">
-          <button 
-            onClick={() => setShowDemo(false)}
-            className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md mr-2`}
-          >
-            Close
-          </button>
-          <button 
-            onClick={handleLogin}
-            className={`${themeClasses.button} px-4 py-2 rounded-md`}
-          >
-            Get Started
-          </button>
+        <div className="flex justify-between items-center">
+          <p className={`${themeClasses.textSecondary} text-sm`}>
+            Watch how GitReadLater helps you organize GitHub repositories efficiently
+          </p>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowDemo(false)}
+              className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md`}
+            >
+              Close
+            </button>
+            <button 
+              onClick={handleLogin}
+              className={`${themeClasses.button} px-4 py-2 rounded-md`}
+            >
+              Get Started
+            </button>
+          </div>
         </div>
       </div>
     </div>
