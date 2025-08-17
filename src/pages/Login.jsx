@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaGithub, FaBookmark, FaTag, FaPlayCircle, FaStar, FaCheckCircle, FaSearch } from 'react-icons/fa';
 import { signInWithGitHub, supabase } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import previewImage from '../assets/preview.png';
 
 const Login = () => {
@@ -10,21 +11,19 @@ const Login = () => {
   const [showDemo, setShowDemo] = useState(false);
   const navigate = useNavigate();
   const { darkMode, themeClasses } = useTheme();
+  const { isAuthenticated, loading } = useAuth();
   const [showImagePopup, setShowImagePopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   
   useEffect(() => {
-    // Check if user is already logged in
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
-      }
-    };
-    
-    checkAuth();
-    
+    // Redirect if already authenticated (using context instead of direct check)
+    if (!loading && isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  useEffect(() => {
     // Add animation with slight delay
     const timer = setTimeout(() => {
       setShowCards(true);
@@ -33,7 +32,7 @@ const Login = () => {
     return () => {
       clearTimeout(timer);
     };
-  }, [navigate]);
+  }, []);
   
   const handleLogin = async () => {
     try {

@@ -31,12 +31,22 @@ function AppContent() {
   const { clearCache } = useCache();
   const navigate = useNavigate();
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <div className="flex justify-center items-center flex-grow">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Protected route using the auth context
   const ProtectedRoute = ({ children }) => {
-    if (loading) {
-      return <div className="flex justify-center items-center h-screen">Loading...</div>;
-    }
-    
     if (!isAuthenticated) {
       return <Navigate to="/login" replace />;
     }
