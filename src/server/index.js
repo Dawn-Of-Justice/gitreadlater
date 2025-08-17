@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -53,6 +53,33 @@ app.get('/api/repositories', async (req, res) => {
   }
 });
 
+// Get repository by ID
+app.get('/api/repositories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('repositories')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching repository:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Repository not found' });
+    }
+
+    res.json({ data });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Save repository
 app.post('/api/repositories', async (req, res) => {
   try {
@@ -88,6 +115,89 @@ app.post('/api/repositories', async (req, res) => {
   }
 });
 
+// Update repository
+app.put('/api/repositories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, tags, is_private } = req.body;
+
+    const { data, error } = await supabase
+      .from('repositories')
+      .update({
+        title,
+        description,
+        tags,
+        is_private,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating repository:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ data });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete repository
+app.delete('/api/repositories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('repositories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting repository:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ message: 'Repository deleted successfully' });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Search repositories
+app.get('/api/repositories/search/:query', async (req, res) => {
+  try {
+    const { query } = req.params;
+    const { user_id } = req.query;
+
+    let supabaseQuery = supabase
+      .from('repositories')
+      .select('*')
+      .or(`title.ilike.%${query}%,description.ilike.%${query}%,url.ilike.%${query}%`)
+      .order('created_at', { ascending: false });
+
+    if (user_id) {
+      supabaseQuery = supabaseQuery.eq('user_id', user_id);
+    }
+
+    const { data, error } = await supabaseQuery;
+
+    if (error) {
+      console.error('Error searching repositories:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ data });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
@@ -101,9 +211,9 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(` ReadLater Backend running on port ${port}`);
-  console.log(` Open Source Repository Manager`);
-  console.log(` Health check: http://localhost:${port}/health`);
+  console.log(`🚀 ReadLater Backend running on port ${port}`);
+  console.log(`📚 Open Source Repository Manager`);
+  console.log(`🌐 Health check: http://localhost:${port}/health`);
 });
 
 module.exports = app;
