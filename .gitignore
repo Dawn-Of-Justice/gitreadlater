@@ -23,4 +23,43 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment variables and secrets
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database backups and exports
+backups/
+*.sql.backup
+*.dump
+
+# Development files
+todo.md
+TODO.md
+notes.md
+NOTES.md
+IDEAS.md
+IDEA.md
+
+# Build analysis
+stats.html
+bundle-analyzer.html
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Server environment files
+src/server/.env
+src/server/.env.local
