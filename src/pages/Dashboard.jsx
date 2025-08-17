@@ -106,10 +106,6 @@ const Dashboard = () => {
           return;
         }
         
-        console.log('Dashboard: User session', { 
-          userId: session.user.id
-        });
-        
         // Check if we have cached data and it's recent (less than 5 minutes old)
         const cacheTimestamp = localStorage.getItem('dashboard_cache_timestamp');
         const isCacheValid = cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 5 * 60 * 1000;
@@ -167,10 +163,6 @@ const Dashboard = () => {
             setAnimateRepositories(true);
           }, 50);
           
-          console.log('Dashboard: Repositories loaded and cached', {
-            count: allRepos.length,
-            isFirstTimeUser: allRepos.length === 0
-          });
         } else {
           // Fallback to repositories table if saved_repositories fails
           console.log('Trying fallback repositories table');
@@ -218,8 +210,6 @@ const Dashboard = () => {
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
-        
-        console.log('Dashboard: Optimized fetch complete');
       }
     };
 
