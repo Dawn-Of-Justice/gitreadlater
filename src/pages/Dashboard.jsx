@@ -65,6 +65,13 @@ const Dashboard = () => {
     invalidateRepositories
   } = useCache();
 
+  // Clear search when navigating to dashboard
+  useEffect(() => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    setSelectedTag('');
+  }, []); // Empty dependency array means this runs only on mount
+
   // Main effect for initial loading - runs once on component mount
   useEffect(() => {
     if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
