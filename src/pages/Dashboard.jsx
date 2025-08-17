@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [repositoriesLoaded, setRepositoriesLoaded] = useState(false); // Track if we've loaded repos
+  const [animateRepositories, setAnimateRepositories] = useState(false); // Track animation state
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -193,6 +194,11 @@ const Dashboard = () => {
             
             setIsFirstTimeUser(false);
             setRepositoriesLoaded(true); // Mark that we've successfully loaded repositories
+            
+            // Trigger staggered animation after a brief delay
+            setTimeout(() => {
+              setAnimateRepositories(true);
+            }, 100);
           } catch (repoError) {
             console.error('Error fetching user repositories:', repoError);
             // Rest of your error handling...
@@ -348,6 +354,18 @@ useEffect(() => {
   
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
+
+// Trigger animation when repositories change (search/filter results)
+useEffect(() => {
+  if (repositories.length > 0 && repositoriesLoaded) {
+    setAnimateRepositories(false);
+    // Small delay to reset animation, then trigger it
+    const timer = setTimeout(() => {
+      setAnimateRepositories(true);
+    }, 50);
+    return () => clearTimeout(timer);
+  }
+}, [debouncedSearchQuery, selectedTag, repositories.length, repositoriesLoaded]);
 
 useEffect(() => {
   const fetchRepositories = async () => {
@@ -509,10 +527,17 @@ useEffect(() => {
         
         {/* Repository cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {repositories.map((repo) => (
+          {repositories.map((repo, index) => (
             <div 
               key={repo.id} 
-              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer`}
+              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-all duration-500 cursor-pointer transform ${
+                animateRepositories 
+                  ? 'translate-y-0 opacity-100' 
+                  : 'translate-y-8 opacity-0'
+              }`}
+              style={{
+                transitionDelay: animateRepositories ? `${index * 100}ms` : '0ms'
+              }}
               onClick={() => navigate(`/repository/${repo.id}`)}
             >
               <div className="p-5">
