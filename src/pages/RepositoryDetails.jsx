@@ -72,39 +72,25 @@ const RepositoryDetails = () => {
       try {
         setLoading(true);
         
-        // Try to fetch from both repository tables
-        let repoData = null;
-        
-        // Try main repositories table first
-        const { data: mainRepo, error: mainError } = await supabase
-          .from('repositories')
-          .select('*')
-          .eq('id', id)
-          .single();
-          
-        if (!mainError && mainRepo) {
-          repoData = mainRepo;
-        } else {
-          // Try saved_repositories table
-          const { data: savedRepo, error: savedError } = await supabase
-            .from('saved_repositories')
-            .select('*')
-            .eq('id', id)
-            .single();
-            
-          if (!savedError && savedRepo) {
-            repoData = savedRepo;
+        // Use backend API to fetch repository details
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/repositories/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Content-Type': 'application/json'
           }
+        });
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.log('Repository not found, redirecting to dashboard');
+            navigate('/', { replace: true });
+            return;
+          }
+          throw new Error(`HTTP ${response.status}`);
         }
         
-        if (repoData) {
-          setRepository(repoData);
-        } else {
-          // Repository not found - redirect to dashboard
-          console.log('Repository not found, redirecting to dashboard');
-          navigate('/', { replace: true });
-          return;
-        }
+        const result = await response.json();
+        setRepository(result.data);
       } catch (error) {
         console.error('Error fetching repository:', error);
         setError('Error loading repository details');
@@ -112,11 +98,9 @@ const RepositoryDetails = () => {
         setLoading(false);
       }
     };
-    
+
     fetchRepository();
-  }, [id, navigate]);
-  
-  useEffect(() => {
+  }, [id, navigate]);  useEffect(() => {
     if (repository) {
       // Initialize notes from repository data
       setNotes(repository.notes || '');
@@ -129,6 +113,20 @@ const RepositoryDetails = () => {
   useEffect(() => {
     const fetchReadme = async () => {
       if (repository) {
+        console.log('Repository data for README fetch:', {
+          repo_owner: repository.repo_owner,
+          repo_name: repository.repo_name,
+          full_repository: repository
+        });
+        
+        if (!repository.repo_owner || !repository.repo_name) {
+          console.error('Missing repo_owner or repo_name:', {
+            repo_owner: repository.repo_owner,
+            repo_name: repository.repo_name
+          });
+          return;
+        }
+        
         try {
           const readmeData = await getReadmeContent(repository.repo_owner, repository.repo_name);
           setReadme(readmeData);
