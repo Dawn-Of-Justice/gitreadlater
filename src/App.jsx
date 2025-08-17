@@ -30,9 +30,31 @@ function AppContent() {
   const { user, loading, isAuthenticated } = useAuth();
   const { clearCache } = useCache();
   const navigate = useNavigate();
+  const [appReady, setAppReady] = useState(false);
 
-  // Show loading spinner while checking authentication
-  if (loading) {
+  // Debug logging
+  useEffect(() => {
+    console.log('Auth state changed:', { user: !!user, loading, isAuthenticated, appReady });
+  }, [user, loading, isAuthenticated, appReady]);
+
+  // Ensure minimum loading time to prevent flash
+  useEffect(() => {
+    if (!loading) {
+      // Add a longer delay to ensure auth state is fully resolved
+      const timer = setTimeout(() => {
+        console.log('Setting app ready to true');
+        setAppReady(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setAppReady(false);
+    }
+  }, [loading]);
+
+  // Show loading spinner while checking authentication or during app initialization
+  if (loading || !appReady) {
+    console.log('Showing loading screen', { loading, appReady });
     return (
       <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
         <div className="flex justify-center items-center flex-grow">

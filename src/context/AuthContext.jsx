@@ -20,16 +20,27 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   useEffect(() => {
-    // Check for existing session
+    let isMounted = true;
+    
+    // Check for existing session with retry logic
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Ensure Supabase is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
+        if (error) {
+          console.error('Session check error:', error);
+        }
         
         if (session?.user) {
           setUser(session.user);
-          // Check if user is admin
           setIsAdmin(session.user.id === ADMIN_USER_ID);
         } else {
           setUser(null);
@@ -37,8 +48,15 @@ export function AuthProvider({ children }) {
         }
       } catch (error) {
         console.error('Error checking session:', error);
+        if (isMounted) {
+          setUser(null);
+          setIsAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setHasCheckedSession(true);
+          setLoading(false);
+        }
       }
     };
     
@@ -47,6 +65,8 @@ export function AuthProvider({ children }) {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
         if (session?.user) {
           setUser(session.user);
           setIsAdmin(session.user.id === ADMIN_USER_ID);
@@ -54,17 +74,22 @@ export function AuthProvider({ children }) {
           setUser(null);
           setIsAdmin(false);
         }
+        
+        // Always ensure loading is false after any auth state change
+        setLoading(false);
+        setHasCheckedSession(true);
       }
     );
     
     return () => {
+      isMounted = false;
       subscription?.unsubscribe();
     };
   }, []);
 
   const value = {
     user,
-    loading,
+    loading: loading || !hasCheckedSession,
     isAdmin,
     isAuthenticated: !!user
   };
