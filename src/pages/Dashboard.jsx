@@ -82,13 +82,15 @@ const Dashboard = () => {
     if (fetchAttemptedRef.current && !location.state?.forceRefresh) return;
     
     const checkUserAndFetch = async () => {
-      console.log('Dashboard: Starting fetch process', { 
+      console.log('Dashboard: Starting optimized fetch process', { 
         forceRefresh: location.state?.forceRefresh,
         refreshFlag,
         fetchAttempted: fetchAttemptedRef.current
       });
       
       try {
+        setLoading(true);
+        
         // Reset force refresh flag if it was set
         if (location.state?.forceRefresh) {
           const newState = { ...location.state };
@@ -96,7 +98,7 @@ const Dashboard = () => {
           navigate(location.pathname, { state: newState, replace: true });
         }
         
-        // Check if user is logged in
+        // Check authentication
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || !session.user) {
           setLoading(false);
@@ -104,140 +106,120 @@ const Dashboard = () => {
           return;
         }
         
-        // Mark that we've checked the user status
-        userCheckedRef.current = true;
-        
-        // Check if repositories table exists - this determines if we're a new installation
-        const exists = await checkRepositoriesTableExists();
-        setTableExists(exists);
-        
         console.log('Dashboard: User session', { 
-          userId: session.user.id,
-          tableExists
+          userId: session.user.id
         });
         
-        if (!exists) {
-          console.log('Repositories table does not exist - new installation');
-          setIsFirstTimeUser(true);
-          setRepositoriesLoaded(true); // No repositories to load if table doesn't exist
-          setLoading(false);
-          return;
+        // Check if we have cached data and it's recent (less than 5 minutes old)
+        const cacheTimestamp = localStorage.getItem('dashboard_cache_timestamp');
+        const isCacheValid = cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 5 * 60 * 1000;
+        
+        if (isCacheValid && cachedRepositories && cachedRepositories.length > 0 && !location.state?.forceRefresh) {
+          console.log('Dashboard: Using cached data for faster loading');
+          setRepositories(cachedRepositories);
+          setTags(cachedTags || []);
+          setIsFirstTimeUser(cachedRepositories.length === 0);
+          setRepositoriesLoaded(true);
+          setTableExists(true);
+          
+          // Trigger animation immediately for cached data
+          setTimeout(() => {
+            setAnimateRepositories(true);
+          }, 50);
+          
+          return; // Skip API calls if cache is valid
         }
         
-        // Check for user's repositories - this determines if it's a first-time user
-        try {
-          let data, count;
-          try {
-            // Try main repositories table first
-            const response = await supabase
-              .from('repositories')
-              .select('*', { count: 'exact', head: false })
-              .eq('user_id', session.user.id)
-              .limit(1);
-              
-            data = response.data;
-            count = response.count;
-            
-            // If no results, try saved_repositories table
-            if (!data || data.length === 0) {
-              //console.log('No repos in main table, checking saved_repositories');
-              const savedResponse = await supabase
-                .from('saved_repositories')
-                .select('*', { count: 'exact', head: false })
-                .eq('user_id', session.user.id)
-                .limit(1);
-                
-              data = savedResponse.data;
-              count = savedResponse.count;
-            }
-          } catch (error) {
-            console.error('Error checking repositories:', error);
-            throw error;
-          }
+        // OPTIMIZATION: Parallel execution to reduce 5-second loading delay
+        // Execute all database queries in parallel instead of sequentially
+        const [repositoriesResult, tagsResult, tableExistsResult] = await Promise.allSettled([
+          // Fetch repositories (try saved_repositories table directly)
+          supabase
+            .from('saved_repositories')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false }),
           
-          console.log('Dashboard: Repository check', {
-            repositoriesFound: data && data.length > 0,
-            count,
-            isFirstTimeUser
+          // Fetch user tags in parallel
+          getUserTags(),
+          
+          // Check table existence in parallel
+          checkRepositoriesTableExists()
+        ]);
+        
+        // Handle table existence
+        const tableExists = tableExistsResult.status === 'fulfilled' ? tableExistsResult.value : true;
+        setTableExists(tableExists);
+        
+        // Handle repositories with fallback
+        if (repositoriesResult.status === 'fulfilled' && !repositoriesResult.value.error) {
+          const allRepos = repositoriesResult.value.data || [];
+          setRepositories(allRepos);
+          setCachedRepositories(allRepos); // Cache the data
+          setIsFirstTimeUser(allRepos.length === 0);
+          setRepositoriesLoaded(true);
+          
+          // Update cache timestamp
+          localStorage.setItem('dashboard_cache_timestamp', Date.now().toString());
+          
+          // Immediate animation trigger for better UX
+          setTimeout(() => {
+            setAnimateRepositories(true);
+          }, 50);
+          
+          console.log('Dashboard: Repositories loaded and cached', {
+            count: allRepos.length,
+            isFirstTimeUser: allRepos.length === 0
           });
-          
-          // If no repos, this is a first-time user or someone who deleted all repos
-          if (!data || data.length === 0) {
-            console.log('User has no repositories');
-            setRepositories([]);
-            setIsFirstTimeUser(true);
-            setRepositoriesLoaded(true); // Mark that we've completed the repository check
-            setLoading(false);
-            return;
-          }
-          
-          // If we get here, user has repositories, so fetch them all
-          let allRepos;
+        } else {
+          // Fallback to repositories table if saved_repositories fails
+          console.log('Trying fallback repositories table');
           try {
-            // Try main repositories table first
-            const { data: mainRepos, error: mainError } = await supabase
+            const { data: fallbackRepos, error: fallbackError } = await supabase
               .from('repositories')
               .select('*')
               .eq('user_id', session.user.id)
               .order('created_at', { ascending: false });
-              
-            if (mainError) throw mainError;
             
-            // If no results or very few, also check saved_repositories table
-            if (!mainRepos || mainRepos.length === 0) {
-              //console.log('Checking saved_repositories table');
-              const { data: savedRepos, error: savedError } = await supabase
-                .from('saved_repositories')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false });
-                
-              if (savedError) throw savedError;
-              allRepos = savedRepos || [];
+            if (!fallbackError) {
+              setRepositories(fallbackRepos || []);
+              setCachedRepositories(fallbackRepos || []); // Cache fallback data
+              setIsFirstTimeUser((fallbackRepos || []).length === 0);
+              localStorage.setItem('dashboard_cache_timestamp', Date.now().toString());
             } else {
-              allRepos = mainRepos;
+              console.error('Fallback repositories query failed:', fallbackError);
+              setRepositories([]);
+              setIsFirstTimeUser(true);
             }
-            
-            setRepositories(allRepos || []);
-            
-            // Fetch tags if we have repositories
-            const userTags = await getUserTags();
-            setTags(userTags);
-            
-            setIsFirstTimeUser(false);
-            setRepositoriesLoaded(true); // Mark that we've successfully loaded repositories
-            
-            // Trigger staggered animation after a brief delay
-            setTimeout(() => {
-              setAnimateRepositories(true);
-            }, 100);
-          } catch (repoError) {
-            console.error('Error fetching user repositories:', repoError);
-            // Rest of your error handling...
-          }
-        } catch (repoError) {
-          console.error('Error fetching user repositories:', repoError);
-          // If the error is about missing table, treat as first time user
-          if (repoError.code === '42P01') {
+          } catch (fallbackErr) {
+            console.error('Fallback repositories error:', fallbackErr);
+            setRepositories([]);
             setIsFirstTimeUser(true);
-            setRepositoriesLoaded(true); // We've determined there are no repositories
-          } else {
-            setError('Error loading your repositories. Please refresh the page.');
-            setRepositoriesLoaded(true); // We've attempted to load, even if failed
           }
+          setRepositoriesLoaded(true);
         }
+        
+        // Handle tags
+        if (tagsResult.status === 'fulfilled') {
+          setTags(tagsResult.value || []);
+          setCachedTags(tagsResult.value || []); // Cache tags
+        } else {
+          console.error('Error fetching tags:', tagsResult.reason);
+          setTags([]);
+        }
+        
       } catch (err) {
-        console.error('Error in initial user check:', err);
+        console.error('Error in optimized fetch:', err);
         setError('Failed to load your saved repositories. Please try refreshing the page.');
-        setRepositoriesLoaded(true); // We've attempted to load, even if failed
+        setRepositories([]);
+        setTags([]);
+        setIsFirstTimeUser(true);
+        setRepositoriesLoaded(true);
       } finally {
         fetchAttemptedRef.current = true;
         setLoading(false);
         
-        console.log('Dashboard: Fetch complete', {
-          repositories: repositories.length,
-          tags: tags.length
-        });
+        console.log('Dashboard: Optimized fetch complete');
       }
     };
 
@@ -424,11 +406,37 @@ useEffect(() => {
     setRefreshFlag(prev => prev + 1);
   };
   
-  // Initial loading state
+  // Initial loading state with skeleton cards for better UX
   if (loading) {
     return (
-      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
-        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
+      <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">Loading your repositories...</h1>
+            <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
+          </div>
+          
+          {/* Skeleton loading cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className={`${themeClasses.card} shadow rounded-lg p-6 animate-pulse`}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                  </div>
+                  <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-12"></div>
+                </div>
+                <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-full mb-2"></div>
+                <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-2/3 mb-4"></div>
+                <div className="flex gap-2">
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
