@@ -6,21 +6,16 @@ API Keys & Credentials
 
 Check .env files and environment variable handling
 Verify no hardcoded secrets in the codebase
-Review Paddle API key and Supabase credential usage
+Review Supabase credential usage
 Authentication
 
 Review the GitHub OAuth implementation in supabaseClient.js
 Check token handling and session management
-Verify webhook signature verification in index.js (line ~151)
 2. Core Data Flow
 Repository Saving Process
 
 Follow the repository saving flow from SaveRepository.jsx through repositoryService.js
 Review how GitHub API data is fetched and stored in Supabase
-Subscription Logic
-
-Check repository limit enforcement in subscriptionService.js
-Verify Paddle webhook handling in index.js
 3. Error Handling & Edge Cases
 Authentication Edge Cases
 

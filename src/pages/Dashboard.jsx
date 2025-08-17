@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaCrown, FaArrowRight, FaBookmark, FaTrash, FaPlus } from 'react-icons/fa';
+import { FaStar, FaSearch, FaTags, FaExternalLinkAlt, FaCircle, FaArrowRight, FaBookmark, FaTrash, FaPlus } from 'react-icons/fa';
 import { getSavedRepositories, getUserTags, checkRepositoriesTableExists, deleteRepository } from '../services/repositoryService';
-import { getUserTier, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
-import { useSubscription } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext'; 
 import { supabase } from '../lib/supabaseClient';
 import PrivateRepoToggle from '../components/PrivateRepoToggle';
@@ -37,7 +35,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { darkMode, themeClasses } = useTheme();
-  const { userSubscription, repoCount, loading: subscriptionLoading } = useSubscription();
   
   // State
   const [repositories, setRepositories] = useState([]);
@@ -65,9 +62,6 @@ const Dashboard = () => {
     setTags: setCachedTags,
     invalidateRepositories
   } = useCache();
-
-  // Set up user tier from subscription
-  const userTier = userSubscription?.tier || TIERS.FREE;
 
   // Main effect for initial loading - runs once on component mount
   useEffect(() => {
@@ -385,10 +379,6 @@ useEffect(() => {
     setSelectedTag(tag === selectedTag ? '' : tag);
   };
   
-  // Calculate repository limit details
-  const repoLimit = REPOSITORY_LIMITS[userTier];
-  const isNearLimit = userTier === TIERS.FREE && repoCount >= repoLimit * 0.8;
-  const isAtLimit = userTier === TIERS.FREE && repoCount >= repoLimit;
   const cardHoverEffect = "transition-transform duration-200 transform hover:-translate-y-1 hover:shadow-lg";
   
   // Add a manual refresh function
@@ -398,7 +388,7 @@ useEffect(() => {
   };
   
   // Initial loading state
-  if (loading || subscriptionLoading) {
+  if (loading) {
     return (
       <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300 flex justify-center items-center`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
         <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${themeClasses.spinnerBorder}`}></div>
@@ -469,49 +459,6 @@ useEffect(() => {
         <div className="mb-6">
           <PrivateRepoToggle />
         </div>
-        
-        {/* Subscription warnings */}
-        {isNearLimit && (
-          <div className={`mb-6 p-4 rounded-md ${isAtLimit ? themeClasses.dangerBanner : themeClasses.warningBanner} transition-colors duration-300`}>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-medium">
-                  {isAtLimit 
-                    ? `You've reached the limit of ${repoLimit} repositories on your free plan.` 
-                    : `You've saved ${repoCount} of ${repoLimit} repositories (${Math.round((repoCount/repoLimit)*100)}%).`
-                  }
-                </p>
-                <p className="mt-1">
-                  {isAtLimit 
-                    ? 'Upgrade to Premium to save unlimited repositories.' 
-                    : 'You\'re approaching your free plan limit. Consider upgrading soon.'}
-                </p>
-              </div>
-              
-              <Link 
-                to="/subscription" 
-                className={`btn mt-3 md:mt-0 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors duration-300 ${isAtLimit ? themeClasses.dangerButton : themeClasses.warningButton}`}
-              >
-                <FaCrown className="mr-1" />
-                <span>Upgrade to Premium</span>
-                <FaArrowRight className="ml-1" />
-              </Link>
-            </div>
-          </div>
-        )}
-        
-        {/* Premium banner */}
-        {userTier === TIERS.PREMIUM && (
-          <div className={`mb-6 p-4 rounded-md ${themeClasses.infoBanner} transition-colors duration-300`}>
-            <div className="flex items-center">
-              <FaCrown className={`${darkMode ? 'text-yellow-400' : 'text-yellow-500'} mr-2`} />
-              <p>
-                <span className="font-medium">Premium Plan Active: </span>
-                You have unlimited repository storage and access to all premium features.
-              </p>
-            </div>
-          </div>
-        )}
         
         {/* Search and filter section */}
         <div className={`${themeClasses.card} rounded-lg shadow-md p-4 mb-8 transition-colors duration-300`}>

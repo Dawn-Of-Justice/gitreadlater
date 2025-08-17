@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
 import { getRepositoryDetails, parseGitHubUrl } from './githubService';
-import { canSaveRepository } from './subscriptionService';
 
 let loggedRepoCache = false;
 let loggedRepoFetch = false;
@@ -57,13 +56,6 @@ export const saveRepository = async (url, notes = '', tags = [], invalidateCache
     
     if (!user) {
       throw new Error('User not authenticated');
-    }
-    
-    // Check if user can save more repositories based on their subscription
-    const canSave = await canSaveRepository();
-    
-    if (!canSave) {
-      throw new Error('Repository limit reached for your plan. Please upgrade to save more repositories.');
     }
     
     // Parse GitHub URL

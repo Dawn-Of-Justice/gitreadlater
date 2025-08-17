@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaCrown, FaArrowRight, FaLock } from 'react-icons/fa';
+import { FaGithub, FaSearch, FaStar, FaTimes, FaSpinner, FaCheck, FaCircle, FaArrowRight, FaLock } from 'react-icons/fa';
 import { searchRepositories, getUserStarredRepos, parseGitHubUrl, getRepositoryDetails, getUserRepositories } from '../services/githubService';
 import { saveRepository, getUserTags } from '../services/repositoryService';
-import { getUserRepositoryCount, getUserTier, initializeUserSubscription, REPOSITORY_LIMITS, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useCache } from '../context/CacheContext';
 import { supabase } from '../lib/supabaseClient';
@@ -61,11 +60,6 @@ const SaveRepository = () => {
   const [showRepositories, setShowRepositories] = useState(false);
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   
-  // Subscription states
-  const [userTier, setUserTier] = useState(TIERS.FREE);
-  const [repoCount, setRepoCount] = useState(0);
-  const [canSave, setCanSave] = useState(true);
-  
   // Get theme from context
   const { darkMode, themeClasses } = useTheme();
   
@@ -79,44 +73,6 @@ const SaveRepository = () => {
   // Add these states for filtering repositories
   const [showOwnedRepos, setShowOwnedRepos] = useState(true);
   const [showStarredRepos, setShowStarredRepos] = useState(true);
-  
-  // Check subscription status on load
-  useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        // First check/initialize user subscription
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user?.id) {
-          try {
-            await initializeUserSubscription(session.user.id);
-          } catch (error) {
-            console.error('Failed to initialize subscription:', error);
-            // Continue anyway
-          }
-        }
-        
-        // Continue with tier and count check
-        const tier = await getUserTier();
-        const count = await getUserRepositoryCount();
-        
-        setUserTier(tier);
-        setRepoCount(count);
-        
-        // Check if user has reached the limit
-        if (tier === TIERS.FREE && count >= REPOSITORY_LIMITS[TIERS.FREE]) {
-          setCanSave(false);
-        }
-      } catch (err) {
-        console.error('Error checking subscription:', err);
-        // Set defaults to prevent blocking UI
-        setUserTier(TIERS.FREE);
-        setRepoCount(0);
-        setCanSave(true);
-      }
-    };
-    
-    checkSubscription();
-  }, []);
 
   // Load user's repositories and starred repos on component mount
   useEffect(() => {
@@ -219,12 +175,6 @@ const SaveRepository = () => {
       return;
     }
     
-    // Check if user can save more repositories
-    if (!canSave) {
-      setError(`You've reached the limit of ${REPOSITORY_LIMITS[TIERS.FREE]} repositories on your free plan. Please upgrade to save more.`);
-      return;
-    }
-    
     try {
       setLoading(true);
       setError(null);
@@ -240,11 +190,7 @@ const SaveRepository = () => {
       navigate('/');
     } catch (err) {
       console.error('Error saving repository:', err);
-      if (err.message.includes('Repository limit reached')) {
-        setError(`You've reached the limit of ${REPOSITORY_LIMITS[TIERS.FREE]} repositories on your free plan. Please upgrade to save more.`);
-      } else {
-        setError(err.message || 'Failed to save repository. Please try again.');
-      }
+      setError(err.message || 'Failed to save repository. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -493,9 +439,6 @@ const SaveRepository = () => {
     ? previousTags.filter(tag => tag.toLowerCase().includes(tagInput.toLowerCase()) && !tags.includes(tag))
     : previousTags.filter(tag => !tags.includes(tag));
 
-  const repoLimit = REPOSITORY_LIMITS[userTier];
-  const isAtLimit = !canSave;
-
   const handleKeyDown = (e) => {
     if (!showRepositories) return;
     
@@ -523,99 +466,10 @@ const SaveRepository = () => {
     }
   };
 
-  // If user is at limit, show upgrade notice
-  if (isAtLimit) {
-    return (
-      <div className={`${themeClasses.body} min-h-screen transition-colors duration-300`}>
-        <div className="container mx-auto px-6 py-8">
-          <h1 className="text-3xl font-bold mb-8">Save Repository</h1>
-          
-          <div className={`${themeClasses.dangerBanner} border rounded-lg p-6 mb-8 transition-colors duration-300`}>
-            <h2 className={`text-xl font-semibold ${darkMode ? 'text-red-200' : 'text-red-700'} mb-3`}>Repository Limit Reached</h2>
-            
-            <p className="mb-4">
-              You've saved {repoCount} repositories, which is the maximum allowed on the free plan.
-              To save more repositories, you'll need to upgrade to our Premium plan.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link 
-                to="/subscription" 
-                className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-300`}
-              >
-                <FaCrown className="mr-2" />
-                <span>Upgrade to Premium</span>
-                <FaArrowRight className="ml-2" />
-              </Link>
-              
-              <Link 
-                to="/" 
-                className={`${themeClasses.secondaryButton} px-4 py-2 rounded-md transition-colors duration-300`}
-              >
-                Back to Dashboard
-              </Link>
-            </div>
-          </div>
-          
-          <div className={`${themeClasses.card} rounded-lg shadow-md p-6 transition-colors duration-300`}>
-            <h3 className="text-lg font-semibold mb-4">Premium Plan Benefits</h3>
-            
-            <ul className="space-y-2">
-              <li className="flex items-start">
-                <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
-                <span>Unlimited saved repositories</span>
-              </li>
-              <li className="flex items-start">
-                <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
-                <span>Advanced search with filters</span>
-              </li>
-              <li className="flex items-start">
-                <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
-                <span>Rich tagging system with nested tags</span>
-              </li>
-              <li className="flex items-start">
-                <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
-                <span>Automatic categorization suggestions</span>
-              </li>
-              <li className="flex items-start">
-                <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
-                <span>Export to third-party services</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
   return (
     <div className={`${themeClasses.body} min-h-screen transition-colors duration-300`}>
       <div className="container mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold mb-8">Save Repository</h1>
-        
-        {/* Subscription status */}
-        {userTier === TIERS.FREE && repoCount >= repoLimit * 0.8 && (
-          <div className={`mb-6 p-4 rounded-md ${themeClasses.warningBanner} transition-colors duration-300`}>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-medium">
-                  You've saved {repoCount} of {repoLimit} repositories ({Math.round((repoCount/repoLimit)*100)}%).
-                </p>
-                <p className="mt-1">
-                  You're approaching your free plan limit. Consider upgrading soon.
-                </p>
-              </div>
-              
-              <Link 
-                to="/subscription" 
-                className="btn mt-3 md:mt-0 bg-yellow-600 hover:bg-yellow-700 text-white flex items-center justify-center px-4 py-2 rounded-md transition-colors duration-300"
-              >
-                <FaCrown className="mr-1" />
-                <span>Upgrade to Premium</span>
-              </Link>
-            </div>
-          </div>
-        )}
         
         <div className={`${themeClasses.card} rounded-lg shadow-md p-6 transition-colors duration-300`}>
           <form onSubmit={handleSubmit}>

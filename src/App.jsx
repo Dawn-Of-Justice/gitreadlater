@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
-import { ThemeProvider, SubscriptionProvider } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { CacheProvider, useCache } from './context/CacheContext';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import ScrollToTop from './components/ScrollToTop';
@@ -17,7 +17,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
 const SaveRepository = lazy(() => import('./pages/SaveRepository'));
 const RepositoryDetails = lazy(() => import('./pages/RepositoryDetails'));
-const Subscription = lazy(() => import('./pages/Subscription'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Contact = lazy(() => import('./pages/Contact'));
@@ -88,12 +87,6 @@ function AppContent() {
               </ProtectedRoute>
             } />
             
-            <Route path="/subscription" element={
-              <ProtectedRoute>
-                <Subscription />
-              </ProtectedRoute>
-            } />
-            
             <Route path="/admin/voting-dashboard" element={
               <Suspense fallback={<div>Loading...</div>}>
                 <AdminRoute>
@@ -116,16 +109,14 @@ function App() {
   return (
     <>
       <ThemeProvider>
-        <SubscriptionProvider>
-          <Router>
-            <CacheProvider>
-              <AuthProvider>
-                <AppContent />
-              </AuthProvider>
-              <ScrollToTop />
-            </CacheProvider>
-          </Router>
-        </SubscriptionProvider>
+        <Router>
+          <CacheProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+            <ScrollToTop />
+          </CacheProvider>
+        </Router>
       </ThemeProvider>
       <SpeedInsights />
     </>

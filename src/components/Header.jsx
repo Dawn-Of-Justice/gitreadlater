@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGithub, FaBookmark, FaPlus, FaSignOutAlt, FaUser, FaCrown, FaMoon, FaSun } from 'react-icons/fa';
+import { FaGithub, FaBookmark, FaPlus, FaSignOutAlt, FaUser, FaMoon, FaSun } from 'react-icons/fa';
 import { signOut, signInWithGitHub, supabase } from '../lib/supabaseClient';
-import { getUserTier, TIERS } from '../services/subscriptionService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,21 +10,9 @@ const ADMIN_USER_ID = "6b3aaad3-bda8-4030-89c4-f4ed89478644";
 const Header = ({ onLogout }) => {
   const { user, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [userTier, setUserTier] = useState(TIERS.FREE);
   const navigate = useNavigate();
   
   const { darkMode, toggleTheme, themeClasses } = useTheme();
-  
-  useEffect(() => {
-    const fetchUserTier = async () => {
-      if (user) {
-        const tier = await getUserTier();
-        setUserTier(tier);
-      }
-    };
-    
-    fetchUserTier();
-  }, [user]);
   
   const handleSignOut = async () => {
     try {
@@ -71,20 +58,6 @@ const Header = ({ onLogout }) => {
                 >
                   <FaPlus className="mr-1" />
                   <span>Save Repository</span>
-                </Link>
-                
-                <Link 
-                  to="/subscription" 
-                  className={`flex items-center space-x-1 ${themeClasses.navLink} transition-colors duration-300`}
-                >
-                  {userTier === TIERS.PREMIUM ? (
-                    <>
-                      <FaCrown className="text-yellow-400 mr-1" />
-                      <span>Premium</span>
-                    </>
-                  ) : (
-                    <span>Upgrade</span>
-                  )}
                 </Link>
                 
                 <div className="flex items-center space-x-4">
@@ -229,21 +202,6 @@ const Header = ({ onLogout }) => {
                 >
                   <FaPlus className="mr-1" />
                   <span>Save Repository</span>
-                </Link>
-                
-                <Link 
-                  to="/subscription" 
-                  className={`flex items-center space-x-2 ${themeClasses.navLink} transition-colors duration-300`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {userTier === TIERS.PREMIUM ? (
-                    <>
-                      <FaCrown className="text-yellow-400 mr-1" />
-                      <span>Premium</span>
-                    </>
-                  ) : (
-                    <span>Upgrade</span>
-                  )}
                 </Link>
                 
                 {/* A more robust version with fallback to GitHub icon */}
