@@ -416,8 +416,8 @@ useEffect(() => {
     );
   }
   
-  // First time user or user with no repositories
-  if (isFirstTimeUser || repositories.length === 0) {
+  // First time user or user with no repositories (but only if we're done loading)
+  if (!loading && (isFirstTimeUser || repositories.length === 0)) {
     return (
       // Add the same theme class and style as your main dashboard
       <div className={`min-h-screen ${themeClasses.body} !transition-colors !duration-300`} style={{backgroundColor: 'var(--bg-color, inherit)'}}>
