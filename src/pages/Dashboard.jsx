@@ -374,20 +374,6 @@ useEffect(() => {
   fetchFilteredRepositories();
 }, [debouncedSearchQuery, selectedTag, isFirstTimeUser, maintainFocus]);
 
-// Trigger animation when repositories change (search/filter results)
-useEffect(() => {
-  if (repositories.length > 0 && repositoriesLoaded) {
-    setVisibleCards(0);
-    setAnimateRepositories(false);
-    // Small delay to reset animation, then trigger staggered animation
-    const timer = setTimeout(() => {
-      setAnimateRepositories(true);
-      startStaggeredAnimation(repositories.length);
-    }, 50);
-    return () => clearTimeout(timer);
-  }
-}, [debouncedSearchQuery, selectedTag, repositories.length, repositoriesLoaded, startStaggeredAnimation]);
-
 useEffect(() => {
   const fetchRepositories = async () => {
     try {
@@ -552,9 +538,9 @@ useEffect(() => {
             <div 
               key={repo.id} 
               className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden cursor-pointer ${
-                index < visibleCards
-                  ? 'repo-card-visible' 
-                  : 'repo-card-hidden'
+                (debouncedSearchQuery || selectedTag) 
+                  ? 'repo-card-visible' // Show search/filter results immediately
+                  : (index < visibleCards ? 'repo-card-visible' : 'repo-card-hidden') // Stagger only on initial load
               }`}
               onClick={() => navigate(`/repository/${repo.id}`)}
             >
