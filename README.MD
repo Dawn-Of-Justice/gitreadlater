@@ -15,9 +15,7 @@ GitReadLater is more than just a bookmark manager - it's a comprehensive reposit
 
 Watch GitReadLater in action - see how easy it is to save, organize, and rediscover GitHub repositories:
 
-<div align="center">
-  <iframe width="800" height="450" src="https://www.youtube.com/embed/_6nZszL1P0w" title="Git ReadLater- save, organise, and rediscover repositories with custom tags and notes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-</div>
+[![SpeakSense Live Demo](https://img.youtube.com/vi/_6nZszL1P0w/0.jpg)](https://youtu.be/_6nZszL1P0w)
 
 *Click the video above to see the full demo of GitReadLater's features and capabilities.*
 
