@@ -67,7 +67,6 @@ const Dashboard = () => {
 
   // Clear search when navigating to dashboard
   useEffect(() => {
-    console.log('Dashboard mounted, clearing search state');
     setSearchQuery('');
     setDebouncedSearchQuery('');
     setSelectedTag('');

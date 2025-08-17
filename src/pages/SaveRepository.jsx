@@ -36,18 +36,8 @@ const SaveRepository = () => {
   const dropdownRef = useRef(null);
   
   // Form states
-  const [url, setUrl] = useState(() => {
-    return localStorage.getItem('saved_repo_url') || '';
-  });
-  const [repoPreview, setRepoPreview] = useState(() => {
-    try {
-      const savedPreview = localStorage.getItem('saved_repo_preview');
-      return savedPreview ? JSON.parse(savedPreview) : null;
-    } catch (err) {
-      console.error('Error parsing saved repository preview', err);
-      return null;
-    }
-  });
+  const [url, setUrl] = useState(''); // Start with empty URL instead of localStorage value
+  const [repoPreview, setRepoPreview] = useState(null); // Start with empty preview
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
@@ -76,6 +66,10 @@ const SaveRepository = () => {
 
   // Load user's repositories and starred repos on component mount
   useEffect(() => {
+    // Clear any previously saved URL and preview when component mounts fresh
+    localStorage.removeItem('saved_repo_url');
+    localStorage.removeItem('saved_repo_preview');
+    
     loadAllRepositories();
   }, []);
   
