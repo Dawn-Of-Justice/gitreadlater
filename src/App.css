@@ -84,11 +84,46 @@ body {
   animation: floatIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
+/* Base styles for repository cards */
+.repo-card {
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform, box-shadow;
+  cursor: pointer;
+}
+
 /* Enhanced hover effect for repository cards */
 .repo-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(-12px) scale(1.03);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+              0 0 0 1px rgba(255, 255, 255, 0.1),
+              0 8px 32px 0 rgba(0, 0, 0, 0.12);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+/* Focus state for accessibility */
+.repo-card:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.dark .repo-card:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 
+              0 0 0 1px rgba(255, 255, 255, 0.05),
+              0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Hover effect for grid container to prevent layout shifts */
+.repo-grid {
+  perspective: 1000px;
+}
+
+.repo-grid:hover .repo-card:not(:hover) {
+  transform: scale(0.98);
+  opacity: 0.8;
 }
 
 @media (prefers-reduced-motion: no-preference) {
