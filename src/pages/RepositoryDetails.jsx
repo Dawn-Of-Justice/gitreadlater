@@ -90,6 +90,11 @@ const RepositoryDetails = () => {
         }
         
         const result = await response.json();
+        
+        console.log('RepositoryDetails: Fetched repository data:', result.data);
+        console.log('RepositoryDetails: repo_owner:', result.data?.repo_owner);
+        console.log('RepositoryDetails: repo_name:', result.data?.repo_name);
+        
         setRepository(result.data);
       } catch (error) {
         console.error('Error fetching repository:', error);
@@ -113,17 +118,10 @@ const RepositoryDetails = () => {
   useEffect(() => {
     const fetchReadme = async () => {
       if (repository) {
-        console.log('Repository data for README fetch:', {
-          repo_owner: repository.repo_owner,
-          repo_name: repository.repo_name,
-          full_repository: repository
-        });
+        console.log('README fetch - repo_owner:', repository.repo_owner, 'repo_name:', repository.repo_name);
         
         if (!repository.repo_owner || !repository.repo_name) {
-          console.error('Missing repo_owner or repo_name:', {
-            repo_owner: repository.repo_owner,
-            repo_name: repository.repo_name
-          });
+          console.error('Missing repo_owner or repo_name for README fetch');
           return;
         }
         
@@ -142,28 +140,10 @@ const RepositoryDetails = () => {
   }, [repository]);
 
   useEffect(() => {
-    const updateRepositoryData = async () => {
-      if (repository) {
-        try {
-          // Attempt to refresh repository data (will only refresh if stale)
-          const updatedRepo = await refreshRepositoryData(id);
-          
-          // Update state with fresh data
-          if (updatedRepo) {
-            setRepository(updatedRepo);
-            setNotes(updatedRepo.notes || '');
-            setTags(updatedRepo.tags || []);
-            setLastUpdated(new Date(updatedRepo.last_fetched || updatedRepo.updated_at));
-          }
-        } catch (err) {
-          console.error('Error refreshing repository data:', err);
-          // Don't show error to user for background refresh
-        }
-      }
-    };
-    
-    updateRepositoryData();
-  }, [repository, id]);
+    // This effect was causing issues by calling refreshRepositoryData which returns all repos
+    // Removing it since we already fetch the repository data in the main useEffect
+    // If we need to refresh data, we can add a manual refresh button instead
+  }, []);
 
   // Handle save changes
   const handleSaveChanges = async () => {
