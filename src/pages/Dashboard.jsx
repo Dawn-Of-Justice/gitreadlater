@@ -66,12 +66,12 @@ const Dashboard = () => {
       if (currentCard < totalCards) {
         setVisibleCards(currentCard + 1);
         currentCard++;
-        setTimeout(showNextCard, 150); // 150ms delay between each card
+        setTimeout(showNextCard, 120); // 120ms delay for smoother animation
       }
     };
     
     // Start showing cards after a brief delay
-    setTimeout(showNextCard, 200);
+    setTimeout(showNextCard, 150);
   }, []);
 
   // Cache
@@ -551,14 +551,11 @@ useEffect(() => {
           {repositories.map((repo, index) => (
             <div 
               key={repo.id} 
-              className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-all duration-600 ease-out ${
+              className={`repo-card ${themeClasses.card} rounded-lg shadow-md overflow-hidden cursor-pointer ${
                 index < visibleCards
-                  ? 'translate-y-0 opacity-100 scale-100 repo-card-enter' 
-                  : 'translate-y-12 opacity-0 scale-95'
+                  ? 'repo-card-visible' 
+                  : 'repo-card-hidden'
               }`}
-              style={{
-                willChange: 'transform, opacity'
-              }}
               onClick={() => navigate(`/repository/${repo.id}`)}
             >
               <div className="p-5">
