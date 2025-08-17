@@ -109,9 +109,6 @@ export const ThemeProvider = ({ children }) => {
     modal: darkMode 
       ? "bg-[#21262d]" 
       : "bg-white",
-    premiumHeader: darkMode 
-      ? "bg-[#1f6feb] text-white" 
-      : "bg-[#0969da] text-white",
     planHeader: darkMode 
       ? "bg-[#30363d] border-[#444c56]" 
       : "bg-[#f6f8fa] border-[#d0d7de]",

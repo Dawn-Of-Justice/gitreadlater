@@ -448,8 +448,7 @@ useEffect(() => {
           
           <Link 
             to="/save"
-            className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center space-x-2 transition-colors duration-300 ${isAtLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={(e) => isAtLimit && e.preventDefault()}
+            className={`${themeClasses.button} px-4 py-2 rounded-md flex items-center space-x-2 transition-colors duration-300`}
           >
             <span>Save New Repository</span>
           </Link>
@@ -588,11 +587,10 @@ useEffect(() => {
           ))}
           
           {/* Add Repository Tile */}
-          {!isAtLimit && (
-            <div 
-              onClick={() => navigate('/save')}
-              className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer border-2 border-dashed ${darkMode ? 'border-gray-700' : 'border-gray-300'} flex flex-col items-center justify-center p-10 hover:border-blue-500`}
-            >
+          <div 
+            onClick={() => navigate('/save')}
+            className={`${themeClasses.card} rounded-lg shadow-md overflow-hidden ${cardHoverEffect} transition-colors duration-300 cursor-pointer border-2 border-dashed ${darkMode ? 'border-gray-700' : 'border-gray-300'} flex flex-col items-center justify-center p-10 hover:border-blue-500`}
+          >
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-4 mb-4`}>
                 <FaPlus className={`text-3xl ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
               </div>
@@ -601,7 +599,6 @@ useEffect(() => {
                 Save a new GitHub repository to your collection
               </p>
             </div>
-          )}
         </div>
       </div>
     </div>

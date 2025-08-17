@@ -86,23 +86,6 @@ npm run dev
 3. Register the application
 4. Copy the Client ID and Client Secret to your Supabase project
 
-## Paddle Setup
-
-1. Create a Paddle account at [Paddle.com](https://Paddle.com)
-2. In the Paddle Dashboard, create a product and price:
-   - Go to Products > Create Product
-   - Set the product name (e.g., "Git ReadLater Premium")
-   - Add a price (e.g., $3/month)
-   - Copy the Price ID (starts with "price_") to your frontend `.env` file
-3. Get your API keys from Developers > API keys
-4. Set up webhook for subscription lifecycle events:
-   - Go to Developers > Webhooks > Add endpoint
-   - Set the endpoint URL to your server's webhook endpoint
-   - Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-   - Get the Webhook Secret for your server's `.env` file
-
-## Deployment
-
 ## Deployment
 
 ### Frontend (Vercel/Netlify)
