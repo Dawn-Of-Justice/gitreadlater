@@ -20,17 +20,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     
-    // Check for existing session with retry logic
+    // Check for existing session
     const checkSession = async () => {
       try {
-        // Ensure Supabase is ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
@@ -46,15 +42,14 @@ export function AuthProvider({ children }) {
           setUser(null);
           setIsAdmin(false);
         }
+        
+        // Only set loading to false here, not in onAuthStateChange
+        setLoading(false);
       } catch (error) {
         console.error('Error checking session:', error);
         if (isMounted) {
           setUser(null);
           setIsAdmin(false);
-        }
-      } finally {
-        if (isMounted) {
-          setHasCheckedSession(true);
           setLoading(false);
         }
       }
@@ -62,7 +57,7 @@ export function AuthProvider({ children }) {
     
     checkSession();
     
-    // Set up auth state change listener
+    // Set up auth state change listener (but don't change loading state)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return;
@@ -74,10 +69,7 @@ export function AuthProvider({ children }) {
           setUser(null);
           setIsAdmin(false);
         }
-        
-        // Always ensure loading is false after any auth state change
-        setLoading(false);
-        setHasCheckedSession(true);
+        // Don't modify loading state in onAuthStateChange
       }
     );
     
@@ -89,7 +81,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    loading: loading || !hasCheckedSession,
+    loading,
     isAdmin,
     isAuthenticated: !!user
   };

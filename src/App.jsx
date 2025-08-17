@@ -30,31 +30,9 @@ function AppContent() {
   const { user, loading, isAuthenticated } = useAuth();
   const { clearCache } = useCache();
   const navigate = useNavigate();
-  const [appReady, setAppReady] = useState(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Auth state changed:', { user: !!user, loading, isAuthenticated, appReady });
-  }, [user, loading, isAuthenticated, appReady]);
-
-  // Ensure minimum loading time to prevent flash
-  useEffect(() => {
-    if (!loading) {
-      // Add a longer delay to ensure auth state is fully resolved
-      const timer = setTimeout(() => {
-        console.log('Setting app ready to true');
-        setAppReady(true);
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    } else {
-      setAppReady(false);
-    }
-  }, [loading]);
-
-  // Show loading spinner while checking authentication or during app initialization
-  if (loading || !appReady) {
-    console.log('Showing loading screen', { loading, appReady });
+  // Show loading spinner while checking authentication
+  if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
         <div className="flex justify-center items-center flex-grow">
@@ -74,22 +52,18 @@ function AppContent() {
         <Header user={user} onLogout={null} />
         
         <main className="flex-grow">
-          <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>}>
-            <Routes>
-              {/* Public routes only when not authenticated */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/roadmap" element={<Roadmap />} />
-              
-              {/* Redirect all other routes to login when not authenticated */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Suspense>
+          <Routes>
+            {/* Public routes only when not authenticated */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            
+            {/* Redirect all other routes to login when not authenticated */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
         </main>
         
         <Footer />
@@ -115,37 +89,31 @@ function AppContent() {
       <Header user={user} onLogout={handleLogout} />
       
       <main className="flex-grow">
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>}>
-          <Routes>
-            {/* Public routes available to authenticated users */}
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/roadmap" element={<Roadmap />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/save" element={<SaveRepository />} />
-            <Route path="/repository/:id" element={<RepositoryDetails />} />
-            
-            <Route path="/admin/voting-dashboard" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <AdminRoute>
-                  <VotingDashboard />
-                </AdminRoute>
-              </Suspense>
-            } />
-            
-            {/* Redirect login to dashboard if already authenticated */}
-            <Route path="/login" element={<Navigate to="/" replace />} />
-            <Route path="/auth/callback" element={<Navigate to="/" replace />} />
-            
-            {/* Catch all - redirect to dashboard */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          {/* Public routes available to authenticated users */}
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          
+          {/* Protected routes */}
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/save" element={<SaveRepository />} />
+          <Route path="/repository/:id" element={<RepositoryDetails />} />
+          
+          <Route path="/admin/voting-dashboard" element={
+            <AdminRoute>
+              <VotingDashboard />
+            </AdminRoute>
+          } />
+          
+          {/* Redirect login to dashboard if already authenticated */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/auth/callback" element={<Navigate to="/" replace />} />
+          
+          {/* Catch all - redirect to dashboard */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
       
       <Footer />
